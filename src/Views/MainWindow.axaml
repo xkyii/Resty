@@ -21,13 +21,13 @@
     <!-- ══════════════════════════ TitleBar ══════════════════════════ -->
     <Grid Grid.Row="0"
           Background="{DynamicResource Brush.TitleBar}"
-          ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+          ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+          PointerPressed="TitleBarPointerPressed"
+          DoubleTapped="TitleBarDoubleTapped">
 
       <!-- Bottom border -->
       <Border Grid.Column="0" Grid.ColumnSpan="5"
-              BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Brush.Border0}"
-              DoubleTapped="MaximizeOrRestoreWindow"
-              PointerPressed="BeginMoveWindow"/>
+              BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Brush.Border0}"/>
 
       <!-- macOS: left caption button placeholder -->
       <Border Grid.Column="0"
@@ -154,8 +154,7 @@
       <!-- Right content -->
       <Grid Grid.Column="2" Background="{DynamicResource Brush.Window}">
         <!-- Welcome page when no tabs -->
-        <v:Welcome DataContext="{Binding}"
-                   IsVisible="{Binding !HasTabs}"/>
+        <v:Welcome DataContext="{Binding}"/>
 
         <!-- Active tab content -->
         <ContentPresenter Content="{Binding ActiveTab.Content}"

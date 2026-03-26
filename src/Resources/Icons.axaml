@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!-- Window / Send Button Icon -->
   <StreamGeometry x:Key="Icons.Window.Close">M6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5l5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6Z</StreamGeometry>
-  <StreamGeometry x:Key="Icons.Window.Minimize">M4 11h16v2H4z</StreamGeometry>
+  <StreamGeometry x:Key="Icons.Window.Minimize">M0 0M32 512H936v96H32z</StreamGeometry>
   <StreamGeometry x:Key="Icons.Window.Maximize">M4 4h16v16H4zm2 2v12h12V6z</StreamGeometry>
   <StreamGeometry x:Key="Icons.Window.Restore">M6 6h12v12H6zm2 2v8h8V8zM4 4h10v2H6v8H4z</StreamGeometry>
 
