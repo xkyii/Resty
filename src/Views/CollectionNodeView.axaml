@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Kx.Resty.ViewModels"
+             xmlns:v="using:Kx.Resty.Views"
+             x:Class="Kx.Resty.Views.CollectionNodeView"
+             x:DataType="vm:CollectionNode">
+  <StackPanel Orientation="Vertical">
+    <!-- Node row -->
+    <Border Height="26"
+            Cursor="Hand"
+            Background="Transparent">
+      <Border.Styles>
+        <Style Selector="Border:pointerover">
+          <Setter Property="Background" Value="{DynamicResource Brush.AccentHovered}"/>
+        </Style>
+      </Border.Styles>
+      <Grid ColumnDefinitions="Auto,Auto,*">
+        <!-- Toggle / indent -->
+        <Button Grid.Column="0"
+                Classes="icon_button"
+                Width="28" Height="26"
+                Margin="8,0,0,0"
+                IsVisible="{Binding IsFolder}"
+                Command="{Binding ToggleExpandedCommand}">
+          <Path Width="8" Height="8"
+                Data="{StaticResource Icons.Chevron.Down}">
+            <Path.RenderTransform>
+              <RotateTransform Angle="{Binding ChevronAngle}"/>
+            </Path.RenderTransform>
+          </Path>
+        </Button>
+        <Border Grid.Column="0" Width="28" IsVisible="{Binding !IsFolder}"/>
+
+        <!-- Icon or Method badge -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+          <Path Width="12" Height="12"
+                Data="{StaticResource Icons.Folder}"
+                IsVisible="{Binding IsFolder}"/>
+          <Border Padding="4,0" Height="16" CornerRadius="3"
+                  IsVisible="{Binding !IsFolder}">
+            <TextBlock Text="{Binding Method}"
+                       FontSize="10" FontWeight="Bold"
+                       VerticalAlignment="Center"/>
+          </Border>
+        </StackPanel>
+
+        <!-- Name -->
+        <TextBlock Grid.Column="2"
+                   Text="{Binding Name}"
+                   FontSize="12"
+                   VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"/>
+      </Grid>
+    </Border>
+
+    <!-- Children (folders only, shown when expanded) -->
+    <ItemsControl ItemsSource="{Binding Children}"
+                  IsVisible="{Binding IsExpanded}"
+                  Margin="12,0,0,0">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:CollectionNode">
+          <v:CollectionNodeView/>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

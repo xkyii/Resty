@@ -1,0 +1,210 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Kx.Resty.ViewModels"
+             xmlns:v="using:Kx.Resty.Views"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+             x:Class="Kx.Resty.Views.RequestTab"
+             x:DataType="vm:RequestTab">
+  <Grid RowDefinitions="Auto,Auto,*">
+
+    <!-- ──────────── Request Line ──────────── -->
+    <Grid Grid.Row="0"
+          Margin="12,10,12,0"
+          ColumnDefinitions="Auto,*,Auto">
+
+      <!-- HTTP Method ComboBox -->
+      <ComboBox Grid.Column="0"
+                Height="32"
+                MinWidth="100"
+                Padding="8,0"
+                ItemsSource="{x:Static vm:RequestTab.Methods}"
+                SelectedItem="{Binding SelectedMethod, Mode=TwoWay}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:HttpMethodOption">
+            <TextBlock Text="{Binding Name}"
+                       FontWeight="Bold"
+                       FontSize="12"
+                       Foreground="{Binding BrushKey, Converter={x:Static v:MethodBrushConverter.Instance}}"
+                       VerticalAlignment="Center"/>
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+
+      <!-- URL TextBox -->
+      <TextBox Grid.Column="1"
+               Height="32"
+               Margin="8,0"
+               Padding="10,0"
+               FontFamily="{DynamicResource Fonts.Monospace}"
+               FontSize="13"
+               VerticalContentAlignment="Center"
+               Watermark="{DynamicResource Text.Request.URLPlaceholder}"
+               Text="{Binding Url, Mode=TwoWay}"/>
+
+      <!-- Send Button -->
+      <Button Grid.Column="2"
+              Classes="send_button"
+              Command="{Binding SendCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Path Width="14" Height="14" Data="{StaticResource Icons.Send}" Fill="White"/>
+          <TextBlock Text="{DynamicResource Text.Request.Send}"
+                     Foreground="White"
+                     FontWeight="Bold"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
+      </Button>
+    </Grid>
+
+    <!-- ──────────── Request Editor Tabs ──────────── -->
+    <Grid Grid.Row="1" Margin="12,8,12,0" RowDefinitions="Auto,*">
+      <!-- Tab header row -->
+      <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="20">
+        <RadioButton Classes="tab_item"
+                     GroupName="RequestTabs"
+                     IsChecked="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=0}">
+          <TextBlock Text="{DynamicResource Text.Request.Tab.Params}" FontSize="12"/>
+        </RadioButton>
+        <RadioButton Classes="tab_item"
+                     GroupName="RequestTabs"
+                     IsChecked="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=1}">
+          <TextBlock Text="{DynamicResource Text.Request.Tab.Headers}" FontSize="12"/>
+        </RadioButton>
+        <RadioButton Classes="tab_item"
+                     GroupName="RequestTabs"
+                     IsChecked="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=2}">
+          <TextBlock Text="{DynamicResource Text.Request.Tab.Body}" FontSize="12"/>
+        </RadioButton>
+        <RadioButton Classes="tab_item"
+                     GroupName="RequestTabs"
+                     IsChecked="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=3}">
+          <TextBlock Text="{DynamicResource Text.Request.Tab.Auth}" FontSize="12"/>
+        </RadioButton>
+      </StackPanel>
+      <!-- Underline -->
+      <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom"
+              Background="{DynamicResource Brush.Border0}"/>
+    </Grid>
+
+    <!-- ──────────── Request + Response Split Area ──────────── -->
+    <Grid Grid.Row="2" RowDefinitions="*,4,Auto" Margin="0,0,0,0">
+
+      <!-- Request editor content (placeholder panels per tab) -->
+      <Border Grid.Row="0" Padding="12,8">
+        <Grid>
+          <!-- Params -->
+          <v:KeyValueTable IsVisible="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=0}"/>
+          <!-- Headers -->
+          <v:KeyValueTable IsVisible="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=1}"/>
+          <!-- Body -->
+          <TextBox IsVisible="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=2}"
+                   AcceptsReturn="True"
+                   TextWrapping="NoWrap"
+                   FontFamily="{DynamicResource Fonts.Monospace}"
+                   FontSize="13"
+                   HorizontalAlignment="Stretch"
+                   VerticalAlignment="Stretch"
+                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   MinHeight="80"/>
+          <!-- Auth -->
+          <TextBlock IsVisible="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=3}"
+                     Text="Auth (not implemented)"
+                     Classes="dim"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"/>
+        </Grid>
+      </Border>
+
+      <!-- Splitter -->
+      <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch" ResizeDirection="Rows"/>
+
+      <!-- Response area -->
+      <Border Grid.Row="2"
+              MinHeight="200"
+              BorderThickness="0,1,0,0"
+              BorderBrush="{DynamicResource Brush.Border0}"
+              Background="{DynamicResource Brush.Contents}">
+        <Grid RowDefinitions="Auto,*">
+          <!-- Response status bar -->
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*" Margin="12,6,12,0">
+            <!-- Status code badge -->
+            <Border Grid.Column="0"
+                    Padding="8,2"
+                    CornerRadius="3"
+                    Background="{DynamicResource Brush.Status.2xx}"
+                    IsVisible="{Binding HasResponse}">
+              <TextBlock Text="{Binding ResponseStatus}"
+                         FontSize="12"
+                         FontWeight="Bold"
+                         Foreground="White"
+                         VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ResponseTime}"
+                       Margin="12,0,0,0"
+                       FontSize="12"
+                       Classes="dim"
+                       IsVisible="{Binding HasResponse}"/>
+            <TextBlock Grid.Column="2"
+                       Text="{Binding ResponseSize}"
+                       Margin="12,0,0,0"
+                       FontSize="12"
+                       Classes="dim"
+                       IsVisible="{Binding HasResponse}"/>
+
+            <!-- Response tab buttons -->
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="16"
+                        HorizontalAlignment="Right"
+                        IsVisible="{Binding HasResponse}">
+              <RadioButton Classes="tab_item"
+                           GroupName="ResponseTabs"
+                           IsChecked="{Binding ResponseTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=0}">
+                <TextBlock Text="{DynamicResource Text.Response.Tab.Body}" FontSize="12"/>
+              </RadioButton>
+              <RadioButton Classes="tab_item"
+                           GroupName="ResponseTabs"
+                           IsChecked="{Binding ResponseTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=1}">
+                <TextBlock Text="{DynamicResource Text.Response.Tab.Headers}" FontSize="12"/>
+              </RadioButton>
+              <RadioButton Classes="tab_item"
+                           GroupName="ResponseTabs"
+                           IsChecked="{Binding ResponseTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=2}">
+                <TextBlock Text="{DynamicResource Text.Response.Tab.Cookies}" FontSize="12"/>
+              </RadioButton>
+            </StackPanel>
+          </Grid>
+          <!-- Underline below response tabs -->
+          <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom"
+                  Background="{DynamicResource Brush.Border0}"
+                  IsVisible="{Binding HasResponse}"/>
+
+          <!-- Response content -->
+          <Grid Grid.Row="1">
+            <!-- Empty state -->
+            <TextBlock Text="{DynamicResource Text.Request.NoResponse}"
+                       IsVisible="{Binding !HasResponse}"
+                       Classes="dim"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+
+            <!-- Body text -->
+            <TextBox IsVisible="{Binding HasResponse}"
+                     Text="{Binding ResponseBody}"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="NoWrap"
+                     FontFamily="{DynamicResource Fonts.Monospace}"
+                     FontSize="13"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     Margin="12,8"/>
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

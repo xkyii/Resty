@@ -1,0 +1,172 @@
+<v:ChromelessWindow xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:vm="using:Kx.Resty.ViewModels"
+                    xmlns:v="using:Kx.Resty.Views"
+                    mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
+                    x:Class="Kx.Resty.Views.MainWindow"
+                    x:DataType="vm:MainWindow"
+                    x:Name="ThisWindow"
+                    Classes="custom_window_frame"
+                    Title="{Binding Title}"
+                    MinWidth="900" MinHeight="600"
+                    Width="1280" Height="800">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="{Binding #ThisWindow.CaptionHeight}"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <!-- ══════════════════════════ TitleBar ══════════════════════════ -->
+    <Grid Grid.Row="0"
+          Background="{DynamicResource Brush.TitleBar}"
+          ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+
+      <!-- Bottom border -->
+      <Border Grid.Column="0" Grid.ColumnSpan="5"
+              BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Brush.Border0}"
+              DoubleTapped="MaximizeOrRestoreWindow"
+              PointerPressed="BeginMoveWindow"/>
+
+      <!-- macOS: left caption button placeholder -->
+      <Border Grid.Column="0"
+              Width="{Binding #ThisWindow.LeftCaptionButtonWidth}"
+              IsVisible="{Binding #ThisWindow.HasLeftCaptionButton}"/>
+
+      <!-- App icon + menu button (Windows/Linux) -->
+      <Button Grid.Column="0"
+              Classes="icon_button"
+              Margin="8,0,0,0"
+              IsVisible="{OnPlatform True, macOS=False}">
+        <Button.Flyout>
+          <MenuFlyout Placement="BottomEdgeAlignedLeft" VerticalOffset="-6">
+            <MenuItem Header="{DynamicResource Text.Menu.Preferences}"
+                      Command="{Binding OpenPreferencesCommand}">
+              <MenuItem.Icon>
+                <Path Width="12" Height="12" Data="{StaticResource Icons.Settings}"/>
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="-"/>
+            <MenuItem Header="{DynamicResource Text.Menu.Quit}"
+                      Command="{x:Static v:MainWindow.QuitCommand}">
+              <MenuItem.Icon>
+                <Path Width="12" Height="12" Data="{StaticResource Icons.Window.Close}"/>
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuFlyout>
+        </Button.Flyout>
+        <Path Width="16" Height="16" Data="{StaticResource Icons.Resty}"/>
+      </Button>
+
+      <!-- Tabs bar -->
+      <ScrollViewer Grid.Column="2"
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Disabled"
+                    VerticalAlignment="Stretch">
+        <ItemsControl ItemsSource="{Binding Tabs}" VerticalAlignment="Stretch">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RequestTabItem">
+              <Border MinWidth="140" MaxWidth="220" Height="38"
+                      BorderThickness="0,0,1,0"
+                      BorderBrush="{DynamicResource Brush.Border0}"
+                      Background="Transparent"
+                      Cursor="Hand">
+                <Border.Styles>
+                  <Style Selector="Border.active_tab">
+                    <Setter Property="Background" Value="{DynamicResource Brush.Window}"/>
+                  </Style>
+                </Border.Styles>
+                <Grid ColumnDefinitions="*,24">
+                  <TextBlock Grid.Column="0"
+                             Text="{Binding Title}"
+                             Margin="12,0,0,0"
+                             TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center"
+                             FontSize="12"/>
+                  <Button Grid.Column="1"
+                          Classes="icon_button"
+                          Width="20" Height="20"
+                          Margin="0,0,4,0"
+                          Command="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).CloseTabCommand}"
+                          CommandParameter="{Binding}">
+                    <Path Width="8" Height="8" Data="{StaticResource Icons.Window.Close}"/>
+                  </Button>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- New tab button -->
+      <Button Grid.Column="3"
+              Classes="icon_button"
+              Width="38" Height="38"
+              ToolTip.Tip="{DynamicResource Text.Panel.NewRequest}"
+              Command="{Binding NewRequestCommand}">
+        <Path Width="14" Height="14" Data="{StaticResource Icons.Add}"/>
+      </Button>
+
+      <!-- Windows/Linux caption buttons -->
+      <StackPanel Grid.Column="4"
+                  Orientation="Horizontal"
+                  IsVisible="{OnPlatform True, macOS=False}">
+        <Button Classes="caption_button"
+                Click="MinimizeWindow">
+          <Path Width="10" Height="10" Data="{StaticResource Icons.Window.Minimize}"/>
+        </Button>
+        <Button Classes="caption_button max_or_restore_btn"
+                Click="MaximizeWindow">
+          <Path Width="10" Height="10"/>
+        </Button>
+        <Button Classes="caption_button close_btn"
+                Click="CloseWindow">
+          <Path Width="10" Height="10" Data="{StaticResource Icons.Window.Close}"/>
+        </Button>
+      </StackPanel>
+    </Grid>
+
+    <!-- ══════════════════════════ Body ══════════════════════════ -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="260" MinWidth="180" MaxWidth="400"/>
+        <ColumnDefinition Width="1"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- Left sidebar -->
+      <v:CollectionPanel Grid.Column="0"
+                         DataContext="{Binding SidePanel}"
+                         Background="{DynamicResource Brush.Sidebar}"/>
+
+      <!-- Splitter -->
+      <GridSplitter Grid.Column="1"
+                    Width="1"
+                    HorizontalAlignment="Stretch"
+                    ResizeDirection="Columns"/>
+
+      <!-- Right content -->
+      <Grid Grid.Column="2" Background="{DynamicResource Brush.Window}">
+        <!-- Welcome page when no tabs -->
+        <v:Welcome DataContext="{Binding}"
+                   IsVisible="{Binding !HasTabs}"/>
+
+        <!-- Active tab content -->
+        <ContentPresenter Content="{Binding ActiveTab.Content}"
+                          IsVisible="{Binding HasTabs}">
+          <ContentPresenter.DataTemplates>
+            <DataTemplate DataType="vm:RequestTab">
+              <v:RequestTab/>
+            </DataTemplate>
+          </ContentPresenter.DataTemplates>
+        </ContentPresenter>
+      </Grid>
+    </Grid>
+  </Grid>
+</v:ChromelessWindow>

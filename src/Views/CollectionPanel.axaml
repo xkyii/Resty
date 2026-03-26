@@ -1,0 +1,141 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Kx.Resty.ViewModels"
+             xmlns:v="using:Kx.Resty.Views"
+             mc:Ignorable="d" d:DesignWidth="260" d:DesignHeight="700"
+             x:Class="Kx.Resty.Views.CollectionPanel"
+             x:DataType="vm:CollectionPanel">
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- Search box -->
+    <Border Grid.Row="0"
+            Padding="8,8,8,6"
+            BorderThickness="0,0,0,1"
+            BorderBrush="{DynamicResource Brush.Border0}">
+      <TextBox Height="28"
+               Watermark="{DynamicResource Text.Panel.Search}"
+               Text="{Binding SearchText, Mode=TwoWay}"
+               CornerRadius="4">
+        <TextBox.InnerLeftContent>
+          <Path Width="12" Height="12"
+                Margin="6,0,0,0"
+                Fill="{DynamicResource Brush.FG2}"
+                Data="{StaticResource Icons.Search}"/>
+        </TextBox.InnerLeftContent>
+      </TextBox>
+    </Border>
+
+    <!-- Expander groups -->
+    <ScrollViewer Grid.Row="1"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Orientation="Vertical">
+
+        <!-- Collections -->
+        <Expander IsExpanded="True" Margin="0,2,0,0">
+          <Expander.Header>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Grid.Column="0"
+                         Text="{DynamicResource Text.Panel.Collections}"
+                         Classes="bold"
+                         FontSize="12"
+                         Foreground="{DynamicResource Brush.FG2}"/>
+              <Button Grid.Column="1"
+                      Classes="icon_button"
+                      Width="22" Height="22"
+                      ToolTip.Tip="{DynamicResource Text.Panel.NewCollection}">
+                <Path Width="12" Height="12" Data="{StaticResource Icons.Add}"/>
+              </Button>
+            </Grid>
+          </Expander.Header>
+          <ItemsControl ItemsSource="{Binding Collections}" Margin="0,2,0,4">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CollectionNode">
+                <v:CollectionNodeView/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Expander>
+
+        <!-- Divider -->
+        <Border Height="1" Background="{DynamicResource Brush.Border0}" Margin="8,2"/>
+
+        <!-- Environments -->
+        <Expander IsExpanded="False" Margin="0,2,0,0">
+          <Expander.Header>
+            <TextBlock Text="{DynamicResource Text.Panel.Environments}"
+                       Classes="bold"
+                       FontSize="12"
+                       Foreground="{DynamicResource Brush.FG2}"/>
+          </Expander.Header>
+          <ItemsControl ItemsSource="{Binding Environments}" Margin="0,2,0,4">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CollectionNode">
+                <Grid Height="26" ColumnDefinitions="Auto,*">
+                  <Path Grid.Column="0" Width="12" Height="12" Margin="20,0,6,0"
+                        Data="{StaticResource Icons.Environment}"/>
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Expander>
+
+        <!-- Divider -->
+        <Border Height="1" Background="{DynamicResource Brush.Border0}" Margin="8,2"/>
+
+        <!-- History -->
+        <Expander IsExpanded="False" Margin="0,2,0,0">
+          <Expander.Header>
+            <TextBlock Text="{DynamicResource Text.Panel.History}"
+                       Classes="bold"
+                       FontSize="12"
+                       Foreground="{DynamicResource Brush.FG2}"/>
+          </Expander.Header>
+          <ItemsControl ItemsSource="{Binding History}" Margin="0,2,0,4">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CollectionNode">
+                <Grid Height="26" ColumnDefinitions="Auto,*">
+                  <TextBlock Grid.Column="0"
+                             Text="{Binding Method}"
+                             Margin="20,0,6,0"
+                             FontSize="11"
+                             FontWeight="Bold"
+                             VerticalAlignment="Center"
+                             Width="48"/>
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Name}"
+                             FontSize="12"
+                             TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Expander>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Bottom: Preferences button -->
+    <Border Grid.Row="2"
+            BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource Brush.Border0}"
+            Padding="4,4">
+      <Button Classes="icon_button"
+              Height="32"
+              Padding="8,0"
+              HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Left"
+              Command="{Binding $parent[Window].((vm:MainWindow)DataContext).OpenPreferencesCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Path Width="14" Height="14" Data="{StaticResource Icons.Settings}"/>
+          <TextBlock Text="{DynamicResource Text.Menu.Preferences}"
+                     FontSize="12"
+                     VerticalAlignment="Center"/>
+        </StackPanel>
+      </Button>
+    </Border>
+  </Grid>
+</UserControl>

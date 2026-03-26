@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Kx.Resty.ViewModels"
+             x:Class="Kx.Resty.Views.KeyValueTable"
+             x:DataType="vm:KeyValueTableViewModel">
+  <Grid RowDefinitions="Auto,*,Auto">
+    <!-- Header -->
+    <Grid Grid.Row="0" ColumnDefinitions="28,*,*,36" Height="28"
+          Background="{DynamicResource Brush.TitleBar}">
+      <TextBlock Grid.Column="1" Text="Key" Foreground="{DynamicResource Brush.FG2}"
+                 FontSize="11" VerticalAlignment="Center" Margin="8,0"/>
+      <TextBlock Grid.Column="2" Text="Value" Foreground="{DynamicResource Brush.FG2}"
+                 FontSize="11" VerticalAlignment="Center" Margin="8,0"/>
+    </Grid>
+
+    <!-- Rows -->
+    <ScrollViewer Grid.Row="1">
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:KeyValueRow">
+            <Grid ColumnDefinitions="28,*,*,36" MinHeight="32"
+                  Background="Transparent">
+              <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              <TextBox Grid.Column="1" Text="{Binding Key}"
+                       Background="Transparent" BorderThickness="0"
+                       Watermark="Key" VerticalAlignment="Center" Padding="6,0"/>
+              <TextBox Grid.Column="2" Text="{Binding Value}"
+                       Background="Transparent" BorderThickness="0"
+                       Watermark="Value" VerticalAlignment="Center" Padding="6,0"/>
+              <Button Grid.Column="3" Classes="icon_button"
+                      Command="{Binding RemoveCommand}"
+                      HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Path Data="{DynamicResource Icons.Delete}" Fill="{DynamicResource Brush.FG2}" Width="10" Height="10"/>
+              </Button>
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <!-- Add Row Button -->
+    <Button Grid.Row="2" Classes="flat" Command="{Binding AddRowCommand}"
+            HorizontalAlignment="Left" Margin="8,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Path Data="{DynamicResource Icons.Add}" Fill="{DynamicResource Brush.FG2}" Width="10" Height="10"/>
+        <TextBlock Text="Add" Foreground="{DynamicResource Brush.FG2}" FontSize="11"/>
+      </StackPanel>
+    </Button>
+  </Grid>
+</UserControl>

@@ -1,0 +1,47 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:String x:Key="Text.App.Name">Kx.Resty</x:String>
+
+  <!-- TitleBar / Menu -->
+  <x:String x:Key="Text.Menu.Preferences">Preferences</x:String>
+  <x:String x:Key="Text.Menu.About">About</x:String>
+  <x:String x:Key="Text.Menu.Quit">Quit</x:String>
+
+  <!-- Welcome -->
+  <x:String x:Key="Text.Welcome.Title">Welcome to Kx.Resty</x:String>
+  <x:String x:Key="Text.Welcome.Subtitle">A modern REST API client</x:String>
+  <x:String x:Key="Text.Welcome.NewRequest">New Request</x:String>
+  <x:String x:Key="Text.Welcome.NewCollection">New Collection</x:String>
+
+  <!-- CollectionPanel -->
+  <x:String x:Key="Text.Panel.Search">Search...</x:String>
+  <x:String x:Key="Text.Panel.Collections">Collections</x:String>
+  <x:String x:Key="Text.Panel.Environments">Environments</x:String>
+  <x:String x:Key="Text.Panel.History">History</x:String>
+  <x:String x:Key="Text.Panel.NewCollection">New Collection</x:String>
+  <x:String x:Key="Text.Panel.NewRequest">New Request</x:String>
+
+  <!-- RequestTab -->
+  <x:String x:Key="Text.Request.Send">Send</x:String>
+  <x:String x:Key="Text.Request.URLPlaceholder">Enter request URL</x:String>
+  <x:String x:Key="Text.Request.Tab.Params">Params</x:String>
+  <x:String x:Key="Text.Request.Tab.Headers">Headers</x:String>
+  <x:String x:Key="Text.Request.Tab.Body">Body</x:String>
+  <x:String x:Key="Text.Request.Tab.Auth">Auth</x:String>
+  <x:String x:Key="Text.Request.NoResponse">Send a request to see the response</x:String>
+  <x:String x:Key="Text.Response.Tab.Body">Body</x:String>
+  <x:String x:Key="Text.Response.Tab.Headers">Headers</x:String>
+  <x:String x:Key="Text.Response.Tab.Cookies">Cookies</x:String>
+
+  <!-- Preferences Dialog -->
+  <x:String x:Key="Text.Preferences.Title">Preferences</x:String>
+  <x:String x:Key="Text.Preferences.Section.Appearance">Appearance</x:String>
+  <x:String x:Key="Text.Preferences.Theme">Theme</x:String>
+  <x:String x:Key="Text.Preferences.Theme.System">Follow System</x:String>
+  <x:String x:Key="Text.Preferences.Theme.Light">Light</x:String>
+  <x:String x:Key="Text.Preferences.Theme.Dark">Dark</x:String>
+  <x:String x:Key="Text.Preferences.Language">Language</x:String>
+  <x:String x:Key="Text.Preferences.Section.General">General</x:String>
+  <x:String x:Key="Text.Preferences.OK">OK</x:String>
+  <x:String x:Key="Text.Preferences.Cancel">Cancel</x:String>
+</ResourceDictionary>

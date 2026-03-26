@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Kx.Resty.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="Kx.Resty.Views.Welcome"
+             x:DataType="vm:MainWindow">
+  <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+    <StackPanel Orientation="Vertical" Spacing="12" HorizontalAlignment="Center">
+      <!-- Logo icon -->
+      <Path Width="64" Height="64"
+            HorizontalAlignment="Center"
+            Data="{StaticResource Icons.Resty}"
+            Fill="{DynamicResource Brush.Accent}"
+            Opacity="0.7"/>
+
+      <!-- Title -->
+      <TextBlock HorizontalAlignment="Center"
+                 FontSize="28"
+                 FontWeight="Bold"
+                 Text="{DynamicResource Text.Welcome.Title}"/>
+
+      <!-- Subtitle -->
+      <TextBlock HorizontalAlignment="Center"
+                 FontSize="14"
+                 Foreground="{DynamicResource Brush.FG2}"
+                 Text="{DynamicResource Text.Welcome.Subtitle}"/>
+
+      <!-- Action buttons -->
+      <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0" HorizontalAlignment="Center">
+        <Button Classes="flat primary"
+                Padding="20,8"
+                Height="36"
+                Command="{Binding NewRequestCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Path Width="14" Height="14" Data="{StaticResource Icons.Add}" Fill="White"/>
+            <TextBlock Text="{DynamicResource Text.Welcome.NewRequest}"
+                       Foreground="White"
+                       VerticalAlignment="Center"/>
+          </StackPanel>
+        </Button>
+
+        <Button Classes="flat"
+                Padding="20,8"
+                Height="36">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Path Width="14" Height="14" Data="{StaticResource Icons.Folder}"/>
+            <TextBlock Text="{DynamicResource Text.Welcome.NewCollection}"
+                       VerticalAlignment="Center"/>
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </StackPanel>
+  </Grid>
+</UserControl>
