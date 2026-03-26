@@ -1,12 +1,11 @@
 using Avalonia.Controls;
 
-namespace Kx.Resty.Views
+namespace Kx.Resty.Views;
+
+public partial class RequestTab : UserControl
 {
-    public partial class RequestTab : UserControl
+    public RequestTab()
     {
-        public RequestTab()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

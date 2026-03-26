@@ -5,57 +5,56 @@ using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
 
-namespace Kx.Resty.Views
+namespace Kx.Resty.Views;
+
+public partial class MainWindow : ChromelessWindow
 {
-    public partial class MainWindow : ChromelessWindow
+    public static readonly IRelayCommand QuitCommand = new RelayCommand(() =>
     {
-        public static readonly IRelayCommand QuitCommand = new RelayCommand(() =>
-        {
-            if (Avalonia.Application.Current?.ApplicationLifetime is
-                Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
-                desktop.Shutdown(0);
-        });
+        if (Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+            desktop.Shutdown(0);
+    });
 
-        public MainWindow()
-        {
-            InitializeComponent();
-        }
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
 
-        public void MinimizeWindow(object? sender, RoutedEventArgs e) =>
-            WindowState = WindowState.Minimized;
+    public void MinimizeWindow(object? sender, RoutedEventArgs e) =>
+        WindowState = WindowState.Minimized;
 
-        public void MaximizeWindow(object? sender, RoutedEventArgs e) =>
-            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    public void MaximizeWindow(object? sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
-        public void CloseWindow(object? sender, RoutedEventArgs e) =>
-            Close();
+    public void CloseWindow(object? sender, RoutedEventArgs e) =>
+        Close();
 
-        public void TitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
-        {
-            if (IsOverInteractiveControl(e.Source, sender as Visual))
-                return;
-            BeginMoveWindow(sender, e);
-        }
+    public void TitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (IsOverInteractiveControl(e.Source, sender as Visual))
+            return;
+        BeginMoveWindow(sender, e);
+    }
 
-        public void TitleBarDoubleTapped(object? sender, TappedEventArgs e)
-        {
-            if (IsOverInteractiveControl(e.Source, sender as Visual))
-                return;
-            MaximizeOrRestoreWindow(sender, e);
-        }
+    public void TitleBarDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (IsOverInteractiveControl(e.Source, sender as Visual))
+            return;
+        MaximizeOrRestoreWindow(sender, e);
+    }
 
-        private static bool IsOverInteractiveControl(object? source, Visual? root)
-        {
-            if (source is not Visual v)
-                return false;
-
-            while (v != null && !ReferenceEquals(v, root))
-            {
-                if (v is Button)
-                    return true;
-                v = v.GetVisualParent();
-            }
+    private static bool IsOverInteractiveControl(object? source, Visual? root)
+    {
+        if (source is not Visual v)
             return false;
+
+        while (v != null && !ReferenceEquals(v, root))
+        {
+            if (v is Button)
+                return true;
+            v = v.GetVisualParent();
         }
+        return false;
     }
 }

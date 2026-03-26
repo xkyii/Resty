@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Kx.Resty.ViewModels"
              xmlns:v="using:Kx.Resty.Views"
+             xmlns:c="using:Kx.Resty.Converters"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="Kx.Resty.Views.RequestTab"
              x:DataType="vm:RequestTab">
@@ -26,7 +27,7 @@
             <TextBlock Text="{Binding Name}"
                        FontWeight="Bold"
                        FontSize="12"
-                       Foreground="{Binding BrushKey, Converter={x:Static v:MethodBrushConverter.Instance}}"
+                       Foreground="{Binding BrushKey, Converter={x:Static c:BrushConverters.MethodBrush}}"
                        VerticalAlignment="Center"/>
           </DataTemplate>
         </ComboBox.ItemTemplate>
@@ -63,22 +64,22 @@
       <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="20">
         <RadioButton Classes="tab_item"
                      GroupName="RequestTabs"
-                     IsChecked="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=0}">
+                     IsChecked="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=0}">
           <TextBlock Text="{DynamicResource Text.Request.Tab.Params}" FontSize="12"/>
         </RadioButton>
         <RadioButton Classes="tab_item"
                      GroupName="RequestTabs"
-                     IsChecked="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=1}">
+                     IsChecked="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=1}">
           <TextBlock Text="{DynamicResource Text.Request.Tab.Headers}" FontSize="12"/>
         </RadioButton>
         <RadioButton Classes="tab_item"
                      GroupName="RequestTabs"
-                     IsChecked="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=2}">
+                     IsChecked="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=2}">
           <TextBlock Text="{DynamicResource Text.Request.Tab.Body}" FontSize="12"/>
         </RadioButton>
         <RadioButton Classes="tab_item"
                      GroupName="RequestTabs"
-                     IsChecked="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=3}">
+                     IsChecked="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=3}">
           <TextBlock Text="{DynamicResource Text.Request.Tab.Auth}" FontSize="12"/>
         </RadioButton>
       </StackPanel>
@@ -94,11 +95,11 @@
       <Border Grid.Row="0" Padding="12,8">
         <Grid>
           <!-- Params -->
-          <v:KeyValueTable IsVisible="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=0}"/>
+          <v:KeyValueTable IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=0}"/>
           <!-- Headers -->
-          <v:KeyValueTable IsVisible="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=1}"/>
+          <v:KeyValueTable IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=1}"/>
           <!-- Body -->
-          <TextBox IsVisible="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=2}"
+          <TextBox IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=2}"
                    AcceptsReturn="True"
                    TextWrapping="NoWrap"
                    FontFamily="{DynamicResource Fonts.Monospace}"
@@ -109,7 +110,7 @@
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    MinHeight="80"/>
           <!-- Auth -->
-          <TextBlock IsVisible="{Binding RequestTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=3}"
+          <TextBlock IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=3}"
                      Text="Auth (not implemented)"
                      Classes="dim"
                      HorizontalAlignment="Center"
@@ -160,17 +161,17 @@
                         IsVisible="{Binding HasResponse}">
               <RadioButton Classes="tab_item"
                            GroupName="ResponseTabs"
-                           IsChecked="{Binding ResponseTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=0}">
+                           IsChecked="{Binding ResponseTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=0}">
                 <TextBlock Text="{DynamicResource Text.Response.Tab.Body}" FontSize="12"/>
               </RadioButton>
               <RadioButton Classes="tab_item"
                            GroupName="ResponseTabs"
-                           IsChecked="{Binding ResponseTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=1}">
+                           IsChecked="{Binding ResponseTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=1}">
                 <TextBlock Text="{DynamicResource Text.Response.Tab.Headers}" FontSize="12"/>
               </RadioButton>
               <RadioButton Classes="tab_item"
                            GroupName="ResponseTabs"
-                           IsChecked="{Binding ResponseTabIndex, Converter={x:Static v:IndexToBoolConverter.Instance}, ConverterParameter=2}">
+                           IsChecked="{Binding ResponseTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=2}">
                 <TextBlock Text="{DynamicResource Text.Response.Tab.Cookies}" FontSize="12"/>
               </RadioButton>
             </StackPanel>

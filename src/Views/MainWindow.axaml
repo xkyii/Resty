@@ -4,6 +4,7 @@
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                     xmlns:vm="using:Kx.Resty.ViewModels"
                     xmlns:v="using:Kx.Resty.Views"
+                    xmlns:s="using:Kx.Resty"
                     mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
                     x:Class="Kx.Resty.Views.MainWindow"
                     x:DataType="vm:MainWindow"
@@ -42,7 +43,7 @@
         <Button.Flyout>
           <MenuFlyout Placement="BottomEdgeAlignedLeft" VerticalOffset="-6">
             <MenuItem Header="{DynamicResource Text.Menu.Preferences}"
-                      Command="{Binding OpenPreferencesCommand}">
+                      Command="{x:Static s:App.OpenPreferencesCommand}">
               <MenuItem.Icon>
                 <Path Width="12" Height="12" Data="{StaticResource Icons.Settings}"/>
               </MenuItem.Icon>

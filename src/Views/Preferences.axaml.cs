@@ -8,15 +8,13 @@ public partial class Preferences : ChromelessWindow
     public Preferences()
     {
         InitializeComponent();
+        DataContext = ViewModels.Preferences.Instance;
         CloseOnESC = true;
     }
 
-    private void OnSaveClicked(object? sender, RoutedEventArgs e)
+    private void OnOKClicked(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is ViewModels.Dialogs.Preferences vm)
-            vm.Save();
+        ViewModels.Preferences.Instance.Save();
         Close();
     }
-
-    private void OnCancelClicked(object? sender, RoutedEventArgs e) => Close();
 }

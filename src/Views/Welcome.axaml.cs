@@ -1,12 +1,11 @@
 using Avalonia.Controls;
 
-namespace Kx.Resty.Views
+namespace Kx.Resty.Views;
+
+public partial class Welcome : UserControl
 {
-    public partial class Welcome : UserControl
+    public Welcome()
     {
-        public Welcome()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

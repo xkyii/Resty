@@ -1,12 +1,11 @@
 using Avalonia.Controls;
 
-namespace Kx.Resty.Views
+namespace Kx.Resty.Views;
+
+public partial class CollectionNodeView : UserControl
 {
-    public partial class CollectionNodeView : UserControl
+    public CollectionNodeView()
     {
-        public CollectionNodeView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }
