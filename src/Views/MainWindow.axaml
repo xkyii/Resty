@@ -14,7 +14,7 @@
                     Width="1280" Height="800">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="{Binding #ThisWindow.CaptionHeight}"/>
+      <RowDefinition Height="32"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
 
@@ -72,7 +72,7 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:RequestTabItem">
-              <Border MinWidth="140" MaxWidth="220" Height="38"
+              <Border MinWidth="140" MaxWidth="220" Height="32"
                       BorderThickness="0,0,1,0"
                       BorderBrush="{DynamicResource Brush.Border0}"
                       Background="Transparent"
@@ -107,7 +107,7 @@
       <!-- New tab button -->
       <Button Grid.Column="3"
               Classes="icon_button"
-              Width="38" Height="38"
+              Width="32" Height="32"
               ToolTip.Tip="{DynamicResource Text.Panel.NewRequest}"
               Command="{Binding NewRequestCommand}">
         <Path Width="14" Height="14" Data="{StaticResource Icons.Add}"/>

@@ -10,7 +10,7 @@
              WindowStartupLocation="CenterOwner">
   <Grid RowDefinitions="Auto,*,Auto">
     <!-- Title bar -->
-    <Border Grid.Row="0" Height="38" Background="{DynamicResource Brush.TitleBar}">
+    <Border Grid.Row="0" Height="32" Background="{DynamicResource Brush.TitleBar}">
       <TextBlock Text="{DynamicResource Text.Preferences.Title}"
                  Foreground="{DynamicResource Brush.FG1}"
                  FontWeight="SemiBold"

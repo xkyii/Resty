@@ -20,7 +20,7 @@ namespace Kx.Resty.Views
 
         public bool HasLeftCaptionButton => LeftCaptionButtonWidth > 0;
 
-        public double CaptionHeight { get; } = 38;
+        public double CaptionHeight { get; } = 32;
 
         public bool CloseOnESC { get; set; } = false;
 
