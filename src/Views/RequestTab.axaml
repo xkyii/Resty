@@ -60,21 +60,44 @@
     </Grid>
 
     <!-- ──────────── Context / Save State ──────────── -->
-    <Grid Grid.Row="1" Margin="12,8,12,0" ColumnDefinitions="Auto,*,Auto">
-      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
-        <TextBlock Text="{DynamicResource Text.Request.Collection}"
-                   Classes="dim"
-                   FontSize="11"/>
-        <TextBlock Text="{Binding CollectionName}"
-                   FontSize="11"
-                   FontFamily="{DynamicResource Fonts.Monospace}"/>
-      </StackPanel>
+    <Grid Grid.Row="1" Margin="12,8,12,0" ColumnDefinitions="Auto,220,Auto,220,*,Auto,Auto" ColumnSpacing="8">
+      <TextBlock Grid.Column="0"
+                 Text="{DynamicResource Text.Request.Name}"
+                 Classes="dim"
+                 FontSize="11"
+                 VerticalAlignment="Center"/>
+      <TextBox Grid.Column="1"
+               Height="28"
+               Text="{Binding RequestName, Mode=TwoWay}"
+               Watermark="{DynamicResource Text.Request.NamePlaceholder}"
+               FontSize="11"/>
 
       <TextBlock Grid.Column="2"
+                 Text="{DynamicResource Text.Request.Collection}"
+                 Classes="dim"
+                 FontSize="11"
+                 VerticalAlignment="Center"/>
+      <TextBox Grid.Column="3"
+               Height="28"
+               Text="{Binding CollectionName, Mode=TwoWay}"
+               IsEnabled="{Binding CanRenameCollection}"
+               FontSize="11"
+               FontFamily="{DynamicResource Fonts.Monospace}"/>
+
+      <TextBlock Grid.Column="5"
                  Text="{Binding SaveStatusText}"
                  Classes="dim"
                  FontSize="11"
+                 VerticalAlignment="Center"
                  HorizontalAlignment="Right"/>
+      <Button Grid.Column="6"
+              Classes="flat"
+              Padding="12,0"
+              Height="28"
+              Command="{Binding SaveCommand}"
+              IsEnabled="{Binding CanSave}">
+        <TextBlock Text="{DynamicResource Text.Request.Save}" FontSize="11"/>
+      </Button>
     </Grid>
 
     <!-- ──────────── Request Editor Tabs ──────────── -->

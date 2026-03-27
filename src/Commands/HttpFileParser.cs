@@ -202,6 +202,7 @@ public static class HttpFileParser
             // Strip optional HTTP/1.1 suffix.
             var vi = url.LastIndexOf(" HTTP/", StringComparison.OrdinalIgnoreCase);
             entry.Url = vi >= 0 ? url[..vi].Trim() : url.Trim();
+            SplitUrlAndQueryParams(entry);
             return true;
         }
 
@@ -211,6 +212,7 @@ public static class HttpFileParser
         {
             entry.Method = "GET";
             entry.Url    = parts[0].Trim();
+            SplitUrlAndQueryParams(entry);
             return true;
         }
 
@@ -236,6 +238,35 @@ public static class HttpFileParser
             Name  = line[1..eq].Trim(), // skip '@'
             Value = line[(eq + 1)..].Trim()
         };
+    }
+
+    private static void SplitUrlAndQueryParams(HttpRequestEntry entry)
+    {
+        var url = entry.Url;
+        var qIndex = url.IndexOf('?');
+        if (qIndex < 0) return;
+
+        var baseUrl = url[..qIndex];
+        var query = url[(qIndex + 1)..];
+        entry.Url = baseUrl;
+
+        entry.QueryParams.Clear();
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var idx = part.IndexOf('=');
+            if (idx < 0)
+            {
+                entry.QueryParams.Add(new NamedValue { Key = part, Value = string.Empty, Enabled = true });
+                continue;
+            }
+
+            entry.QueryParams.Add(new NamedValue
+            {
+                Key = part[..idx],
+                Value = part[(idx + 1)..],
+                Enabled = true
+            });
+        }
     }
 
     private static bool TryParseName(string line,

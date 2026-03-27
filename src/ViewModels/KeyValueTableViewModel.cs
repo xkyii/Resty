@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kx.Resty.Models;
@@ -20,11 +22,13 @@ public partial class KeyValueRow : ObservableObject
 public partial class KeyValueTableViewModel : ObservableObject
 {
     public ObservableCollection<KeyValueRow> Items { get; }
+    public event Action? Changed;
 
     /// <summary>Creates a table backed by a fresh empty collection.</summary>
     public KeyValueTableViewModel()
     {
         Items = [];
+        Items.CollectionChanged += OnItemsChanged;
     }
 
     /// <summary>Populates the table from an existing list of <see cref="NamedValue"/>s.
@@ -48,4 +52,22 @@ public partial class KeyValueTableViewModel : ObservableObject
     public List<NamedValue> ToNamedValues() =>
         Items.Select(r => new NamedValue { Enabled = r.IsEnabled, Key = r.Key, Value = r.Value })
              .ToList();
+
+    private void OnItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems is not null)
+            foreach (var item in e.NewItems)
+                if (item is KeyValueRow row)
+                    row.PropertyChanged += OnRowPropertyChanged;
+
+        if (e.OldItems is not null)
+            foreach (var item in e.OldItems)
+                if (item is KeyValueRow row)
+                    row.PropertyChanged -= OnRowPropertyChanged;
+
+        Changed?.Invoke();
+    }
+
+    private void OnRowPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        => Changed?.Invoke();
 }

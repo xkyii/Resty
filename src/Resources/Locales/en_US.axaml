@@ -29,10 +29,22 @@
   <x:String x:Key="Text.Panel.History">History</x:String>
   <x:String x:Key="Text.Panel.NewCollection">New Collection</x:String>
   <x:String x:Key="Text.Panel.ImportCollection">Import Collection</x:String>
+  <x:String x:Key="Text.Panel.RenameCollection">Rename</x:String>
+  <x:String x:Key="Text.Panel.RenameCollectionPrompt">Enter a new collection name</x:String>
+  <x:String x:Key="Text.Panel.EnterCollectionName">Collection name</x:String>
+  <x:String x:Key="Text.Panel.Renaming">Renaming...</x:String>
+  <x:String x:Key="Text.Panel.RenameFailedDuplicate">Rename failed: This name already exists</x:String>
   <x:String x:Key="Text.Panel.NewRequest">New Request</x:String>
 
+  <!-- Common -->
+  <x:String x:Key="Text.Common.OK">OK</x:String>
+  <x:String x:Key="Text.Common.Cancel">Cancel</x:String>
+
   <!-- RequestTab -->
+  <x:String x:Key="Text.Request.Name">Name:</x:String>
+  <x:String x:Key="Text.Request.NamePlaceholder">Request name</x:String>
   <x:String x:Key="Text.Request.Collection">Collection:</x:String>
+  <x:String x:Key="Text.Request.Save">Save</x:String>
   <x:String x:Key="Text.Request.SaveState.Saved">Saved</x:String>
   <x:String x:Key="Text.Request.SaveState.Unsaved">Unsaved changes</x:String>
   <x:String x:Key="Text.Request.SaveState.Unlinked">Unsaved request</x:String>

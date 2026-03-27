@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            xmlns:vm="using:Kx.Resty.ViewModels"
+            mc:Ignorable="d" d:DesignWidth="380" d:DesignHeight="180"
+            x:Class="Kx.Resty.Views.RenameDialog"
+            x:DataType="vm:RenameDialogViewModel">
+
+  <StackPanel Margin="16" Spacing="8" VerticalAlignment="Stretch">
+    <!-- Label -->
+    <TextBlock Text="{DynamicResource Text.Panel.RenameCollectionPrompt}"
+               Foreground="{DynamicResource Brush.Foreground}"
+               FontSize="13"/>
+
+    <!-- Input field -->
+    <TextBox x:Name="NameInput"
+             Text="{Binding Name}"
+             Watermark="{DynamicResource Text.Panel.EnterCollectionName}"
+             BorderThickness="1"
+             BorderBrush="{DynamicResource Brush.Border0}"
+             Padding="8,6"
+             FontSize="13"/>
+
+    <!-- Buttons -->
+    <StackPanel Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Spacing="8"
+                Margin="0,12,0,0">
+      <Button x:Name="CancelButton"
+              Content="{DynamicResource Text.Common.Cancel}"
+              MinWidth="72"
+              IsCancel="True"/>
+      <Button x:Name="OkButton"
+              Content="{DynamicResource Text.Common.OK}"
+              MinWidth="72"
+              IsDefault="True"
+              IsEnabled="{Binding !InProgress}"/>
+    </StackPanel>
+
+    <!-- Progress display -->
+    <TextBlock Text="{Binding ProgressDescription}"
+               IsVisible="{Binding ProgressDescription, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+               Foreground="{DynamicResource Brush.Warning}"
+               FontSize="12"
+               Margin="0,4,0,0"/>
+  </StackPanel>
+
+</UserControl>

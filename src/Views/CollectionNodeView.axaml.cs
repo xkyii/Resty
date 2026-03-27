@@ -1,5 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.VisualTree;
 using Kx.Resty.Models;
 
@@ -24,5 +27,17 @@ public partial class CollectionNodeView : UserControl
 
         var panelView = this.FindAncestorOfType<CollectionPanel>();
         (panelView?.DataContext as ViewModels.CollectionPanel)?.OpenRequest(entry, collection);
+    }
+
+    private async void OnRenameCollectionClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not CollectionTreeNode { Collection: { } collection }) return;
+
+        var panelView = this.FindAncestorOfType<CollectionPanel>();
+        var panelVM = panelView?.DataContext as ViewModels.CollectionPanel;
+        var owner = TopLevel.GetTopLevel(this) as Window;
+        if (panelVM is null || owner is null) return;
+
+        await RenameDialog.ShowAsync(owner, collection, panelVM.RenameCollection);
     }
 }

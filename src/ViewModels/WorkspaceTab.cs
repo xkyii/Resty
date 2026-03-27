@@ -51,11 +51,12 @@ public partial class WorkspaceTab : ObservableObject, IDisposable
             return;
         }
 
+        var request = new RequestTab(entry, collection);
         var tab = new RequestTabItem
         {
-            Title   = entry.DisplayName,
-            Content = new RequestTab(entry, collection)
+            Content = request
         };
+        WireTabState(tab, request);
         OpenRequests.Add(tab);
         SetActiveRequest(tab);
     }
@@ -73,13 +74,15 @@ public partial class WorkspaceTab : ObservableObject, IDisposable
             Commands.HttpFileWriter.Write(collection);
         }
 
+        var request = entry is not null
+            ? new RequestTab(entry, collection!)
+            : new RequestTab();
+
         var tab = new RequestTabItem
         {
-            Title   = "New Request",
-            Content = entry is not null
-                ? new RequestTab(entry, collection!)
-                : new RequestTab()
+            Content = request
         };
+        WireTabState(tab, request);
         OpenRequests.Add(tab);
         SetActiveRequest(tab);
     }
@@ -104,6 +107,13 @@ public partial class WorkspaceTab : ObservableObject, IDisposable
         foreach (var t in OpenRequests)
             t.IsActive = ReferenceEquals(t, tab);
         ActiveRequest = tab;
+    }
+
+    private static void WireTabState(RequestTabItem tab, RequestTab request)
+    {
+        void RefreshTitle() => tab.Title = request.TabTitle;
+        request.TabStateChanged += RefreshTitle;
+        RefreshTitle();
     }
 
     partial void OnActiveRequestChanged(RequestTabItem? value)

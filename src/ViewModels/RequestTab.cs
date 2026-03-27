@@ -33,23 +33,25 @@ public partial class RequestTab : ObservableObject
 
     private readonly HttpRequestEntry _entry;
     private readonly HttpCollection?  _collection;   // null = unsaved new request
-    private Timer?                    _saveTimer;
+    private bool _suppressDirtyMark;
 
     /// <summary>Exposes the backing model (used by WorkspaceTab to de-duplicate open tabs).</summary>
     public HttpRequestEntry Entry => _entry;
 
+    public event Action? TabStateChanged;
+
     // ─── Constructors ─────────────────────────────────────────────────────────
 
     /// <summary>Opens an existing request for editing.</summary>
-    [ObservableProperty] private string           _collectionName = string.Empty;
-    [ObservableProperty] private bool             _isSaved;
-    [ObservableProperty] private string           _saveStatusText = string.Empty;
     public RequestTab(HttpRequestEntry entry, HttpCollection collection)
     {
         _entry      = entry;
         _collection = collection;
 
-        CollectionName = Path.GetFileName(collection.FilePath);
+        _suppressDirtyMark = true;
+
+        CollectionName = Path.GetFileNameWithoutExtension(collection.FilePath);
+        RequestName    = entry.Name ?? string.Empty;
         IsSaved        = true;
         UpdateSaveStatusText();
 
@@ -60,8 +62,10 @@ public partial class RequestTab : ObservableObject
         HeadersTable = new KeyValueTableViewModel(entry.Headers);
         ParamsTable  = new KeyValueTableViewModel(entry.QueryParams);
 
-        HeadersTable.Items.CollectionChanged += (_, _) => ScheduleSave();
-        ParamsTable.Items.CollectionChanged  += (_, _) => ScheduleSave();
+        HeadersTable.Changed += MarkDirty;
+        ParamsTable.Changed  += MarkDirty;
+
+        _suppressDirtyMark = false;
     }
 
     /// <summary>Creates a new unsaved request (not linked to any file).</summary>
@@ -75,8 +79,12 @@ public partial class RequestTab : ObservableObject
         ParamsTable     = new KeyValueTableViewModel();
 
         CollectionName = App.Text("Request.Collection.Unlinked");
+        RequestName    = string.Empty;
         IsSaved        = false;
         UpdateSaveStatusText();
+
+        HeadersTable.Changed += MarkDirty;
+        ParamsTable.Changed  += MarkDirty;
     }
 
     // ─── Request editor state ─────────────────────────────────────────────────
@@ -87,6 +95,26 @@ public partial class RequestTab : ObservableObject
     [ObservableProperty] private HttpMethodOption _selectedMethod = null!;
     [ObservableProperty] private string           _url            = string.Empty;
     [ObservableProperty] private string           _body           = string.Empty;
+    [ObservableProperty] private string           _requestName    = string.Empty;
+    [ObservableProperty] private string           _collectionName = string.Empty;
+    [ObservableProperty] private bool             _isSaved;
+    [ObservableProperty] private string           _saveStatusText = string.Empty;
+
+    public bool CanSave => _collection is not null;
+    public bool CanRenameCollection => _collection is not null;
+
+    public string TabTitle
+    {
+        get
+        {
+            var baseTitle = !string.IsNullOrWhiteSpace(RequestName)
+                ? RequestName.Trim()
+                : string.IsNullOrWhiteSpace(Url)
+                    ? "New Request"
+                    : $"{SelectedMethod.Name} {Url}";
+            return IsSaved ? baseTitle : $"{baseTitle} *";
+        }
+    }
 
     // Request sub-tab: 0=Params, 1=Headers, 2=Body, 3=Auth
     [ObservableProperty] private int _requestTabIndex;
@@ -107,42 +135,57 @@ public partial class RequestTab : ObservableObject
     partial void OnSelectedMethodChanged(HttpMethodOption value)
     {
         _entry.Method = value.Name;
-        IsSaved = false;
-        ScheduleSave();
+        MarkDirty();
+        NotifyTabStateChanged();
     }
 
     partial void OnUrlChanged(string value)
     {
         _entry.Url = value;
-        IsSaved = false;
-        ScheduleSave();
+        MarkDirty();
+        NotifyTabStateChanged();
     }
 
     partial void OnBodyChanged(string value)
     {
         _entry.Body = value;
-        IsSaved = false;
-        ScheduleSave();
+        MarkDirty();
+    }
+
+    partial void OnRequestNameChanged(string value)
+    {
+        _entry.Name = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        MarkDirty();
+        NotifyTabStateChanged();
+    }
+
+    partial void OnCollectionNameChanged(string value)
+    {
+        if (_collection is null) return;
+        MarkDirty();
     }
 
     partial void OnIsSavedChanged(bool value)
-        => UpdateSaveStatusText();
-
-    // ─── Debounced write-back ─────────────────────────────────────────────────
-
-    private void ScheduleSave()
     {
-        if (_collection is null) return;
-        _saveTimer?.Dispose();
-        _saveTimer = new Timer(_ => WriteBack(), null, 500, Timeout.Infinite);
+        UpdateSaveStatusText();
+        NotifyTabStateChanged();
     }
 
-    private void WriteBack()
+    // ─── Save ─────────────────────────────────────────────────────────────────
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    public void Save()
     {
         if (_collection is null) return;
-        // Must run on UI thread to safely read ObservableCollection items.
         Dispatcher.UIThread.Post(() =>
         {
+            ApplyCollectionRenameIfNeeded();
+
+            _entry.Name = string.IsNullOrWhiteSpace(RequestName) ? null : RequestName.Trim();
+            _entry.Method = SelectedMethod.Name;
+            _entry.Url = Url;
+            _entry.Body = Body;
+
             _entry.Headers.Clear();
             _entry.Headers.AddRange(HeadersTable.ToNamedValues());
             _entry.QueryParams.Clear();
@@ -194,6 +237,47 @@ public partial class RequestTab : ObservableObject
         HasResponse  = true;
         IsSending    = false;
     }
+
+    private void ApplyCollectionRenameIfNeeded()
+    {
+        if (_collection is null) return;
+
+        var originalPath = _collection.FilePath;
+        var dir = Path.GetDirectoryName(originalPath);
+        if (string.IsNullOrWhiteSpace(dir)) return;
+
+        var targetName = SanitizeFileName(CollectionName);
+        if (string.IsNullOrWhiteSpace(targetName))
+            targetName = "collection";
+
+        var targetPath = Path.Combine(dir, targetName + ".http");
+        if (string.Equals(originalPath, targetPath, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (File.Exists(targetPath))
+            return;
+
+        File.Move(originalPath, targetPath);
+        _collection.FilePath = targetPath;
+        _collection.Name = targetName;
+        CollectionName = targetName;
+    }
+
+    private static string SanitizeFileName(string input)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = input.Trim().Select(c => invalid.Contains(c) ? '-' : c).ToArray();
+        return new string(chars).Trim();
+    }
+
+    private void MarkDirty()
+    {
+        if (_suppressDirtyMark) return;
+        IsSaved = false;
+    }
+
+    private void NotifyTabStateChanged()
+        => TabStateChanged?.Invoke();
 
     private void UpdateSaveStatusText()
     {

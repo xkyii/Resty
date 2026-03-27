@@ -98,6 +98,41 @@ public partial class CollectionPanel : ObservableObject
         File.Copy(sourcePath, destPath);
     }
 
+    public bool RenameCollection(HttpCollection collection, string newName)
+    {
+        if (collection is null) return false;
+        if (string.IsNullOrWhiteSpace(newName)) return false;
+
+        var oldPath = collection.FilePath;
+        var dir = Path.GetDirectoryName(oldPath);
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir)) return false;
+
+        var sanitized = SanitizeFileName(newName);
+        if (string.IsNullOrWhiteSpace(sanitized)) return false;
+
+        var newPath = Path.Combine(dir, sanitized + ".http");
+        if (string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase))
+        {
+            collection.Name = sanitized;
+            return true;
+        }
+
+        if (File.Exists(newPath))
+        {
+            var i = 1;
+            while (File.Exists(newPath))
+            {
+                newPath = Path.Combine(dir, $"{sanitized}-{i}.http");
+                i++;
+            }
+        }
+
+        File.Move(oldPath, newPath);
+        collection.FilePath = newPath;
+        collection.Name = Path.GetFileNameWithoutExtension(newPath);
+        return true;
+    }
+
     [RelayCommand]
     public void SelectEnvironment(EnvironmentSet env)
     {
@@ -179,4 +214,11 @@ public partial class CollectionPanel : ObservableObject
 
     private static bool Contains(string value, string query)
         => value.Contains(query, StringComparison.OrdinalIgnoreCase);
+
+    private static string SanitizeFileName(string input)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = input.Trim().Select(c => invalid.Contains(c) ? '-' : c).ToArray();
+        return new string(chars).Trim();
+    }
 }

@@ -9,6 +9,13 @@
 
     <!-- ── Node header row ──────────────────────────────────────── -->
     <Border Height="26" Cursor="Hand" Background="Transparent">
+      <Border.ContextMenu>
+        <ContextMenu>
+          <MenuItem Header="{DynamicResource Text.Panel.RenameCollection}"
+                    IsVisible="{Binding !IsDirectory}"
+                    Click="OnRenameCollectionClicked"/>
+        </ContextMenu>
+      </Border.ContextMenu>
       <Border.Styles>
         <Style Selector="Border:pointerover">
           <Setter Property="Background" Value="{DynamicResource Brush.AccentHovered}"/>

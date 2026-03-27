@@ -29,10 +29,22 @@
   <x:String x:Key="Text.Panel.History">历史</x:String>
   <x:String x:Key="Text.Panel.NewCollection">新建集合</x:String>
   <x:String x:Key="Text.Panel.ImportCollection">导入集合</x:String>
+  <x:String x:Key="Text.Panel.RenameCollection">重命名</x:String>
+  <x:String x:Key="Text.Panel.RenameCollectionPrompt">请输入新的集合名称</x:String>
+  <x:String x:Key="Text.Panel.EnterCollectionName">集合名称</x:String>
+  <x:String x:Key="Text.Panel.Renaming">正在重命名...</x:String>
+  <x:String x:Key="Text.Panel.RenameFailedDuplicate">重命名失败：该名称已存在</x:String>
   <x:String x:Key="Text.Panel.NewRequest">新建请求</x:String>
 
+  <!-- Common -->
+  <x:String x:Key="Text.Common.OK">确定</x:String>
+  <x:String x:Key="Text.Common.Cancel">取消</x:String>
+
   <!-- RequestTab -->
+  <x:String x:Key="Text.Request.Name">名称：</x:String>
+  <x:String x:Key="Text.Request.NamePlaceholder">请求名称</x:String>
   <x:String x:Key="Text.Request.Collection">集合：</x:String>
+  <x:String x:Key="Text.Request.Save">保存</x:String>
   <x:String x:Key="Text.Request.SaveState.Saved">已保存</x:String>
   <x:String x:Key="Text.Request.SaveState.Unsaved">有未保存更改</x:String>
   <x:String x:Key="Text.Request.SaveState.Unlinked">未保存请求</x:String>

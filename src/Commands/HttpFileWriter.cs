@@ -19,15 +19,19 @@ public static class HttpFileWriter
         if (collection.Variables.Count > 0)
             sb.AppendLine();
 
-        // Requests separated by ###.
+        // Requests separated by ###, using name after marker when available.
         for (int i = 0; i < collection.Requests.Count; i++)
         {
-            if (i > 0)
+            var req = collection.Requests[i];
+            if (i > 0 || !string.IsNullOrWhiteSpace(req.Name))
             {
-                sb.AppendLine("###");
+                sb.Append("###");
+                if (!string.IsNullOrWhiteSpace(req.Name))
+                    sb.Append(' ').Append(req.Name!.Trim());
+                sb.AppendLine();
                 sb.AppendLine();
             }
-            WriteRequest(sb, collection.Requests[i]);
+            WriteRequest(sb, req);
         }
 
         var dir = Path.GetDirectoryName(collection.FilePath);
@@ -44,10 +48,6 @@ public static class HttpFileWriter
     {
         var ann = req.Annotations;
 
-        // Name comment.
-        if (!string.IsNullOrWhiteSpace(req.Name))
-            sb.AppendLine($"# @name {req.Name}");
-
         // Behaviour annotations.
         if (ann.NoLog)          sb.AppendLine("// @no-log");
         if (ann.NoRedirect)     sb.AppendLine("// @no-redirect");
@@ -59,7 +59,7 @@ public static class HttpFileWriter
             sb.AppendLine($"// @connection-timeout {ann.ConnectionTimeoutSeconds.Value}");
 
         // Request line.
-        sb.AppendLine($"{req.Method} {req.Url}");
+        sb.AppendLine($"{req.Method} {BuildUrlWithParams(req)}");
 
         // Headers (only enabled ones).
         foreach (var h in req.Headers.Where(h => h.Enabled && !string.IsNullOrEmpty(h.Key)))
@@ -78,5 +78,27 @@ public static class HttpFileWriter
         }
 
         sb.AppendLine();
+    }
+
+    private static string BuildUrlWithParams(HttpRequestEntry req)
+    {
+        var enabledParams = req.QueryParams
+            .Where(p => p.Enabled && !string.IsNullOrWhiteSpace(p.Key))
+            .ToList();
+        if (enabledParams.Count == 0)
+            return req.Url;
+
+        var sb = new StringBuilder(req.Url);
+        var separator = req.Url.Contains('?') ? '&' : '?';
+        foreach (var p in enabledParams)
+        {
+            sb.Append(separator);
+            sb.Append(p.Key);
+            if (!string.IsNullOrEmpty(p.Value))
+                sb.Append('=').Append(p.Value);
+            separator = '&';
+        }
+
+        return sb.ToString();
     }
 }
