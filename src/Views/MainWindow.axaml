@@ -85,12 +85,18 @@
                   </Style>
                 </Border.Styles>
                 <Grid ColumnDefinitions="*,24">
-                  <TextBlock Grid.Column="0"
-                             Text="{Binding Name}"
-                             Margin="12,0,0,0"
-                             TextTrimming="CharacterEllipsis"
-                             VerticalAlignment="Center"
-                             FontSize="12"/>
+                  <Button Grid.Column="0"
+                          Classes="icon_button"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Left"
+                          Command="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).SwitchWorkspaceCommand}"
+                          CommandParameter="{Binding}">
+                    <TextBlock Text="{Binding Name}"
+                               Margin="12,0,0,0"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"
+                               FontSize="12"/>
+                  </Button>
                   <Button Grid.Column="1"
                           Classes="icon_button"
                           Width="20" Height="20"
@@ -186,12 +192,18 @@
                       </Style>
                     </Border.Styles>
                     <Grid ColumnDefinitions="*,22">
-                      <TextBlock Grid.Column="0"
-                                 Text="{Binding Title}"
-                                 Margin="10,0,0,0"
-                                 TextTrimming="CharacterEllipsis"
-                                 VerticalAlignment="Center"
-                                 FontSize="11"/>
+                      <Button Grid.Column="0"
+                              Classes="icon_button"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Left"
+                              Command="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).ActiveWorkspace.SwitchRequestCommand}"
+                              CommandParameter="{Binding}">
+                        <TextBlock Text="{Binding Title}"
+                                   Margin="10,0,0,0"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center"
+                                   FontSize="11"/>
+                      </Button>
                       <Button Grid.Column="1"
                               Classes="icon_button"
                               Width="18" Height="18"
@@ -222,12 +234,21 @@
           <!-- Welcome page (no workspace open) -->
           <v:Welcome DataContext="{Binding}" IsVisible="{Binding !HasWorkspaces}"/>
 
-          <!-- No request open placeholder -->
-          <TextBlock Text="Select a request or create a new one"
-                     Classes="dim"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center"
-                     IsVisible="{Binding !HasActiveRequest}"/>
+          <!-- No request open (workspace open, no active request) -->
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="6"
+                      IsVisible="{Binding HasWorkspacesButNoRequest}">
+            <TextBlock Text="{DynamicResource Text.Empty.NoRequest}"
+                       Classes="dim"
+                       HorizontalAlignment="Center"
+                       FontSize="14"/>
+            <TextBlock Text="{DynamicResource Text.Empty.NoRequest.Sub}"
+                       Classes="dim"
+                       HorizontalAlignment="Center"
+                       FontSize="12"
+                       Opacity="0.6"/>
+          </StackPanel>
 
           <!-- Active request editor -->
           <ContentPresenter Content="{Binding ActiveWorkspace.ActiveRequest.Content}"

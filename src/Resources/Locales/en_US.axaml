@@ -13,6 +13,13 @@
   <x:String x:Key="Text.Welcome.NewRequest">New Request</x:String>
   <x:String x:Key="Text.Welcome.NewCollection">New Collection</x:String>
 
+  <x:String x:Key="Text.Welcome.OpenDirectory">Open Directory</x:String>
+  <x:String x:Key="Text.Welcome.OpenDirectoryHint">Open a directory containing .http collections</x:String>
+
+  <!-- Empty states -->
+  <x:String x:Key="Text.Empty.NoRequest">Select a request to start editing</x:String>
+  <x:String x:Key="Text.Empty.NoRequest.Sub">Click a request in the sidebar, or create one in the current collection</x:String>
+
   <!-- CollectionPanel -->
   <x:String x:Key="Text.Panel.Search">Search...</x:String>
   <x:String x:Key="Text.Panel.Collections">Collections</x:String>

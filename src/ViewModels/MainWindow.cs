@@ -15,14 +15,20 @@ public partial class MainWindow : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasWorkspaces))]
     [NotifyPropertyChangedFor(nameof(HasActiveRequest))]
+    [NotifyPropertyChangedFor(nameof(HasWorkspacesButNoRequest))]
     private WorkspaceTab? _activeWorkspace;
 
-    public bool HasWorkspaces    => Workspaces.Count > 0;
-    public bool HasActiveRequest => ActiveWorkspace?.ActiveRequest is not null;
+    public bool HasWorkspaces             => Workspaces.Count > 0;
+    public bool HasActiveRequest          => ActiveWorkspace?.ActiveRequest is not null;
+    public bool HasWorkspacesButNoRequest => HasWorkspaces && !HasActiveRequest;
 
     public MainWindow()
     {
-        Workspaces.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasWorkspaces));
+        Workspaces.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasWorkspaces));
+            OnPropertyChanged(nameof(HasWorkspacesButNoRequest));
+        };
     }
 
     // ─── Commands ─────────────────────────────────────────────────────────────
@@ -58,6 +64,9 @@ public partial class MainWindow : ObservableObject
     }
 
     [RelayCommand]
+    public void SwitchWorkspace(WorkspaceTab ws) => SetActiveWorkspace(ws);
+
+    [RelayCommand]
     public void CloseWorkspace(WorkspaceTab ws)
     {
         var idx = Workspaces.IndexOf(ws);
@@ -79,12 +88,16 @@ public partial class MainWindow : ObservableObject
     partial void OnActiveWorkspaceChanged(WorkspaceTab? value)
     {
         OnPropertyChanged(nameof(HasActiveRequest));
+        OnPropertyChanged(nameof(HasWorkspacesButNoRequest));
         // Forward active-request change notifications from the new workspace.
         if (value is not null)
             value.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName is nameof(WorkspaceTab.ActiveRequest))
+                {
                     OnPropertyChanged(nameof(HasActiveRequest));
+                    OnPropertyChanged(nameof(HasWorkspacesButNoRequest));
+                }
             };
     }
 }

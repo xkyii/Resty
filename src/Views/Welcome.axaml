@@ -28,29 +28,24 @@
                  Text="{DynamicResource Text.Welcome.Subtitle}"/>
 
       <!-- Action buttons -->
-      <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0" HorizontalAlignment="Center">
+      <StackPanel Orientation="Vertical" Spacing="8" Margin="0,16,0,0" HorizontalAlignment="Center">
         <Button Classes="flat primary"
                 Padding="20,8"
                 Height="36"
+                HorizontalAlignment="Center"
                 Command="{Binding OpenDirectoryCommand}">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <Path Width="14" Height="14" Data="{StaticResource Icons.Folder}" Fill="White"/>
-            <TextBlock Text="Open Directory"
+            <TextBlock Text="{DynamicResource Text.Welcome.OpenDirectory}"
                        Foreground="White"
                        VerticalAlignment="Center"/>
           </StackPanel>
         </Button>
-
-        <Button Classes="flat"
-                Padding="20,8"
-                Height="36"
-                Command="{Binding OpenDirectoryCommand}">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <Path Width="14" Height="14" Data="{StaticResource Icons.Add}"/>
-            <TextBlock Text="{DynamicResource Text.Welcome.NewRequest}"
-                       VerticalAlignment="Center"/>
-          </StackPanel>
-        </Button>
+        <TextBlock HorizontalAlignment="Center"
+                   FontSize="12"
+                   Foreground="{DynamicResource Brush.FG2}"
+                   Text="{DynamicResource Text.Welcome.OpenDirectoryHint}"
+                   Opacity="0.7"/>
       </StackPanel>
     </StackPanel>
   </Grid>

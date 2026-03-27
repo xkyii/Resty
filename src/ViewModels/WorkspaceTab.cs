@@ -62,14 +62,28 @@ public partial class WorkspaceTab : ObservableObject, IDisposable
     [RelayCommand]
     public void NewRequest()
     {
+        var collection = SidePanel.SelectedCollection;
+        HttpRequestEntry? entry = null;
+
+        if (collection is not null)
+        {
+            entry = new HttpRequestEntry();
+            collection.Requests.Add(entry);
+        }
+
         var tab = new RequestTabItem
         {
             Title   = "New Request",
-            Content = new RequestTab()
+            Content = entry is not null
+                ? new RequestTab(entry, collection!)
+                : new RequestTab()
         };
         OpenRequests.Add(tab);
         SetActiveRequest(tab);
     }
+
+    [RelayCommand]
+    public void SwitchRequest(RequestTabItem tab) => SetActiveRequest(tab);
 
     [RelayCommand]
     public void CloseRequest(RequestTabItem tab)

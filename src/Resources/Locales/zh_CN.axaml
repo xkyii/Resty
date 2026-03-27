@@ -13,6 +13,13 @@
   <x:String x:Key="Text.Welcome.NewRequest">新建请求</x:String>
   <x:String x:Key="Text.Welcome.NewCollection">新建集合</x:String>
 
+  <x:String x:Key="Text.Welcome.OpenDirectory">打开目录</x:String>
+  <x:String x:Key="Text.Welcome.OpenDirectoryHint">打开包含 .http 集合文件的目录</x:String>
+
+  <!-- 空状态 -->
+  <x:String x:Key="Text.Empty.NoRequest">从左侧选择一个请求开始编辑</x:String>
+  <x:String x:Key="Text.Empty.NoRequest.Sub">点击左侧集合中的请求，或在当前集合中新建请求</x:String>
+
   <!-- CollectionPanel -->
   <x:String x:Key="Text.Panel.Search">搜索...</x:String>
   <x:String x:Key="Text.Panel.Collections">集合</x:String>

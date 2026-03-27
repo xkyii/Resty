@@ -7,8 +7,9 @@ namespace Kx.Resty.ViewModels;
 
 public partial class CollectionPanel : ObservableObject
 {
-    [ObservableProperty] private string         _searchText       = string.Empty;
+    [ObservableProperty] private string          _searchText        = string.Empty;
     [ObservableProperty] private EnvironmentSet? _activeEnvironment;
+    [ObservableProperty] private HttpCollection? _selectedCollection;
 
     public ObservableCollection<CollectionTreeNode> RootNodes    { get; } = [];
     public ObservableCollection<EnvironmentSet>     Environments { get; } = [];
@@ -21,7 +22,10 @@ public partial class CollectionPanel : ObservableObject
 
     /// <summary>Called from CollectionNodeView code-behind when a request row is tapped.</summary>
     public void OpenRequest(HttpRequestEntry entry, HttpCollection collection)
-        => OnRequestOpen?.Invoke(entry, collection);
+    {
+        SelectedCollection = collection;
+        OnRequestOpen?.Invoke(entry, collection);
+    }
 
     [RelayCommand]
     public void SelectEnvironment(EnvironmentSet env)
