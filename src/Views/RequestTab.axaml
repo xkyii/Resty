@@ -95,11 +95,16 @@
       <Border Grid.Row="0" Padding="12,8">
         <Grid>
           <!-- Params -->
-          <v:KeyValueTable IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=0}"/>
+          <Grid IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=0}">
+            <v:KeyValueTable DataContext="{Binding ParamsTable}"/>
+          </Grid>
           <!-- Headers -->
-          <v:KeyValueTable IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=1}"/>
+          <Grid IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=1}">
+            <v:KeyValueTable DataContext="{Binding HeadersTable}"/>
+          </Grid>
           <!-- Body -->
           <TextBox IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=2}"
+                   Text="{Binding Body, Mode=TwoWay}"
                    AcceptsReturn="True"
                    TextWrapping="NoWrap"
                    FontFamily="{DynamicResource Fonts.Monospace}"

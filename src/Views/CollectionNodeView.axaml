@@ -1,26 +1,26 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Kx.Resty.ViewModels"
+             xmlns:models="using:Kx.Resty.Models"
              xmlns:v="using:Kx.Resty.Views"
+             xmlns:c="using:Kx.Resty.Converters"
              x:Class="Kx.Resty.Views.CollectionNodeView"
-             x:DataType="vm:CollectionNode">
+             x:DataType="models:CollectionTreeNode">
   <StackPanel Orientation="Vertical">
-    <!-- Node row -->
-    <Border Height="26"
-            Cursor="Hand"
-            Background="Transparent">
+
+    <!-- ── Node header row ──────────────────────────────────────── -->
+    <Border Height="26" Cursor="Hand" Background="Transparent">
       <Border.Styles>
         <Style Selector="Border:pointerover">
           <Setter Property="Background" Value="{DynamicResource Brush.AccentHovered}"/>
         </Style>
       </Border.Styles>
       <Grid ColumnDefinitions="Auto,Auto,*">
-        <!-- Toggle / indent -->
+
+        <!-- Expand/collapse chevron -->
         <Button Grid.Column="0"
                 Classes="icon_button"
                 Width="28" Height="26"
                 Margin="8,0,0,0"
-                IsVisible="{Binding IsFolder}"
                 Command="{Binding ToggleExpandedCommand}">
           <Path Width="8" Height="8"
                 Data="{StaticResource Icons.Chevron.Down}">
@@ -29,19 +29,15 @@
             </Path.RenderTransform>
           </Path>
         </Button>
-        <Border Grid.Column="0" Width="28" IsVisible="{Binding !IsFolder}"/>
 
-        <!-- Icon or Method badge -->
+        <!-- Icon: folder (directory) or file icon (.http collection) -->
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
           <Path Width="12" Height="12"
                 Data="{StaticResource Icons.Folder}"
-                IsVisible="{Binding IsFolder}"/>
-          <Border Padding="4,0" Height="16" CornerRadius="3"
-                  IsVisible="{Binding !IsFolder}">
-            <TextBlock Text="{Binding Method}"
-                       FontSize="10" FontWeight="Bold"
-                       VerticalAlignment="Center"/>
-          </Border>
+                IsVisible="{Binding IsDirectory}"/>
+          <Path Width="12" Height="12"
+                Data="{StaticResource Icons.File}"
+                IsVisible="{Binding !IsDirectory}"/>
         </StackPanel>
 
         <!-- Name -->
@@ -53,15 +49,54 @@
       </Grid>
     </Border>
 
-    <!-- Children (folders only, shown when expanded) -->
-    <ItemsControl ItemsSource="{Binding Children}"
-                  IsVisible="{Binding IsExpanded}"
-                  Margin="12,0,0,0">
-      <ItemsControl.ItemTemplate>
-        <DataTemplate x:DataType="vm:CollectionNode">
-          <v:CollectionNodeView/>
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
+    <!-- ── Expanded children ────────────────────────────────────── -->
+    <StackPanel IsVisible="{Binding IsExpanded}" Margin="16,0,0,0">
+
+      <!-- Sub-folders / sibling .http files (IsDirectory = true) -->
+      <ItemsControl ItemsSource="{Binding Children}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:CollectionTreeNode">
+            <v:CollectionNodeView/>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Request entries (.http collection node) -->
+      <ItemsControl ItemsSource="{Binding Collection.Requests}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:HttpRequestEntry">
+            <Border Height="26"
+                    Cursor="Hand"
+                    Background="Transparent"
+                    Tapped="OnRequestEntryTapped">
+              <Border.Styles>
+                <Style Selector="Border:pointerover">
+                  <Setter Property="Background" Value="{DynamicResource Brush.AccentHovered}"/>
+                </Style>
+              </Border.Styles>
+              <Grid ColumnDefinitions="Auto,Auto,*">
+                <Border Grid.Column="0" Width="28"/>
+                <!-- HTTP method badge -->
+                <Border Grid.Column="1"
+                        Padding="4,0" Height="16" CornerRadius="3"
+                        Background="{Binding MethodBrushKey, Converter={x:Static c:BrushConverters.MethodBrush}}">
+                  <TextBlock Text="{Binding Method}"
+                             FontSize="9" FontWeight="Bold"
+                             Foreground="White"
+                             VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Grid.Column="2"
+                           Text="{Binding DisplayName}"
+                           FontSize="11"
+                           Margin="6,0,0,0"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+    </StackPanel>
   </StackPanel>
 </UserControl>

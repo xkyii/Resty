@@ -1,69 +1,90 @@
 using System.Collections.ObjectModel;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace Kx.Resty.ViewModels;
 
-public class RequestTabItem : ObservableObject
-{
-    public string Title
-    {
-        get;
-        set => SetProperty(ref field, value);
-    } = "New Request";
-
-    public RequestTab? Content
-    {
-        get;
-        set => SetProperty(ref field, value);
-    }
-}
-
 public partial class MainWindow : ObservableObject
 {
     public string Title => "Kx.Resty";
 
-    public ObservableCollection<RequestTabItem> Tabs { get; } = [];
+    public ObservableCollection<WorkspaceTab> Workspaces { get; } = [];
 
-    public RequestTabItem? ActiveTab
-    {
-        get;
-        set => SetProperty(ref field, value);
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasWorkspaces))]
+    [NotifyPropertyChangedFor(nameof(HasActiveRequest))]
+    private WorkspaceTab? _activeWorkspace;
 
-    public CollectionPanel SidePanel { get; } = new CollectionPanel();
-
-    public bool HasTabs => Tabs.Count > 0;
+    public bool HasWorkspaces    => Workspaces.Count > 0;
+    public bool HasActiveRequest => ActiveWorkspace?.ActiveRequest is not null;
 
     public MainWindow()
     {
-        Tabs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTabs));
+        Workspaces.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasWorkspaces));
     }
 
+    // ─── Commands ─────────────────────────────────────────────────────────────
+
     [RelayCommand]
-    public void NewRequest()
+    public async Task OpenDirectory()
     {
-        var tab = new RequestTabItem
+        var mainWindow =
+            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+            ?.MainWindow;
+        if (mainWindow is null) return;
+
+        var result = await mainWindow.StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions { Title = "Open Directory", AllowMultiple = false });
+
+        if (result.Count == 0) return;
+
+        var path = result[0].TryGetLocalPath();
+        if (string.IsNullOrEmpty(path)) return;
+
+        // Focus the existing workspace if already open.
+        var existing = Workspaces.FirstOrDefault(w => w.DirectoryPath == path);
+        if (existing is not null) { SetActiveWorkspace(existing); return; }
+
+        var ws = new WorkspaceTab
         {
-            Title = "New Request",
-            Content = new RequestTab()
+            DirectoryPath = path,
+            Name          = Path.GetFileName(path)
         };
-        Tabs.Add(tab);
-        ActiveTab = tab;
+        ws.StartScanning();
+        Workspaces.Add(ws);
+        SetActiveWorkspace(ws);
     }
 
     [RelayCommand]
-    public void CloseTab(RequestTabItem tab)
+    public void CloseWorkspace(WorkspaceTab ws)
     {
-        var idx = Tabs.IndexOf(tab);
-        Tabs.Remove(tab);
+        var idx = Workspaces.IndexOf(ws);
+        ws.Dispose();
+        Workspaces.Remove(ws);
 
-        if (Tabs.Count == 0)
-        {
-            ActiveTab = null;
-            return;
-        }
+        if (Workspaces.Count == 0) { ActiveWorkspace = null; return; }
+        SetActiveWorkspace(Workspaces[Math.Clamp(idx, 0, Workspaces.Count - 1)]);
+    }
 
-        ActiveTab = Tabs[Math.Clamp(idx, 0, Tabs.Count - 1)];
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    private void SetActiveWorkspace(WorkspaceTab? ws)
+    {
+        foreach (var w in Workspaces) w.IsActive = ReferenceEquals(w, ws);
+        ActiveWorkspace = ws;
+    }
+
+    partial void OnActiveWorkspaceChanged(WorkspaceTab? value)
+    {
+        OnPropertyChanged(nameof(HasActiveRequest));
+        // Forward active-request change notifications from the new workspace.
+        if (value is not null)
+            value.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName is nameof(WorkspaceTab.ActiveRequest))
+                    OnPropertyChanged(nameof(HasActiveRequest));
+            };
     }
 }

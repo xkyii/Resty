@@ -5,11 +5,6 @@ namespace Kx.Resty.ViewModels;
 
 public partial class Welcome : ObservableObject
 {
-    public MainWindow? Owner { get; set; }
-
-    [RelayCommand]
-    public void NewRequest()
-    {
-        Owner?.NewRequestCommand.Execute(null);
-    }
+    // Welcome.axaml uses x:DataType="vm:MainWindow" directly, so this class
+    // is kept as a placeholder for future use.
 }

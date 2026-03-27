@@ -60,23 +60,24 @@
         <Path Width="16" Height="16" Data="{StaticResource Icons.Resty}"/>
       </Button>
 
-      <!-- Tabs bar -->
+      <!-- Workspace tabs bar -->
       <ScrollViewer Grid.Column="2"
                     HorizontalScrollBarVisibility="Auto"
                     VerticalScrollBarVisibility="Disabled"
                     VerticalAlignment="Stretch">
-        <ItemsControl ItemsSource="{Binding Tabs}" VerticalAlignment="Stretch">
+        <ItemsControl ItemsSource="{Binding Workspaces}" VerticalAlignment="Stretch">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <StackPanel Orientation="Horizontal"/>
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:RequestTabItem">
+            <DataTemplate x:DataType="vm:WorkspaceTab">
               <Border MinWidth="140" MaxWidth="220" Height="32"
                       BorderThickness="0,0,1,0"
                       BorderBrush="{DynamicResource Brush.Border0}"
                       Background="Transparent"
+                      Classes.active_tab="{Binding IsActive}"
                       Cursor="Hand">
                 <Border.Styles>
                   <Style Selector="Border.active_tab">
@@ -85,7 +86,7 @@
                 </Border.Styles>
                 <Grid ColumnDefinitions="*,24">
                   <TextBlock Grid.Column="0"
-                             Text="{Binding Title}"
+                             Text="{Binding Name}"
                              Margin="12,0,0,0"
                              TextTrimming="CharacterEllipsis"
                              VerticalAlignment="Center"
@@ -94,7 +95,7 @@
                           Classes="icon_button"
                           Width="20" Height="20"
                           Margin="0,0,4,0"
-                          Command="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).CloseTabCommand}"
+                          Command="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).CloseWorkspaceCommand}"
                           CommandParameter="{Binding}">
                     <Path Width="8" Height="8" Data="{StaticResource Icons.Window.Close}"/>
                   </Button>
@@ -105,13 +106,13 @@
         </ItemsControl>
       </ScrollViewer>
 
-      <!-- New tab button -->
+      <!-- Open directory button -->
       <Button Grid.Column="3"
               Classes="icon_button"
               Width="32" Height="32"
-              ToolTip.Tip="{DynamicResource Text.Panel.NewRequest}"
-              Command="{Binding NewRequestCommand}">
-        <Path Width="14" Height="14" Data="{StaticResource Icons.Add}"/>
+              ToolTip.Tip="Open Directory"
+              Command="{Binding OpenDirectoryCommand}">
+        <Path Width="14" Height="14" Data="{StaticResource Icons.Folder}"/>
       </Button>
 
       <!-- Windows/Linux caption buttons -->
@@ -141,9 +142,9 @@
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
 
-      <!-- Left sidebar -->
+      <!-- Left sidebar (per-workspace) -->
       <v:CollectionPanel Grid.Column="0"
-                         DataContext="{Binding SidePanel}"
+                         DataContext="{Binding ActiveWorkspace.SidePanel}"
                          Background="{DynamicResource Brush.Sidebar}"/>
 
       <!-- Splitter -->
@@ -153,19 +154,91 @@
                     ResizeDirection="Columns"/>
 
       <!-- Right content -->
-      <Grid Grid.Column="2" Background="{DynamicResource Brush.Window}">
-        <!-- Welcome page when no tabs -->
-        <v:Welcome DataContext="{Binding}"/>
+      <Grid Grid.Column="2" Background="{DynamicResource Brush.Window}" RowDefinitions="32,*">
 
-        <!-- Active tab content -->
-        <ContentPresenter Content="{Binding ActiveTab.Content}"
-                          IsVisible="{Binding HasTabs}">
-          <ContentPresenter.DataTemplates>
-            <DataTemplate DataType="vm:RequestTab">
-              <v:RequestTab/>
-            </DataTemplate>
-          </ContentPresenter.DataTemplates>
-        </ContentPresenter>
+        <!-- ── Request sub-tab bar ─────────────────────────────────── -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource Brush.TitleBar}"
+                IsVisible="{Binding HasWorkspaces}"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource Brush.Border0}">
+        <Grid ColumnDefinitions="*,32">
+          <ScrollViewer Grid.Column="0"
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding ActiveWorkspace.OpenRequests}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:RequestTabItem">
+                  <Border MinWidth="120" MaxWidth="200" Height="32"
+                          BorderThickness="0,0,1,0"
+                          BorderBrush="{DynamicResource Brush.Border0}"
+                          Background="Transparent"
+                          Classes.active_tab="{Binding IsActive}"
+                          Cursor="Hand">
+                    <Border.Styles>
+                      <Style Selector="Border.active_tab">
+                        <Setter Property="Background" Value="{DynamicResource Brush.Window}"/>
+                      </Style>
+                    </Border.Styles>
+                    <Grid ColumnDefinitions="*,22">
+                      <TextBlock Grid.Column="0"
+                                 Text="{Binding Title}"
+                                 Margin="10,0,0,0"
+                                 TextTrimming="CharacterEllipsis"
+                                 VerticalAlignment="Center"
+                                 FontSize="11"/>
+                      <Button Grid.Column="1"
+                              Classes="icon_button"
+                              Width="18" Height="18"
+                              Margin="0,0,2,0"
+                              Command="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).ActiveWorkspace.CloseRequestCommand}"
+                              CommandParameter="{Binding}">
+                        <Path Width="7" Height="7" Data="{StaticResource Icons.Window.Close}"/>
+                      </Button>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <!-- New request button -->
+          <Button Grid.Column="1"
+                  Classes="icon_button"
+                  Width="32" Height="32"
+                  ToolTip.Tip="{DynamicResource Text.Panel.NewRequest}"
+                  Command="{Binding ActiveWorkspace.NewRequestCommand}">
+            <Path Width="12" Height="12" Data="{StaticResource Icons.Add}"/>
+          </Button>
+        </Grid>
+        </Border>
+
+        <!-- ── Editor / placeholder area ─────────────────────────── -->
+        <Grid Grid.Row="1">
+          <!-- Welcome page (no workspace open) -->
+          <v:Welcome DataContext="{Binding}" IsVisible="{Binding !HasWorkspaces}"/>
+
+          <!-- No request open placeholder -->
+          <TextBlock Text="Select a request or create a new one"
+                     Classes="dim"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     IsVisible="{Binding !HasActiveRequest}"/>
+
+          <!-- Active request editor -->
+          <ContentPresenter Content="{Binding ActiveWorkspace.ActiveRequest.Content}"
+                            IsVisible="{Binding HasActiveRequest}">
+            <ContentPresenter.DataTemplates>
+              <DataTemplate DataType="vm:RequestTab">
+                <v:RequestTab/>
+              </DataTemplate>
+            </ContentPresenter.DataTemplates>
+          </ContentPresenter>
+        </Grid>
       </Grid>
     </Grid>
   </Grid>

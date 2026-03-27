@@ -32,10 +32,10 @@
         <Button Classes="flat primary"
                 Padding="20,8"
                 Height="36"
-                Command="{Binding NewRequestCommand}">
+                Command="{Binding OpenDirectoryCommand}">
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Path Width="14" Height="14" Data="{StaticResource Icons.Add}" Fill="White"/>
-            <TextBlock Text="{DynamicResource Text.Welcome.NewRequest}"
+            <Path Width="14" Height="14" Data="{StaticResource Icons.Folder}" Fill="White"/>
+            <TextBlock Text="Open Directory"
                        Foreground="White"
                        VerticalAlignment="Center"/>
           </StackPanel>
@@ -43,10 +43,11 @@
 
         <Button Classes="flat"
                 Padding="20,8"
-                Height="36">
+                Height="36"
+                Command="{Binding OpenDirectoryCommand}">
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Path Width="14" Height="14" Data="{StaticResource Icons.Folder}"/>
-            <TextBlock Text="{DynamicResource Text.Welcome.NewCollection}"
+            <Path Width="14" Height="14" Data="{StaticResource Icons.Add}"/>
+            <TextBlock Text="{DynamicResource Text.Welcome.NewRequest}"
                        VerticalAlignment="Center"/>
           </StackPanel>
         </Button>

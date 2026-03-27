@@ -1,0 +1,99 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Kx.Resty.Models;
+
+namespace Kx.Resty.ViewModels;
+
+public partial class WorkspaceTab : ObservableObject, IDisposable
+{
+    public string DirectoryPath { get; init; } = string.Empty;
+    public string Name          { get; init; } = string.Empty;
+
+    public CollectionPanel SidePanel { get; } = new();
+
+    public ObservableCollection<RequestTabItem> OpenRequests { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasOpenRequests))]
+    private RequestTabItem? _activeRequest;
+
+    [ObservableProperty] private bool _isActive;
+
+    public bool HasOpenRequests => OpenRequests.Count > 0;
+
+    private Commands.WorkspaceScanner? _scanner;
+
+    public WorkspaceTab()
+    {
+        OpenRequests.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasOpenRequests));
+        SidePanel.OnRequestOpen = OpenRequest;
+    }
+
+    /// <summary>Starts scanning the directory and watching for changes.</summary>
+    public void StartScanning()
+    {
+        _scanner = new Commands.WorkspaceScanner(DirectoryPath, SidePanel);
+        _scanner.Start();
+    }
+
+    // ─── Open / close requests ────────────────────────────────────────────────
+
+    /// <summary>Opens (or focuses) a request entry in the sub-tab bar.</summary>
+    public void OpenRequest(HttpRequestEntry entry, HttpCollection collection)
+    {
+        // Re-use the existing tab if already open.
+        var existing = OpenRequests.FirstOrDefault(t => ReferenceEquals(t.Content?.Entry, entry));
+        if (existing is not null)
+        {
+            SetActiveRequest(existing);
+            return;
+        }
+
+        var tab = new RequestTabItem
+        {
+            Title   = entry.DisplayName,
+            Content = new RequestTab(entry, collection)
+        };
+        OpenRequests.Add(tab);
+        SetActiveRequest(tab);
+    }
+
+    [RelayCommand]
+    public void NewRequest()
+    {
+        var tab = new RequestTabItem
+        {
+            Title   = "New Request",
+            Content = new RequestTab()
+        };
+        OpenRequests.Add(tab);
+        SetActiveRequest(tab);
+    }
+
+    [RelayCommand]
+    public void CloseRequest(RequestTabItem tab)
+    {
+        var idx = OpenRequests.IndexOf(tab);
+        OpenRequests.Remove(tab);
+
+        if (OpenRequests.Count == 0) { ActiveRequest = null; return; }
+        SetActiveRequest(OpenRequests[Math.Clamp(idx, 0, OpenRequests.Count - 1)]);
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    private void SetActiveRequest(RequestTabItem? tab)
+    {
+        foreach (var t in OpenRequests)
+            t.IsActive = ReferenceEquals(t, tab);
+        ActiveRequest = tab;
+    }
+
+    partial void OnActiveRequestChanged(RequestTabItem? value)
+        => OnPropertyChanged(nameof(HasOpenRequests));
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public void Dispose() => _scanner?.Dispose();
+}
