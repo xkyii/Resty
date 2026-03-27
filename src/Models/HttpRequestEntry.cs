@@ -1,7 +1,12 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+
 namespace Kx.Resty.Models;
 
-public class HttpRequestEntry
+public partial class HttpRequestEntry : ObservableObject
 {
+    [ObservableProperty]
+    private bool _isSelected;
+
     /// <summary>Name from <c># @name</c> or after <c>###</c>.</summary>
     public string? Name        { get; set; }
     public string  Method      { get; set; } = "GET";

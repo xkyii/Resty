@@ -8,7 +8,9 @@
   <StackPanel Orientation="Vertical">
 
     <!-- ── Node header row ──────────────────────────────────────── -->
-    <Border Height="26" Cursor="Hand" Background="Transparent">
+        <Border Height="26" Cursor="Hand" Background="Transparent"
+          Classes.selected="{Binding IsSelected}"
+          PointerPressed="OnCollectionNodePointerPressed">
       <Border.ContextMenu>
         <ContextMenu>
           <MenuItem Header="{DynamicResource Text.Panel.RenameCollection}"
@@ -17,6 +19,16 @@
         </ContextMenu>
       </Border.ContextMenu>
       <Border.Styles>
+        <Style Selector="Border.selected">
+          <Setter Property="Background" Value="{DynamicResource Brush.AccentSelected}"/>
+          <Setter Property="BorderThickness" Value="2,0,0,0"/>
+          <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+        </Style>
+        <Style Selector="Border.selected:pointerover">
+          <Setter Property="Background" Value="{DynamicResource Brush.AccentSelected}"/>
+          <Setter Property="BorderThickness" Value="2,0,0,0"/>
+          <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+        </Style>
         <Style Selector="Border:pointerover">
           <Setter Property="Background" Value="{DynamicResource Brush.AccentHovered}"/>
         </Style>
@@ -75,7 +87,8 @@
             <Border Height="26"
                     Cursor="Hand"
                     Background="Transparent"
-                    Tapped="OnRequestEntryTapped">
+                    Classes.selected="{Binding IsSelected}"
+                  PointerPressed="OnRequestEntryPointerPressed">
               <Border.ContextMenu>
                 <ContextMenu>
                   <MenuItem Header="{DynamicResource Text.Panel.RenameRequest}"
@@ -83,6 +96,16 @@
                 </ContextMenu>
               </Border.ContextMenu>
               <Border.Styles>
+                <Style Selector="Border.selected">
+                  <Setter Property="Background" Value="{DynamicResource Brush.AccentSelected}"/>
+                  <Setter Property="BorderThickness" Value="2,0,0,0"/>
+                  <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                </Style>
+                <Style Selector="Border.selected:pointerover">
+                  <Setter Property="Background" Value="{DynamicResource Brush.AccentSelected}"/>
+                  <Setter Property="BorderThickness" Value="2,0,0,0"/>
+                  <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                </Style>
                 <Style Selector="Border:pointerover">
                   <Setter Property="Background" Value="{DynamicResource Brush.AccentHovered}"/>
                 </Style>

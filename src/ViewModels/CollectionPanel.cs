@@ -25,6 +25,11 @@ public partial class CollectionPanel : ObservableObject
     /// </summary>
     public Action<HttpRequestEntry, HttpCollection>? OnRequestOpen { get; set; }
 
+    // ─── Selection tracking ───────────────────────────────────────────────────
+
+    private CollectionTreeNode?  _selectedNode;
+    private HttpRequestEntry?    _selectedEntry;
+
     public CollectionPanel()
     {
         RootNodes.CollectionChanged += (_, _) => ApplyFilter();
@@ -33,8 +38,56 @@ public partial class CollectionPanel : ObservableObject
     /// <summary>Called from CollectionNodeView code-behind when a request row is tapped.</summary>
     public void OpenRequest(HttpRequestEntry entry, HttpCollection collection)
     {
+        // Clear old selection
+        if (_selectedEntry != null) _selectedEntry.IsSelected = false;
+        if (_selectedNode  != null) _selectedNode.IsSelected  = false;
+
+        // Set new selection
+        entry.IsSelected = true;
+        _selectedEntry = entry;
+
+        var node = FindNode(collection);
+        if (node != null) { node.IsSelected = true; _selectedNode = node; }
+
         SelectedCollection = collection;
         OnRequestOpen?.Invoke(entry, collection);
+    }
+
+    /// <summary>Called when a collection node header is clicked (expand/collapse).</summary>
+    public void SelectCollectionNode(CollectionTreeNode node)
+    {
+        if (_selectedEntry != null)
+        {
+            _selectedEntry.IsSelected = false;
+            _selectedEntry = null;
+        }
+
+        if (_selectedNode != null) _selectedNode.IsSelected = false;
+        node.IsSelected = true;
+        _selectedNode = node;
+
+        SelectedCollection = node.Collection;
+    }
+
+    private CollectionTreeNode? FindNode(HttpCollection collection)
+    {
+        foreach (var root in RootNodes)
+        {
+            var found = FindNodeIn(root, collection);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private static CollectionTreeNode? FindNodeIn(CollectionTreeNode node, HttpCollection collection)
+    {
+        if (ReferenceEquals(node.Collection, collection)) return node;
+        foreach (var child in node.Children)
+        {
+            var found = FindNodeIn(child, collection);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     [RelayCommand]

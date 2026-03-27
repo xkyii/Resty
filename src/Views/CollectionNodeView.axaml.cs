@@ -20,13 +20,22 @@ public partial class CollectionNodeView : UserControl
     /// Walks up the visual tree to find the <see cref="CollectionPanel"/> and
     /// calls <see cref="ViewModels.CollectionPanel.OpenRequest"/> on its ViewModel.
     /// </summary>
-    private void OnRequestEntryTapped(object? sender, TappedEventArgs e)
+    private void OnRequestEntryPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (DataContext is not CollectionTreeNode { Collection: { } collection }) return;
         if ((sender as Border)?.DataContext is not HttpRequestEntry entry) return;
 
         var panelView = this.FindAncestorOfType<CollectionPanel>();
         (panelView?.DataContext as ViewModels.CollectionPanel)?.OpenRequest(entry, collection);
+    }
+
+    private void OnCollectionNodePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (DataContext is not CollectionTreeNode node) return;
+        if (node.IsDirectory) return;  // only highlight .http collection nodes
+
+        var panelView = this.FindAncestorOfType<CollectionPanel>();
+        (panelView?.DataContext as ViewModels.CollectionPanel)?.SelectCollectionNode(node);
     }
 
     private async void OnRenameCollectionClicked(object? sender, RoutedEventArgs e)

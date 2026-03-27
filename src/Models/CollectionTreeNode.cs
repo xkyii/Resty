@@ -19,6 +19,9 @@ public partial class CollectionTreeNode : ObservableObject
     [NotifyPropertyChangedFor(nameof(ChevronAngle))]
     private bool _isExpanded;
 
+    [ObservableProperty]
+    private bool _isSelected;
+
     public double ChevronAngle => IsExpanded ? 0.0 : -90.0;
 
     [RelayCommand]
