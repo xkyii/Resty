@@ -30,6 +30,7 @@
   <x:String x:Key="Text.Panel.NewCollection">New Collection</x:String>
   <x:String x:Key="Text.Panel.ImportCollection">Import Collection</x:String>
   <x:String x:Key="Text.Panel.RenameCollection">Rename</x:String>
+  <x:String x:Key="Text.Panel.RenameRequest">Rename</x:String>
   <x:String x:Key="Text.Panel.RenameCollectionPrompt">Enter a new collection name</x:String>
   <x:String x:Key="Text.Panel.EnterCollectionName">Collection name</x:String>
   <x:String x:Key="Text.Panel.Renaming">Renaming...</x:String>

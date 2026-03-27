@@ -30,6 +30,7 @@
   <x:String x:Key="Text.Panel.NewCollection">新建集合</x:String>
   <x:String x:Key="Text.Panel.ImportCollection">导入集合</x:String>
   <x:String x:Key="Text.Panel.RenameCollection">重命名</x:String>
+  <x:String x:Key="Text.Panel.RenameRequest">重命名</x:String>
   <x:String x:Key="Text.Panel.RenameCollectionPrompt">请输入新的集合名称</x:String>
   <x:String x:Key="Text.Panel.EnterCollectionName">集合名称</x:String>
   <x:String x:Key="Text.Panel.Renaming">正在重命名...</x:String>

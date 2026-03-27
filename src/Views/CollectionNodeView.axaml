@@ -76,6 +76,12 @@
                     Cursor="Hand"
                     Background="Transparent"
                     Tapped="OnRequestEntryTapped">
+              <Border.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{DynamicResource Text.Panel.RenameRequest}"
+                            Click="OnRenameRequestClicked"/>
+                </ContextMenu>
+              </Border.ContextMenu>
               <Border.Styles>
                 <Style Selector="Border:pointerover">
                   <Setter Property="Background" Value="{DynamicResource Brush.AccentHovered}"/>

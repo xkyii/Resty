@@ -38,6 +38,27 @@ public partial class CollectionNodeView : UserControl
         var owner = TopLevel.GetTopLevel(this) as Window;
         if (panelVM is null || owner is null) return;
 
-        await RenameDialog.ShowAsync(owner, collection, panelVM.RenameCollection);
+        await RenameDialog.ShowAsync(
+            owner,
+            App.Text("Panel.RenameCollection"),
+            collection.Name,
+            newName => panelVM.RenameCollection(collection, newName));
+    }
+
+    private async void OnRenameRequestClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not CollectionTreeNode { Collection: { } collection }) return;
+        if ((sender as MenuItem)?.DataContext is not HttpRequestEntry entry) return;
+
+        var panelView = this.FindAncestorOfType<CollectionPanel>();
+        var panelVM = panelView?.DataContext as ViewModels.CollectionPanel;
+        var owner = TopLevel.GetTopLevel(this) as Window;
+        if (panelVM is null || owner is null) return;
+
+        await RenameDialog.ShowAsync(
+            owner,
+            App.Text("Panel.RenameRequest"),
+            entry.Name ?? string.Empty,
+            newName => panelVM.RenameRequest(collection, entry, newName));
     }
 }

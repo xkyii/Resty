@@ -133,6 +133,21 @@ public partial class CollectionPanel : ObservableObject
         return true;
     }
 
+    /// <summary>
+    /// Renames a request entry within a collection (changes text after ### in the .http file).
+    /// </summary>
+    public bool RenameRequest(HttpCollection collection, HttpRequestEntry entry, string newName)
+    {
+        if (collection is null || entry is null) return false;
+
+        var trimmed = newName.Trim();
+        if (string.IsNullOrEmpty(trimmed)) return false;
+
+        entry.Name = trimmed;
+        Commands.HttpFileWriter.Write(collection);
+        return true;
+    }
+
     [RelayCommand]
     public void SelectEnvironment(EnvironmentSet env)
     {

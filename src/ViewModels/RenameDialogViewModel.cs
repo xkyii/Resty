@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Kx.Resty.Models;
 
 namespace Kx.Resty.ViewModels;
 
@@ -11,14 +10,14 @@ public partial class RenameDialogViewModel : Popup
     [ObservableProperty]
     private string _name = string.Empty;
 
-    private readonly HttpCollection _collection;
-    private readonly Func<HttpCollection, string, bool> _renameAction;
+    private readonly Func<string, bool> _renameAction;
 
-    public RenameDialogViewModel(HttpCollection collection, Func<HttpCollection, string, bool> renameAction)
+    /// <param name="currentName">The existing name shown in the input box.</param>
+    /// <param name="renameAction">Called with the new trimmed name; return false to show an error.</param>
+    public RenameDialogViewModel(string currentName, Func<string, bool> renameAction)
     {
-        _collection = collection;
         _renameAction = renameAction;
-        Name = collection.Name;
+        Name = currentName;
     }
 
     public override async Task<bool> Sure()
@@ -33,11 +32,8 @@ public partial class RenameDialogViewModel : Popup
         {
             await Task.Run(() =>
             {
-                var trimmedName = Name.Trim();
-                if (!_renameAction(_collection, trimmedName))
-                {
+                if (!_renameAction(Name.Trim()))
                     throw new Exception(App.Text("Panel.RenameFailedDuplicate"));
-                }
             });
 
             return true;
