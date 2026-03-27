@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Kx.Resty.Models;
 
 namespace Kx.Resty.ViewModels;
 
@@ -14,20 +16,28 @@ public partial class MainWindow : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasWorkspaces))]
+    [NotifyPropertyChangedFor(nameof(HasCollections))]
+    [NotifyPropertyChangedFor(nameof(HasNoCollections))]
     [NotifyPropertyChangedFor(nameof(HasActiveRequest))]
-    [NotifyPropertyChangedFor(nameof(HasWorkspacesButNoRequest))]
+    [NotifyPropertyChangedFor(nameof(HasCollectionsButNoRequest))]
     private WorkspaceTab? _activeWorkspace;
 
     public bool HasWorkspaces             => Workspaces.Count > 0;
+    public bool HasCollections            => ActiveWorkspace?.SidePanel.RootNodes.Count > 0;
+    public bool HasNoCollections          => HasWorkspaces && !HasCollections;
     public bool HasActiveRequest          => ActiveWorkspace?.ActiveRequest is not null;
-    public bool HasWorkspacesButNoRequest => HasWorkspaces && !HasActiveRequest;
+    public bool HasCollectionsButNoRequest => HasCollections && !HasActiveRequest;
+
+    private ObservableCollection<CollectionTreeNode>? _trackedRootNodes;
 
     public MainWindow()
     {
         Workspaces.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasWorkspaces));
-            OnPropertyChanged(nameof(HasWorkspacesButNoRequest));
+            OnPropertyChanged(nameof(HasCollections));
+            OnPropertyChanged(nameof(HasNoCollections));
+            OnPropertyChanged(nameof(HasCollectionsButNoRequest));
         };
     }
 
@@ -87,8 +97,17 @@ public partial class MainWindow : ObservableObject
 
     partial void OnActiveWorkspaceChanged(WorkspaceTab? value)
     {
+        if (_trackedRootNodes is not null)
+            _trackedRootNodes.CollectionChanged -= OnRootNodesChanged;
+
+        _trackedRootNodes = value?.SidePanel.RootNodes;
+        if (_trackedRootNodes is not null)
+            _trackedRootNodes.CollectionChanged += OnRootNodesChanged;
+
         OnPropertyChanged(nameof(HasActiveRequest));
-        OnPropertyChanged(nameof(HasWorkspacesButNoRequest));
+        OnPropertyChanged(nameof(HasCollections));
+        OnPropertyChanged(nameof(HasNoCollections));
+        OnPropertyChanged(nameof(HasCollectionsButNoRequest));
         // Forward active-request change notifications from the new workspace.
         if (value is not null)
             value.PropertyChanged += (_, e) =>
@@ -96,8 +115,15 @@ public partial class MainWindow : ObservableObject
                 if (e.PropertyName is nameof(WorkspaceTab.ActiveRequest))
                 {
                     OnPropertyChanged(nameof(HasActiveRequest));
-                    OnPropertyChanged(nameof(HasWorkspacesButNoRequest));
+                    OnPropertyChanged(nameof(HasCollectionsButNoRequest));
                 }
             };
+    }
+
+    private void OnRootNodesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(HasCollections));
+        OnPropertyChanged(nameof(HasNoCollections));
+        OnPropertyChanged(nameof(HasCollectionsButNoRequest));
     }
 }

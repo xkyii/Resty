@@ -33,6 +33,7 @@ public partial class WorkspaceTab : ObservableObject, IDisposable
     /// <summary>Starts scanning the directory and watching for changes.</summary>
     public void StartScanning()
     {
+        SidePanel.WorkspacePath = DirectoryPath;
         _scanner = new Commands.WorkspaceScanner(DirectoryPath, SidePanel);
         _scanner.Start();
     }
@@ -69,6 +70,7 @@ public partial class WorkspaceTab : ObservableObject, IDisposable
         {
             entry = new HttpRequestEntry();
             collection.Requests.Add(entry);
+            Commands.HttpFileWriter.Write(collection);
         }
 
         var tab = new RequestTabItem

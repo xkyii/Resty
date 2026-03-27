@@ -8,7 +8,7 @@
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="Kx.Resty.Views.RequestTab"
              x:DataType="vm:RequestTab">
-  <Grid RowDefinitions="Auto,Auto,*">
+  <Grid RowDefinitions="Auto,Auto,Auto,*">
 
     <!-- ──────────── Request Line ──────────── -->
     <Grid Grid.Row="0"
@@ -47,6 +47,7 @@
       <!-- Send Button -->
       <Button Grid.Column="2"
               Classes="send_button"
+              IsEnabled="{Binding !IsSending}"
               Command="{Binding SendCommand}">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Path Width="14" Height="14" Data="{StaticResource Icons.Send}" Fill="White"/>
@@ -58,8 +59,26 @@
       </Button>
     </Grid>
 
+    <!-- ──────────── Context / Save State ──────────── -->
+    <Grid Grid.Row="1" Margin="12,8,12,0" ColumnDefinitions="Auto,*,Auto">
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="{DynamicResource Text.Request.Collection}"
+                   Classes="dim"
+                   FontSize="11"/>
+        <TextBlock Text="{Binding CollectionName}"
+                   FontSize="11"
+                   FontFamily="{DynamicResource Fonts.Monospace}"/>
+      </StackPanel>
+
+      <TextBlock Grid.Column="2"
+                 Text="{Binding SaveStatusText}"
+                 Classes="dim"
+                 FontSize="11"
+                 HorizontalAlignment="Right"/>
+    </Grid>
+
     <!-- ──────────── Request Editor Tabs ──────────── -->
-    <Grid Grid.Row="1" Margin="12,8,12,0" RowDefinitions="Auto,*">
+    <Grid Grid.Row="2" Margin="12,8,12,0" RowDefinitions="Auto,*">
       <!-- Tab header row -->
       <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="20">
         <RadioButton Classes="tab_item"
@@ -89,7 +108,7 @@
     </Grid>
 
     <!-- ──────────── Request + Response Split Area ──────────── -->
-    <Grid Grid.Row="2" RowDefinitions="*,4,Auto" Margin="0,0,0,0">
+    <Grid Grid.Row="3" RowDefinitions="*,4,Auto" Margin="0,0,0,0">
 
       <!-- Request editor content (placeholder panels per tab) -->
       <Border Grid.Row="0" Padding="12,8">

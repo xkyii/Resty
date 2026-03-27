@@ -635,6 +635,8 @@ stateDiagram-v2
 
 #### 任务 B3：工作区状态显式化
 
+- 状态：✅ 已完成（待提交）
+
 - 文件：`src/ViewModels/MainWindow.cs`
 - 文件：`src/Views/MainWindow.axaml`
 - 目标：把 `NoWorkspace / NoCollections / NoRequest / ActiveRequest` 变成可驱动 UI 的状态。
@@ -649,6 +651,8 @@ stateDiagram-v2
 
 #### 任务 C1：搜索框接入过滤逻辑
 
+- 状态：✅ 已完成（待提交）
+
 - 文件：`src/ViewModels/CollectionPanel.cs`
 - 文件：`src/Views/CollectionPanel.axaml`
 - 目标：`SearchText` 真正影响集合树展示。
@@ -661,6 +665,8 @@ stateDiagram-v2
 2. 无匹配时显示“未找到匹配项”。
 
 #### 任务 C2：新增集合级动作入口
+
+- 状态：✅ 已完成（待提交）
 
 - 文件：`src/Views/CollectionPanel.axaml`
 - 文件：`src/ViewModels/CollectionPanel.cs`
@@ -676,6 +682,8 @@ stateDiagram-v2
 
 #### 任务 D1：请求保存反馈与归属提示
 
+- 状态：✅ 已完成（待提交）
+
 - 文件：`src/ViewModels/RequestTab.cs`
 - 文件：`src/Views/RequestTab.axaml`
 - 文件：`src/Commands/HttpFileWriter.cs`
@@ -689,6 +697,8 @@ stateDiagram-v2
 2. 不再出现“改了但不知道写到哪里”的体验。
 
 #### 任务 D2：发送动作结果闭环
+
+- 状态：✅ 已完成（待提交）
 
 - 文件：`src/ViewModels/RequestTab.cs`
 - 文件：`src/Views/RequestTab.axaml`
@@ -727,3 +737,5 @@ flowchart LR
 5. Day 6-7：D1 + D2
 
 按照这个顺序推进，可以先把“看起来乱”的核心问题压下去，再补功能闭环。
+
+> 备注：当前代码已通过编辑器语义检查，且已执行 `dotnet build --no-restore` 验证通过（保留 1 条既有 warning：`Views/MainWindow.axaml.cs` 的 CS8600）。

@@ -17,6 +17,8 @@
   <x:String x:Key="Text.Welcome.OpenDirectoryHint">打开包含 .http 集合文件的目录</x:String>
 
   <!-- 空状态 -->
+  <x:String x:Key="Text.Empty.NoCollections">当前工作区还没有 .http 集合文件</x:String>
+  <x:String x:Key="Text.Empty.NoCollections.Sub">请先新建或导入集合文件</x:String>
   <x:String x:Key="Text.Empty.NoRequest">从左侧选择一个请求开始编辑</x:String>
   <x:String x:Key="Text.Empty.NoRequest.Sub">点击左侧集合中的请求，或在当前集合中新建请求</x:String>
 
@@ -26,9 +28,17 @@
   <x:String x:Key="Text.Panel.Environments">环境</x:String>
   <x:String x:Key="Text.Panel.History">历史</x:String>
   <x:String x:Key="Text.Panel.NewCollection">新建集合</x:String>
+  <x:String x:Key="Text.Panel.ImportCollection">导入集合</x:String>
   <x:String x:Key="Text.Panel.NewRequest">新建请求</x:String>
 
   <!-- RequestTab -->
+  <x:String x:Key="Text.Request.Collection">集合：</x:String>
+  <x:String x:Key="Text.Request.SaveState.Saved">已保存</x:String>
+  <x:String x:Key="Text.Request.SaveState.Unsaved">有未保存更改</x:String>
+  <x:String x:Key="Text.Request.SaveState.Unlinked">未保存请求</x:String>
+  <x:String x:Key="Text.Request.Collection.Unlinked">（未关联集合）</x:String>
+  <x:String x:Key="Text.Request.Send.Invalid">请求无效</x:String>
+  <x:String x:Key="Text.Request.Send.InvalidHint">请先输入有效 URL 再发送。</x:String>
   <x:String x:Key="Text.Request.Send">发送</x:String>
   <x:String x:Key="Text.Request.URLPlaceholder">输入请求 URL</x:String>
   <x:String x:Key="Text.Request.Tab.Params">参数</x:String>

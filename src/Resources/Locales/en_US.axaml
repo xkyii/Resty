@@ -17,6 +17,8 @@
   <x:String x:Key="Text.Welcome.OpenDirectoryHint">Open a directory containing .http collections</x:String>
 
   <!-- Empty states -->
+  <x:String x:Key="Text.Empty.NoCollections">No .http collection found in this workspace</x:String>
+  <x:String x:Key="Text.Empty.NoCollections.Sub">Create or import a collection file to continue</x:String>
   <x:String x:Key="Text.Empty.NoRequest">Select a request to start editing</x:String>
   <x:String x:Key="Text.Empty.NoRequest.Sub">Click a request in the sidebar, or create one in the current collection</x:String>
 
@@ -26,9 +28,17 @@
   <x:String x:Key="Text.Panel.Environments">Environments</x:String>
   <x:String x:Key="Text.Panel.History">History</x:String>
   <x:String x:Key="Text.Panel.NewCollection">New Collection</x:String>
+  <x:String x:Key="Text.Panel.ImportCollection">Import Collection</x:String>
   <x:String x:Key="Text.Panel.NewRequest">New Request</x:String>
 
   <!-- RequestTab -->
+  <x:String x:Key="Text.Request.Collection">Collection:</x:String>
+  <x:String x:Key="Text.Request.SaveState.Saved">Saved</x:String>
+  <x:String x:Key="Text.Request.SaveState.Unsaved">Unsaved changes</x:String>
+  <x:String x:Key="Text.Request.SaveState.Unlinked">Unsaved request</x:String>
+  <x:String x:Key="Text.Request.Collection.Unlinked">(Unlinked)</x:String>
+  <x:String x:Key="Text.Request.Send.Invalid">Invalid request</x:String>
+  <x:String x:Key="Text.Request.Send.InvalidHint">Please enter a valid URL before sending.</x:String>
   <x:String x:Key="Text.Request.Send">Send</x:String>
   <x:String x:Key="Text.Request.URLPlaceholder">Enter request URL</x:String>
   <x:String x:Key="Text.Request.Tab.Params">Params</x:String>
