@@ -16,34 +16,17 @@
             Padding="8,8,8,6"
             BorderThickness="0,0,0,1"
             BorderBrush="{DynamicResource Brush.Border0}">
-      <StackPanel Spacing="6">
-        <TextBox Height="28"
-                 Watermark="{DynamicResource Text.Panel.Search}"
-                 Text="{Binding SearchText, Mode=TwoWay}"
-                 CornerRadius="4">
-          <TextBox.InnerLeftContent>
-            <Path Width="12" Height="12"
-                  Margin="6,0,0,0"
-                  Fill="{DynamicResource Brush.FG2}"
-                  Data="{StaticResource Icons.Search}"/>
-          </TextBox.InnerLeftContent>
-        </TextBox>
-
-        <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
-          <Button Grid.Column="0"
-                  Classes="flat"
-                  Height="26"
-                  Command="{Binding CreateCollectionCommand}">
-            <TextBlock Text="{DynamicResource Text.Panel.NewCollection}" FontSize="11"/>
-          </Button>
-          <Button Grid.Column="1"
-                  Classes="flat"
-                  Height="26"
-                  Command="{Binding ImportCollectionCommand}">
-            <TextBlock Text="{DynamicResource Text.Panel.ImportCollection}" FontSize="11"/>
-          </Button>
-        </Grid>
-      </StackPanel>
+      <TextBox Height="28"
+               Watermark="{DynamicResource Text.Panel.Search}"
+               Text="{Binding SearchText, Mode=TwoWay}"
+               CornerRadius="4">
+        <TextBox.InnerLeftContent>
+          <Path Width="12" Height="12"
+                Margin="6,0,0,0"
+                Fill="{DynamicResource Brush.FG2}"
+                Data="{StaticResource Icons.Search}"/>
+        </TextBox.InnerLeftContent>
+      </TextBox>
     </Border>
 
     <!-- Expander groups -->
@@ -55,9 +38,19 @@
         <!-- 鈹€鈹€ Collections 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ -->
         <Expander IsExpanded="True" Margin="0,2,0,0">
           <Expander.Header>
-            <TextBlock Text="{DynamicResource Text.Panel.Collections}"
-                       Classes="bold" FontSize="12"
-                       Foreground="{DynamicResource Brush.FG2}"/>
+            <Border Background="Transparent" Padding="8,0">
+              <Border.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{DynamicResource Text.Panel.NewCollection}"
+                            Command="{Binding CreateCollectionCommand}"/>
+                  <MenuItem Header="{DynamicResource Text.Panel.ImportCollection}"
+                            Command="{Binding ImportCollectionCommand}"/>
+                </ContextMenu>
+              </Border.ContextMenu>
+              <TextBlock Text="{DynamicResource Text.Panel.Collections}"
+                         Classes="bold" FontSize="12"
+                         Foreground="{DynamicResource Brush.FG2}"/>
+            </Border>
           </Expander.Header>
           <ItemsControl ItemsSource="{Binding FilteredRootNodes}" Margin="0,2,0,4">
             <ItemsControl.ItemTemplate>
