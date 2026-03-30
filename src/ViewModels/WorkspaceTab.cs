@@ -106,6 +106,9 @@ public partial class WorkspaceTab : ObservableObject, IDisposable
     {
         foreach (var t in OpenRequests)
             t.IsActive = ReferenceEquals(t, tab);
+
+        tab?.Content?.ReloadFromEntry();
+        SidePanel.SyncSelectionFromRequest(tab?.Content?.Entry, tab?.Content?.Collection);
         ActiveRequest = tab;
     }
 

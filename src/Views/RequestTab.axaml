@@ -157,11 +157,37 @@
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    MinHeight="80"/>
           <!-- Auth -->
-          <TextBlock IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=3}"
-                     Text="Auth (not implemented)"
-                     Classes="dim"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center"/>
+          <StackPanel IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=3}"
+                      Spacing="10"
+                      MaxWidth="420"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Top">
+            <TextBlock Text="{DynamicResource Text.Request.Auth.Type}"
+                       Classes="dim"
+                       FontSize="11"/>
+            <ComboBox ItemsSource="{x:Static vm:RequestTab.AuthTypes}"
+                      SelectedItem="{Binding SelectedAuthType, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:HttpAuthOption">
+                  <TextBlock Text="{Binding Name}"/>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBlock Text="{DynamicResource Text.Request.Auth.Username}"
+                       Classes="dim"
+                       FontSize="11"
+                       IsVisible="{Binding HasCredentialsAuth}"/>
+            <TextBox Text="{Binding AuthUsername, Mode=TwoWay}"
+                     IsVisible="{Binding HasCredentialsAuth}"/>
+
+            <TextBlock Text="{DynamicResource Text.Request.Auth.Password}"
+                       Classes="dim"
+                       FontSize="11"
+                       IsVisible="{Binding HasCredentialsAuth}"/>
+            <TextBox Text="{Binding AuthPassword, Mode=TwoWay}"
+                     IsVisible="{Binding HasCredentialsAuth}"/>
+          </StackPanel>
         </Grid>
       </Border>
 

@@ -49,6 +49,14 @@ public partial class KeyValueTableViewModel : ObservableObject
         Items.Add(row);
     }
 
+    public void ReplaceWith(IEnumerable<NamedValue> source)
+    {
+        Items.Clear();
+        foreach (var nv in source)
+            AddRow(nv.Enabled, nv.Key, nv.Value);
+        Changed?.Invoke();
+    }
+
     public List<NamedValue> ToNamedValues() =>
         Items.Select(r => new NamedValue { Enabled = r.IsEnabled, Key = r.Key, Value = r.Value })
              .ToList();

@@ -38,6 +38,8 @@ public partial class CollectionPanel : ObservableObject
     /// <summary>Called from CollectionNodeView code-behind when a request row is tapped.</summary>
     public void OpenRequest(HttpRequestEntry entry, HttpCollection collection)
     {
+        TryRefreshEntryFromDisk(collection, entry);
+
         // Clear old selection
         if (_selectedEntry != null) _selectedEntry.IsSelected = false;
         if (_selectedNode  != null) _selectedNode.IsSelected  = false;
@@ -51,6 +53,62 @@ public partial class CollectionPanel : ObservableObject
 
         SelectedCollection = collection;
         OnRequestOpen?.Invoke(entry, collection);
+    }
+
+    private static void TryRefreshEntryFromDisk(HttpCollection collection, HttpRequestEntry target)
+    {
+        try
+        {
+            var index = collection.Requests.IndexOf(target);
+            if (index < 0) return;
+
+            var latest = Commands.HttpFileParser.Parse(collection.FilePath);
+            if (index >= latest.Requests.Count) return;
+
+            CopyRequest(latest.Requests[index], target);
+        }
+        catch
+        {
+            // Best-effort refresh; keep current in-memory values if parsing fails.
+        }
+    }
+
+    private static void CopyRequest(HttpRequestEntry src, HttpRequestEntry dst)
+    {
+        dst.Name = src.Name;
+        dst.Method = src.Method;
+        dst.Url = src.Url;
+        dst.Body = src.Body;
+        dst.BodyFilePath = src.BodyFilePath;
+
+        dst.Headers.Clear();
+        foreach (var h in src.Headers)
+        {
+            dst.Headers.Add(new NamedValue
+            {
+                Enabled = h.Enabled,
+                Key = h.Key,
+                Value = h.Value,
+            });
+        }
+
+        dst.QueryParams.Clear();
+        foreach (var p in src.QueryParams)
+        {
+            dst.QueryParams.Add(new NamedValue
+            {
+                Enabled = p.Enabled,
+                Key = p.Key,
+                Value = p.Value,
+            });
+        }
+
+        dst.Annotations.NoRedirect = src.Annotations.NoRedirect;
+        dst.Annotations.NoLog = src.Annotations.NoLog;
+        dst.Annotations.NoCookieJar = src.Annotations.NoCookieJar;
+        dst.Annotations.NoAutoEncoding = src.Annotations.NoAutoEncoding;
+        dst.Annotations.TimeoutSeconds = src.Annotations.TimeoutSeconds;
+        dst.Annotations.ConnectionTimeoutSeconds = src.Annotations.ConnectionTimeoutSeconds;
     }
 
     /// <summary>Called when a collection node header is clicked (expand/collapse).</summary>
@@ -67,6 +125,36 @@ public partial class CollectionPanel : ObservableObject
         _selectedNode = node;
 
         SelectedCollection = node.Collection;
+    }
+
+    /// <summary>
+    /// Synchronizes left-side selection state from top request-tab selection.
+    /// This updates highlights only and does not trigger open-request callbacks.
+    /// </summary>
+    public void SyncSelectionFromRequest(HttpRequestEntry? entry, HttpCollection? collection)
+    {
+        if (_selectedEntry != null)
+            _selectedEntry.IsSelected = false;
+
+        if (_selectedNode != null)
+            _selectedNode.IsSelected = false;
+
+        _selectedEntry = null;
+        _selectedNode = null;
+
+        if (entry is null || collection is null)
+            return;
+
+        entry.IsSelected = true;
+        _selectedEntry = entry;
+
+        var node = FindNode(collection);
+        if (node != null)
+        {
+            node.IsSelected = true;
+            _selectedNode = node;
+            SelectedCollection = collection;
+        }
     }
 
     private CollectionTreeNode? FindNode(HttpCollection collection)

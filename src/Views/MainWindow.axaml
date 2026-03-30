@@ -79,12 +79,16 @@
                       Background="Transparent"
                       Classes.active_tab="{Binding IsActive}"
                       Cursor="Hand">
-                <Border.Styles>
-                  <Style Selector="Border.active_tab">
-                    <Setter Property="Background" Value="{DynamicResource Brush.Window}"/>
-                  </Style>
-                </Border.Styles>
                 <Grid ColumnDefinitions="*,24">
+                  <!-- Explicit selected background for workspace tab -->
+                  <Border Grid.Column="0" Grid.ColumnSpan="2"
+                          Background="{DynamicResource Brush.AccentSelected}"
+                          IsVisible="{Binding IsActive}"/>
+                  <Border Grid.Column="0" Grid.ColumnSpan="2"
+                          BorderThickness="0,2,0,0"
+                          BorderBrush="{DynamicResource Brush.Accent}"
+                          IsVisible="{Binding IsActive}"/>
+
                   <Button Grid.Column="0"
                           Classes="icon_button"
                           HorizontalAlignment="Stretch"
@@ -186,12 +190,16 @@
                           Background="Transparent"
                           Classes.active_tab="{Binding IsActive}"
                           Cursor="Hand">
-                    <Border.Styles>
-                      <Style Selector="Border.active_tab">
-                        <Setter Property="Background" Value="{DynamicResource Brush.Window}"/>
-                      </Style>
-                    </Border.Styles>
                     <Grid ColumnDefinitions="*,22">
+                      <!-- Explicit selected background (SourceGit-like: selected tab clearly raised) -->
+                      <Border Grid.Column="0" Grid.ColumnSpan="2"
+                              Background="{DynamicResource Brush.AccentSelected}"
+                              IsVisible="{Binding IsActive}"/>
+                      <Border Grid.Column="0" Grid.ColumnSpan="2"
+                              BorderThickness="0,2,0,0"
+                              BorderBrush="{DynamicResource Brush.Accent}"
+                              IsVisible="{Binding IsActive}"/>
+
                       <Button Grid.Column="0"
                               Classes="icon_button"
                               HorizontalAlignment="Stretch"
@@ -277,14 +285,8 @@
           </StackPanel>
 
           <!-- Active request editor -->
-          <ContentPresenter Content="{Binding ActiveWorkspace.ActiveRequest.Content}"
-                            IsVisible="{Binding HasActiveRequest}">
-            <ContentPresenter.DataTemplates>
-              <DataTemplate DataType="vm:RequestTab">
-                <v:RequestTab/>
-              </DataTemplate>
-            </ContentPresenter.DataTemplates>
-          </ContentPresenter>
+          <v:RequestTab DataContext="{Binding ActiveWorkspace.ActiveRequest.Content}"
+                        IsVisible="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).HasActiveRequest}"/>
         </Grid>
       </Grid>
     </Grid>

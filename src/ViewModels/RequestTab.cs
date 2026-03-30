@@ -14,6 +14,12 @@ public class HttpMethodOption
     public string BrushKey { get; init; } = "";
 }
 
+public class HttpAuthOption
+{
+    public string Name { get; init; } = "";
+    public string Code { get; init; } = "";
+}
+
 public partial class RequestTab : ObservableObject
 {
     // ─── Static data ──────────────────────────────────────────────────────────
@@ -29,6 +35,13 @@ public partial class RequestTab : ObservableObject
         new() { Name = "OPTIONS", BrushKey = "Brush.Method.GET"    },
     ];
 
+    public static readonly HttpAuthOption[] AuthTypes =
+    [
+        new() { Name = "None",   Code = "none" },
+        new() { Name = "Basic",  Code = "basic" },
+        new() { Name = "Digest", Code = "digest" },
+    ];
+
     // ─── Backing model ────────────────────────────────────────────────────────
 
     private readonly HttpRequestEntry _entry;
@@ -37,6 +50,7 @@ public partial class RequestTab : ObservableObject
 
     /// <summary>Exposes the backing model (used by WorkspaceTab to de-duplicate open tabs).</summary>
     public HttpRequestEntry Entry => _entry;
+    public HttpCollection? Collection => _collection;
 
     public event Action? TabStateChanged;
 
@@ -48,24 +62,13 @@ public partial class RequestTab : ObservableObject
         _entry      = entry;
         _collection = collection;
 
-        _suppressDirtyMark = true;
+        HeadersTable = new KeyValueTableViewModel();
+        ParamsTable  = new KeyValueTableViewModel();
 
-        CollectionName = Path.GetFileNameWithoutExtension(collection.FilePath);
-        RequestName    = entry.Name ?? string.Empty;
-        IsSaved        = true;
-        UpdateSaveStatusText();
-
-        _selectedMethod = Methods.FirstOrDefault(m => m.Name == entry.Method) ?? Methods[0];
-        _url            = entry.Url;
-        _body           = entry.Body;
-
-        HeadersTable = new KeyValueTableViewModel(entry.Headers);
-        ParamsTable  = new KeyValueTableViewModel(entry.QueryParams);
+        ReloadFromEntry();
 
         HeadersTable.Changed += MarkDirty;
         ParamsTable.Changed  += MarkDirty;
-
-        _suppressDirtyMark = false;
     }
 
     /// <summary>Creates a new unsaved request (not linked to any file).</summary>
@@ -74,9 +77,10 @@ public partial class RequestTab : ObservableObject
         _entry      = new HttpRequestEntry();
         _collection = null;
 
-        _selectedMethod = Methods[0];
-        HeadersTable    = new KeyValueTableViewModel();
-        ParamsTable     = new KeyValueTableViewModel();
+        _selectedMethod   = Methods[0];
+        _selectedAuthType = AuthTypes[0];
+        HeadersTable      = new KeyValueTableViewModel();
+        ParamsTable       = new KeyValueTableViewModel();
 
         CollectionName = App.Text("Request.Collection.Unlinked");
         RequestName    = string.Empty;
@@ -87,14 +91,43 @@ public partial class RequestTab : ObservableObject
         ParamsTable.Changed  += MarkDirty;
     }
 
+    public void ReloadFromEntry()
+    {
+        _suppressDirtyMark = true;
+
+        CollectionName = _collection is null
+            ? App.Text("Request.Collection.Unlinked")
+            : Path.GetFileNameWithoutExtension(_collection.FilePath);
+        RequestName = _entry.Name ?? string.Empty;
+        SelectedMethod = Methods.FirstOrDefault(m => m.Name == _entry.Method) ?? Methods[0];
+        Url = _entry.Url;
+        Body = GetEditableBodyText(_entry);
+
+        SelectedAuthType = AuthTypes[0];
+        AuthUsername = string.Empty;
+        AuthPassword = string.Empty;
+
+        HeadersTable.ReplaceWith(GetEditableHeaders(_entry));
+        ParamsTable.ReplaceWith(_entry.QueryParams);
+
+        IsSaved = _collection is not null;
+        UpdateSaveStatusText();
+        NotifyTabStateChanged();
+
+        _suppressDirtyMark = false;
+    }
+
     // ─── Request editor state ─────────────────────────────────────────────────
 
     public KeyValueTableViewModel HeadersTable { get; }
     public KeyValueTableViewModel ParamsTable  { get; }
 
     [ObservableProperty] private HttpMethodOption _selectedMethod = null!;
+    [ObservableProperty] private HttpAuthOption   _selectedAuthType = null!;
     [ObservableProperty] private string           _url            = string.Empty;
     [ObservableProperty] private string           _body           = string.Empty;
+    [ObservableProperty] private string           _authUsername   = string.Empty;
+    [ObservableProperty] private string           _authPassword   = string.Empty;
     [ObservableProperty] private string           _requestName    = string.Empty;
     [ObservableProperty] private string           _collectionName = string.Empty;
     [ObservableProperty] private bool             _isSaved;
@@ -102,6 +135,7 @@ public partial class RequestTab : ObservableObject
 
     public bool CanSave => _collection is not null;
     public bool CanRenameCollection => _collection is not null;
+    public bool HasCredentialsAuth => SelectedAuthType.Code is "basic" or "digest";
 
     public string TabTitle
     {
@@ -148,9 +182,20 @@ public partial class RequestTab : ObservableObject
 
     partial void OnBodyChanged(string value)
     {
-        _entry.Body = value;
         MarkDirty();
     }
+
+    partial void OnSelectedAuthTypeChanged(HttpAuthOption value)
+    {
+        OnPropertyChanged(nameof(HasCredentialsAuth));
+        MarkDirty();
+    }
+
+    partial void OnAuthUsernameChanged(string value)
+        => MarkDirty();
+
+    partial void OnAuthPasswordChanged(string value)
+        => MarkDirty();
 
     partial void OnRequestNameChanged(string value)
     {
@@ -184,10 +229,11 @@ public partial class RequestTab : ObservableObject
             _entry.Name = string.IsNullOrWhiteSpace(RequestName) ? null : RequestName.Trim();
             _entry.Method = SelectedMethod.Name;
             _entry.Url = Url;
-            _entry.Body = Body;
+            ApplyEditableBodyToEntry();
 
             _entry.Headers.Clear();
             _entry.Headers.AddRange(HeadersTable.ToNamedValues());
+            AppendAuthorizationHeader(_entry.Headers);
             _entry.QueryParams.Clear();
             _entry.QueryParams.AddRange(ParamsTable.ToNamedValues());
             Commands.HttpFileWriter.Write(_collection);
@@ -268,6 +314,101 @@ public partial class RequestTab : ObservableObject
         var invalid = Path.GetInvalidFileNameChars();
         var chars = input.Trim().Select(c => invalid.Contains(c) ? '-' : c).ToArray();
         return new string(chars).Trim();
+    }
+
+    private List<NamedValue> GetEditableHeaders(HttpRequestEntry entry)
+    {
+        var result = new List<NamedValue>();
+
+        foreach (var header in entry.Headers)
+        {
+            if (string.Equals(header.Key, "Authorization", StringComparison.OrdinalIgnoreCase) &&
+                TryParseAuthorizationHeader(header.Value, out var authType, out var username, out var password))
+            {
+                SelectedAuthType = authType;
+                AuthUsername = username;
+                AuthPassword = password;
+                continue;
+            }
+
+            result.Add(new NamedValue
+            {
+                Enabled = header.Enabled,
+                Key = header.Key,
+                Value = header.Value,
+            });
+        }
+
+        return result;
+    }
+
+    private static string GetEditableBodyText(HttpRequestEntry entry)
+    {
+        if (!string.IsNullOrWhiteSpace(entry.BodyFilePath))
+            return $"< {entry.BodyFilePath}";
+
+        return entry.Body;
+    }
+
+    private void ApplyEditableBodyToEntry()
+    {
+        var text = Body ?? string.Empty;
+        var trimmed = text.Trim();
+
+        if (trimmed.StartsWith("< ", StringComparison.Ordinal))
+        {
+            _entry.Body = string.Empty;
+            _entry.BodyFilePath = trimmed[2..].Trim();
+            return;
+        }
+
+        _entry.Body = text;
+        _entry.BodyFilePath = null;
+    }
+
+    private void AppendAuthorizationHeader(List<NamedValue> headers)
+    {
+        if (!HasCredentialsAuth)
+            return;
+
+        var username = AuthUsername.Trim();
+        var password = AuthPassword.Trim();
+        if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
+            return;
+
+        headers.Add(new NamedValue
+        {
+            Enabled = true,
+            Key = "Authorization",
+            Value = $"{SelectedAuthType.Name} {username} {password}".TrimEnd(),
+        });
+    }
+
+    private static bool TryParseAuthorizationHeader(
+        string value,
+        out HttpAuthOption authType,
+        out string username,
+        out string password)
+    {
+        authType = AuthTypes[0];
+        username = string.Empty;
+        password = string.Empty;
+
+        foreach (var candidate in AuthTypes.Where(x => x.Code != "none"))
+        {
+            var prefix = candidate.Name + " ";
+            if (!value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            authType = candidate;
+            var payload = value[prefix.Length..].Trim();
+            var parts = payload.Split(' ', 2, StringSplitOptions.None);
+            username = parts.ElementAtOrDefault(0) ?? string.Empty;
+            password = parts.ElementAtOrDefault(1) ?? string.Empty;
+            return true;
+        }
+
+        return false;
     }
 
     private void MarkDirty()

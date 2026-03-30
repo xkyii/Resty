@@ -75,7 +75,7 @@
       <ItemsControl ItemsSource="{Binding Children}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:CollectionTreeNode">
-            <v:CollectionNodeView/>
+            <v:CollectionNodeView DataContext="{Binding}"/>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>

@@ -58,6 +58,9 @@
   <x:String x:Key="Text.Request.Tab.Headers">请求头</x:String>
   <x:String x:Key="Text.Request.Tab.Body">请求体</x:String>
   <x:String x:Key="Text.Request.Tab.Auth">认证</x:String>
+  <x:String x:Key="Text.Request.Auth.Type">认证类型</x:String>
+  <x:String x:Key="Text.Request.Auth.Username">用户名</x:String>
+  <x:String x:Key="Text.Request.Auth.Password">密码</x:String>
   <x:String x:Key="Text.Request.NoResponse">发送请求后查看响应</x:String>
   <x:String x:Key="Text.Response.Tab.Body">响应体</x:String>
   <x:String x:Key="Text.Response.Tab.Headers">响应头</x:String>

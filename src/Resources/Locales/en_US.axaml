@@ -58,6 +58,9 @@
   <x:String x:Key="Text.Request.Tab.Headers">Headers</x:String>
   <x:String x:Key="Text.Request.Tab.Body">Body</x:String>
   <x:String x:Key="Text.Request.Tab.Auth">Auth</x:String>
+  <x:String x:Key="Text.Request.Auth.Type">Auth Type</x:String>
+  <x:String x:Key="Text.Request.Auth.Username">Username</x:String>
+  <x:String x:Key="Text.Request.Auth.Password">Password</x:String>
   <x:String x:Key="Text.Request.NoResponse">Send a request to see the response</x:String>
   <x:String x:Key="Text.Response.Tab.Body">Body</x:String>
   <x:String x:Key="Text.Response.Tab.Headers">Headers</x:String>
