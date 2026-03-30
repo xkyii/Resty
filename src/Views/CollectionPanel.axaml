@@ -42,7 +42,7 @@
               <Border.ContextMenu>
                 <ContextMenu>
                   <MenuItem Header="{DynamicResource Text.Panel.NewCollection}"
-                            Command="{Binding CreateCollectionCommand}"/>
+                            Click="OnCreateCollectionClicked"/>
                   <MenuItem Header="{DynamicResource Text.Panel.ImportCollection}"
                             Command="{Binding ImportCollectionCommand}"/>
                 </ContextMenu>

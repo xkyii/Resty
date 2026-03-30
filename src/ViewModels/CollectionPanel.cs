@@ -178,12 +178,17 @@ public partial class CollectionPanel : ObservableObject
         return null;
     }
 
-    [RelayCommand]
-    public void CreateCollection()
+    /// <summary>
+    /// Creates a new collection file with the given name.
+    /// </summary>
+    /// <param name="collectionName">The name (without .http extension) for the new collection.</param>
+    /// <returns>true if created; false if file already exists or path is invalid.</returns>
+    public bool CreateCollection(string collectionName)
     {
-        if (string.IsNullOrWhiteSpace(WorkspacePath) || !Directory.Exists(WorkspacePath)) return;
+        if (string.IsNullOrWhiteSpace(WorkspacePath) || !Directory.Exists(WorkspacePath)) return false;
+        if (string.IsNullOrWhiteSpace(collectionName)) collectionName = "new-collection";
 
-        var baseName = "new-collection";
+        var baseName = collectionName.Trim();
         var path = Path.Combine(WorkspacePath, baseName + ".http");
         var index = 1;
         while (File.Exists(path))
@@ -193,6 +198,7 @@ public partial class CollectionPanel : ObservableObject
         }
 
         File.WriteAllText(path, "### New Request\nGET https://example.com/\n\n");
+        return true;
     }
 
     [RelayCommand]
