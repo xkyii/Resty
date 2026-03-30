@@ -16,6 +16,7 @@ public partial class MainWindow : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasWorkspaces))]
+    [NotifyPropertyChangedFor(nameof(HasNoWorkspaces))]
     [NotifyPropertyChangedFor(nameof(HasCollections))]
     [NotifyPropertyChangedFor(nameof(HasNoCollections))]
     [NotifyPropertyChangedFor(nameof(HasActiveRequest))]
@@ -23,6 +24,7 @@ public partial class MainWindow : ObservableObject
     private WorkspaceTab? _activeWorkspace;
 
     public bool HasWorkspaces             => Workspaces.Count > 0;
+    public bool HasNoWorkspaces           => !HasWorkspaces;
     public bool HasCollections            => ActiveWorkspace?.SidePanel.RootNodes.Count > 0;
     public bool HasNoCollections          => HasWorkspaces && !HasCollections;
     public bool HasActiveRequest          => ActiveWorkspace?.ActiveRequest is not null;
@@ -35,6 +37,7 @@ public partial class MainWindow : ObservableObject
         Workspaces.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasWorkspaces));
+            OnPropertyChanged(nameof(HasNoWorkspaces));
             OnPropertyChanged(nameof(HasCollections));
             OnPropertyChanged(nameof(HasNoCollections));
             OnPropertyChanged(nameof(HasCollectionsButNoRequest));
