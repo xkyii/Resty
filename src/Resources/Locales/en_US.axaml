@@ -54,7 +54,7 @@
   <x:String x:Key="Text.Request.Send.InvalidHint">Please enter a valid URL before sending.</x:String>
   <x:String x:Key="Text.Request.Send">Send</x:String>
   <x:String x:Key="Text.Request.URLPlaceholder">Enter request URL</x:String>
-  <x:String x:Key="Text.Request.Tab.Params">Params</x:String>
+  <x:String x:Key="Text.Request.Tab.Params">Query</x:String>
   <x:String x:Key="Text.Request.Tab.Headers">Headers</x:String>
   <x:String x:Key="Text.Request.Tab.Body">Body</x:String>
   <x:String x:Key="Text.Request.Tab.Auth">Auth</x:String>

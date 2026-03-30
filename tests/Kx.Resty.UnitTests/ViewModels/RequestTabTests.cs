@@ -59,6 +59,95 @@ public class RequestTabTests
     }
 
     [Fact]
+    public void Constructor_BuildsEditableUrlFromStoredQueryParams()
+    {
+        var collection = new HttpCollection
+        {
+            FilePath = "d:/tmp/demo.http",
+            Name = "demo"
+        };
+        var entry = new HttpRequestEntry
+        {
+            Method = "GET",
+            Url = "https://example.com/search"
+        };
+        entry.QueryParams.Add(new NamedValue { Key = "q", Value = "avalonia" });
+        entry.QueryParams.Add(new NamedValue { Key = "sort", Value = "stars" });
+
+        var tab = new RequestTab(entry, collection);
+
+        Assert.Equal("https://example.com/search?q=avalonia&sort=stars", tab.Url);
+        Assert.Equal(2, tab.ParamsTable.Items.Count);
+        Assert.Equal("q", tab.ParamsTable.Items[0].Key);
+        Assert.Equal("avalonia", tab.ParamsTable.Items[0].Value);
+    }
+
+    [Fact]
+    public void EditingUrl_ImmediatelySynchronizesQueryParamsTable()
+    {
+        var collection = new HttpCollection
+        {
+            FilePath = "d:/tmp/demo.http",
+            Name = "demo"
+        };
+        var entry = new HttpRequestEntry
+        {
+            Method = "GET",
+            Url = "https://example.com/users"
+        };
+
+        var tab = new RequestTab(entry, collection);
+        tab.Url = "https://example.com/users?page=2&pageSize=20&keyword=tom";
+
+        Assert.Equal("https://example.com/users?page=2&pageSize=20&keyword=tom", tab.Url);
+        Assert.Equal("https://example.com/users", entry.Url);
+        Assert.Collection(
+            tab.ParamsTable.Items,
+            item =>
+            {
+                Assert.Equal("page", item.Key);
+                Assert.Equal("2", item.Value);
+            },
+            item =>
+            {
+                Assert.Equal("pageSize", item.Key);
+                Assert.Equal("20", item.Value);
+            },
+            item =>
+            {
+                Assert.Equal("keyword", item.Key);
+                Assert.Equal("tom", item.Value);
+            });
+    }
+
+    [Fact]
+    public void EditingQueryParams_ImmediatelySynchronizesUrl()
+    {
+        var collection = new HttpCollection
+        {
+            FilePath = "d:/tmp/demo.http",
+            Name = "demo"
+        };
+        var entry = new HttpRequestEntry
+        {
+            Method = "GET",
+            Url = "https://example.com/users"
+        };
+
+        var tab = new RequestTab(entry, collection);
+
+        tab.ParamsTable.AddRow(true, "page", "2");
+        Assert.Equal("https://example.com/users?page=2", tab.Url);
+
+        tab.ParamsTable.AddRow(true, "keyword", "tom");
+        Assert.Equal("https://example.com/users?page=2&keyword=tom", tab.Url);
+
+        tab.ParamsTable.Items[0].IsEnabled = false;
+        Assert.Equal("https://example.com/users?keyword=tom", tab.Url);
+        Assert.Equal("https://example.com/users", entry.Url);
+    }
+
+    [Fact]
     public void HandleBodyEditing_DistinguishesDirectBodyVsFileReference()
     {
         var collection = new HttpCollection

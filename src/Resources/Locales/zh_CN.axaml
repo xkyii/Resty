@@ -54,7 +54,7 @@
   <x:String x:Key="Text.Request.Send.InvalidHint">请先输入有效 URL 再发送。</x:String>
   <x:String x:Key="Text.Request.Send">发送</x:String>
   <x:String x:Key="Text.Request.URLPlaceholder">输入请求 URL</x:String>
-  <x:String x:Key="Text.Request.Tab.Params">参数</x:String>
+  <x:String x:Key="Text.Request.Tab.Params">查询参数</x:String>
   <x:String x:Key="Text.Request.Tab.Headers">请求头</x:String>
   <x:String x:Key="Text.Request.Tab.Body">请求体</x:String>
   <x:String x:Key="Text.Request.Tab.Auth">认证</x:String>

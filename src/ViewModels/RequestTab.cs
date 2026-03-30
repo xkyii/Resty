@@ -47,6 +47,7 @@ public partial class RequestTab : ObservableObject
     private readonly HttpRequestEntry _entry;
     private readonly HttpCollection?  _collection;   // null = unsaved new request
     private bool _suppressDirtyMark;
+    private bool _isSynchronizingUrlAndParams;
 
     /// <summary>Exposes the backing model (used by WorkspaceTab to de-duplicate open tabs).</summary>
     public HttpRequestEntry Entry => _entry;
@@ -68,7 +69,7 @@ public partial class RequestTab : ObservableObject
         ReloadFromEntry();
 
         HeadersTable.Changed += MarkDirty;
-        ParamsTable.Changed  += MarkDirty;
+        ParamsTable.Changed  += OnParamsTableChanged;
     }
 
     /// <summary>Creates a new unsaved request (not linked to any file).</summary>
@@ -88,19 +89,20 @@ public partial class RequestTab : ObservableObject
         UpdateSaveStatusText();
 
         HeadersTable.Changed += MarkDirty;
-        ParamsTable.Changed  += MarkDirty;
+        ParamsTable.Changed  += OnParamsTableChanged;
     }
 
     public void ReloadFromEntry()
     {
         _suppressDirtyMark = true;
+        _isSynchronizingUrlAndParams = true;
 
         CollectionName = _collection is null
             ? App.Text("Request.Collection.Unlinked")
             : Path.GetFileNameWithoutExtension(_collection.FilePath);
         RequestName = _entry.Name ?? string.Empty;
         SelectedMethod = Methods.FirstOrDefault(m => m.Name == _entry.Method) ?? Methods[0];
-        Url = _entry.Url;
+        Url = BuildEditableUrl(_entry.Url, _entry.QueryParams);
         Body = GetEditableBodyText(_entry);
 
         SelectedAuthType = AuthTypes[0];
@@ -114,7 +116,16 @@ public partial class RequestTab : ObservableObject
         UpdateSaveStatusText();
         NotifyTabStateChanged();
 
+        _isSynchronizingUrlAndParams = false;
         _suppressDirtyMark = false;
+
+        // If params table is empty but URL contains query string, extract params from URL
+        if (ParamsTable.Items.Count == 0 && !string.IsNullOrEmpty(Url))
+        {
+            var (_, queryParams, _) = SplitUrlParts(Url);
+            if (queryParams.Count > 0)
+                SyncParamsFromUrl(Url);
+        }
     }
 
     // ─── Request editor state ─────────────────────────────────────────────────
@@ -175,7 +186,15 @@ public partial class RequestTab : ObservableObject
 
     partial void OnUrlChanged(string value)
     {
-        _entry.Url = value;
+        _entry.Url = GetUrlBasePart(value);
+
+        if (_isSynchronizingUrlAndParams)
+        {
+            NotifyTabStateChanged();
+            return;
+        }
+
+        SyncParamsFromUrl(value);
         MarkDirty();
         NotifyTabStateChanged();
     }
@@ -228,14 +247,13 @@ public partial class RequestTab : ObservableObject
 
             _entry.Name = string.IsNullOrWhiteSpace(RequestName) ? null : RequestName.Trim();
             _entry.Method = SelectedMethod.Name;
-            _entry.Url = Url;
+            _entry.Url = GetUrlBasePart(Url);
             ApplyEditableBodyToEntry();
 
             _entry.Headers.Clear();
             _entry.Headers.AddRange(HeadersTable.ToNamedValues());
             AppendAuthorizationHeader(_entry.Headers);
-            _entry.QueryParams.Clear();
-            _entry.QueryParams.AddRange(ParamsTable.ToNamedValues());
+            SyncEntryQueryParams();
             Commands.HttpFileWriter.Write(_collection);
             IsSaved = true;
         });
@@ -415,6 +433,128 @@ public partial class RequestTab : ObservableObject
     {
         if (_suppressDirtyMark) return;
         IsSaved = false;
+    }
+
+    private void OnParamsTableChanged()
+    {
+        SyncEntryQueryParams();
+
+        if (_isSynchronizingUrlAndParams)
+            return;
+
+        SyncUrlFromParams();
+        MarkDirty();
+        NotifyTabStateChanged();
+    }
+
+    private void SyncParamsFromUrl(string url)
+    {
+        var (baseUrl, queryParams, _) = SplitUrlParts(url);
+
+        _isSynchronizingUrlAndParams = true;
+        try
+        {
+            ParamsTable.ReplaceWith(queryParams);
+        }
+        finally
+        {
+            _isSynchronizingUrlAndParams = false;
+        }
+
+        _entry.Url = baseUrl;
+        SyncEntryQueryParams();
+    }
+
+    private void SyncUrlFromParams()
+    {
+        var (baseUrl, _, fragment) = SplitUrlParts(Url);
+        var rebuiltUrl = BuildEditableUrl(baseUrl, ParamsTable.ToNamedValues(), fragment);
+
+        _isSynchronizingUrlAndParams = true;
+        try
+        {
+            if (!string.Equals(Url, rebuiltUrl, StringComparison.Ordinal))
+                Url = rebuiltUrl;
+        }
+        finally
+        {
+            _isSynchronizingUrlAndParams = false;
+        }
+
+        _entry.Url = baseUrl;
+    }
+
+    private void SyncEntryQueryParams()
+    {
+        _entry.QueryParams.Clear();
+        _entry.QueryParams.AddRange(ParamsTable.ToNamedValues().Select(CloneNamedValue));
+    }
+
+    private static NamedValue CloneNamedValue(NamedValue source) => new()
+    {
+        Enabled = source.Enabled,
+        Key = source.Key,
+        Value = source.Value,
+    };
+
+    private static string GetUrlBasePart(string url)
+        => SplitUrlParts(url).BaseUrl;
+
+    private static string BuildEditableUrl(string baseUrl, IEnumerable<NamedValue> queryParams, string fragment = "")
+    {
+        var enabledParams = queryParams
+            .Where(p => p.Enabled && !string.IsNullOrWhiteSpace(p.Key))
+            .ToList();
+        if (enabledParams.Count == 0)
+            return baseUrl + fragment;
+
+        var sb = new StringBuilder(baseUrl);
+        var separator = baseUrl.Contains('?') ? '&' : '?';
+        foreach (var p in enabledParams)
+        {
+            sb.Append(separator);
+            sb.Append(p.Key);
+            if (!string.IsNullOrEmpty(p.Value))
+                sb.Append('=').Append(p.Value);
+            separator = '&';
+        }
+
+        sb.Append(fragment);
+        return sb.ToString();
+    }
+
+    private static (string BaseUrl, List<NamedValue> QueryParams, string Fragment) SplitUrlParts(string url)
+    {
+        var value = url ?? string.Empty;
+        var hashIndex = value.IndexOf('#');
+        var fragment = hashIndex >= 0 ? value[hashIndex..] : string.Empty;
+        var withoutFragment = hashIndex >= 0 ? value[..hashIndex] : value;
+
+        var queryIndex = withoutFragment.IndexOf('?');
+        if (queryIndex < 0)
+            return (withoutFragment, [], fragment);
+
+        var baseUrl = withoutFragment[..queryIndex];
+        var query = withoutFragment[(queryIndex + 1)..];
+        var result = new List<NamedValue>();
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var idx = part.IndexOf('=');
+            if (idx < 0)
+            {
+                result.Add(new NamedValue { Key = part, Value = string.Empty, Enabled = true });
+                continue;
+            }
+
+            result.Add(new NamedValue
+            {
+                Key = part[..idx],
+                Value = part[(idx + 1)..],
+                Enabled = true,
+            });
+        }
+
+        return (baseUrl, result, fragment);
     }
 
     private void NotifyTabStateChanged()
