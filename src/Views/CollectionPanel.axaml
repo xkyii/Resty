@@ -40,12 +40,12 @@
           <Expander.Header>
             <Border Background="Transparent" Padding="8,0">
               <Border.ContextMenu>
-                <ContextMenu>
-                  <MenuItem Header="{DynamicResource Text.Panel.NewCollection}"
-                            IsEnabled="{Binding CanManageCollections}"
+                <ContextMenu Opened="OnCollectionsContextMenuOpened">
+                  <MenuItem x:Name="CreateCollectionMenuItem"
+                            Header="{DynamicResource Text.Panel.NewCollection}"
                             Click="OnCreateCollectionClicked"/>
-                  <MenuItem Header="{DynamicResource Text.Panel.ImportCollection}"
-                            IsEnabled="{Binding CanManageCollections}"
+                  <MenuItem x:Name="ImportCollectionMenuItem"
+                            Header="{DynamicResource Text.Panel.ImportCollection}"
                             Command="{Binding ImportCollectionCommand}"/>
                 </ContextMenu>
               </Border.ContextMenu>

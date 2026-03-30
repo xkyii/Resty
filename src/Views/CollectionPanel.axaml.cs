@@ -12,11 +12,25 @@ public partial class CollectionPanel : UserControl
         InitializeComponent();
     }
 
+    private void OnCollectionsContextMenuOpened(object? sender, RoutedEventArgs e)
+    {
+        var panelVM = DataContext as ViewModels.CollectionPanel;
+        var canManage = panelVM?.CanManageCollections == true;
+
+        var createItem = this.FindControl<MenuItem>("CreateCollectionMenuItem");
+        var importItem = this.FindControl<MenuItem>("ImportCollectionMenuItem");
+
+        if (createItem != null)
+            createItem.IsEnabled = canManage;
+        if (importItem != null)
+            importItem.IsEnabled = canManage;
+    }
+
     private async void OnCreateCollectionClicked(object? sender, RoutedEventArgs e)
     {
-            var panelVM = DataContext as ViewModels.CollectionPanel;
+        var panelVM = DataContext as ViewModels.CollectionPanel;
         var owner = TopLevel.GetTopLevel(this) as Window;
-        if (panelVM is null || owner is null) return;
+        if (panelVM is null || owner is null || !panelVM.CanManageCollections) return;
 
         await InputDialog.ShowAsync(
             owner,
