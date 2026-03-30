@@ -28,8 +28,9 @@ public class RequestTabTests
         Assert.Equal("basic", tab.SelectedAuthType.Code);
         Assert.Equal("alice", tab.AuthUsername);
         Assert.Equal("secret", tab.AuthPassword);
-        Assert.Single(tab.HeadersTable.Items);
-        Assert.Equal("Accept", tab.HeadersTable.Items[0].Key);
+        var headers = tab.HeadersTable.ToNamedValues();
+        Assert.Single(headers);
+        Assert.Equal("Accept", headers[0].Key);
     }
 
     [Fact]
@@ -77,9 +78,10 @@ public class RequestTabTests
         var tab = new RequestTab(entry, collection);
 
         Assert.Equal("https://example.com/search?q=avalonia&sort=stars", tab.Url);
-        Assert.Equal(2, tab.ParamsTable.Items.Count);
-        Assert.Equal("q", tab.ParamsTable.Items[0].Key);
-        Assert.Equal("avalonia", tab.ParamsTable.Items[0].Value);
+        var queryParams = tab.ParamsTable.ToNamedValues();
+        Assert.Equal(2, queryParams.Count);
+        Assert.Equal("q", queryParams[0].Key);
+        Assert.Equal("avalonia", queryParams[0].Value);
     }
 
     [Fact]
@@ -101,8 +103,10 @@ public class RequestTabTests
 
         Assert.Equal("https://example.com/users?page=2&pageSize=20&keyword=tom", tab.Url);
         Assert.Equal("https://example.com/users", entry.Url);
+
+        var queryParams = tab.ParamsTable.ToNamedValues();
         Assert.Collection(
-            tab.ParamsTable.Items,
+            queryParams,
             item =>
             {
                 Assert.Equal("page", item.Key);
@@ -142,7 +146,8 @@ public class RequestTabTests
         tab.ParamsTable.AddRow(true, "keyword", "tom");
         Assert.Equal("https://example.com/users?page=2&keyword=tom", tab.Url);
 
-        tab.ParamsTable.Items[0].IsEnabled = false;
+        var pageRow = tab.ParamsTable.Items.First(x => x.Key == "page");
+        pageRow.IsEnabled = false;
         Assert.Equal("https://example.com/users?keyword=tom", tab.Url);
         Assert.Equal("https://example.com/users", entry.Url);
     }

@@ -3,7 +3,7 @@
              xmlns:vm="using:Kx.Resty.ViewModels"
              x:Class="Kx.Resty.Views.KeyValueTable"
              x:DataType="vm:KeyValueTableViewModel">
-  <Grid RowDefinitions="Auto,*,Auto">
+  <Grid RowDefinitions="Auto,*">
     <!-- Header -->
     <Grid Grid.Row="0" ColumnDefinitions="28,*,*,36" Height="28"
           Background="{DynamicResource Brush.TitleBar}">
@@ -39,13 +39,5 @@
       </ItemsControl>
     </ScrollViewer>
 
-    <!-- Add Row Button -->
-    <Button Grid.Row="2" Classes="flat" Command="{Binding AddRowCommand}"
-            HorizontalAlignment="Left" Margin="8,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <Path Data="{DynamicResource Icons.Add}" Fill="{DynamicResource Brush.FG2}" Width="10" Height="10"/>
-        <TextBlock Text="Add" Foreground="{DynamicResource Brush.FG2}" FontSize="11"/>
-      </StackPanel>
-    </Button>
   </Grid>
 </UserControl>
