@@ -240,7 +240,7 @@
         <!-- ── Editor / placeholder area ─────────────────────────── -->
         <Grid Grid.Row="1">
           <!-- Welcome page (no workspace open) -->
-          <v:Welcome DataContext="{Binding}" IsVisible="{Binding !HasWorkspaces}"/>
+          <v:Welcome DataContext="{Binding}" />
 
           <!-- No collections in current workspace -->
           <StackPanel HorizontalAlignment="Center"

@@ -43,3 +43,4 @@ build/*.AppImage
 Resty.app/
 build.command
 src/Properties/launchSettings.json
+artifacts

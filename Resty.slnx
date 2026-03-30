@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="src/Kx.Resty.csproj" />
+  <Project Path="tests/Kx.Resty.UnitTests/Kx.Resty.UnitTests.csproj" />
+  <Project Path="tests/Kx.Resty.HeadlessTests/Kx.Resty.HeadlessTests.csproj" />
 </Solution>
