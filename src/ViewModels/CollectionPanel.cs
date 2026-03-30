@@ -12,8 +12,10 @@ public partial class CollectionPanel : ObservableObject
     [ObservableProperty] private string          _searchText        = string.Empty;
     [ObservableProperty] private EnvironmentSet? _activeEnvironment;
     [ObservableProperty] private HttpCollection? _selectedCollection;
+    [ObservableProperty] private string          _workspacePath      = string.Empty;
 
-    public string WorkspacePath { get; set; } = string.Empty;
+    public bool CanManageCollections =>
+        !string.IsNullOrWhiteSpace(WorkspacePath) && Directory.Exists(WorkspacePath);
 
     public ObservableCollection<CollectionTreeNode> RootNodes         { get; } = [];
     public ObservableCollection<CollectionTreeNode> FilteredRootNodes { get; } = [];
@@ -33,6 +35,11 @@ public partial class CollectionPanel : ObservableObject
     public CollectionPanel()
     {
         RootNodes.CollectionChanged += (_, _) => ApplyFilter();
+    }
+
+    partial void OnWorkspacePathChanged(string value)
+    {
+        OnPropertyChanged(nameof(CanManageCollections));
     }
 
     /// <summary>Called from CollectionNodeView code-behind when a request row is tapped.</summary>
