@@ -145,6 +145,7 @@ public partial class RequestTab : ObservableObject
     [ObservableProperty] private string           _saveStatusText = string.Empty;
 
     public bool CanSave => _collection is not null;
+    public bool CanRefresh => _collection is not null;
     public bool CanRenameCollection => _collection is not null;
     public bool HasCredentialsAuth => SelectedAuthType.Code is "basic" or "digest";
 
@@ -264,6 +265,31 @@ public partial class RequestTab : ObservableObject
         });
     }
 
+    [RelayCommand(CanExecute = nameof(CanRefresh))]
+    public void RefreshFromFile()
+    {
+        if (_collection is null)
+            return;
+
+        var index = _collection.Requests.IndexOf(_entry);
+        if (index < 0)
+            return;
+
+        try
+        {
+            var latest = Commands.HttpFileParser.Parse(_collection.FilePath);
+            if (index >= latest.Requests.Count)
+                return;
+
+            CopyRequest(latest.Requests[index], _entry);
+            ReloadFromEntry();
+        }
+        catch
+        {
+            // Keep current in-memory values when parsing fails.
+        }
+    }
+
     // ─── Send ─────────────────────────────────────────────────────────────────
 
     [RelayCommand]
@@ -337,6 +363,30 @@ public partial class RequestTab : ObservableObject
         var invalid = Path.GetInvalidFileNameChars();
         var chars = input.Trim().Select(c => invalid.Contains(c) ? '-' : c).ToArray();
         return new string(chars).Trim();
+    }
+
+    private static void CopyRequest(HttpRequestEntry src, HttpRequestEntry dst)
+    {
+        dst.Name = src.Name;
+        dst.Method = src.Method;
+        dst.Url = src.Url;
+        dst.Body = src.Body;
+        dst.BodyFilePath = src.BodyFilePath;
+
+        dst.Headers.Clear();
+        foreach (var h in src.Headers)
+            dst.Headers.Add(CloneNamedValue(h));
+
+        dst.QueryParams.Clear();
+        foreach (var p in src.QueryParams)
+            dst.QueryParams.Add(CloneNamedValue(p));
+
+        dst.Annotations.NoRedirect = src.Annotations.NoRedirect;
+        dst.Annotations.NoLog = src.Annotations.NoLog;
+        dst.Annotations.NoCookieJar = src.Annotations.NoCookieJar;
+        dst.Annotations.NoAutoEncoding = src.Annotations.NoAutoEncoding;
+        dst.Annotations.TimeoutSeconds = src.Annotations.TimeoutSeconds;
+        dst.Annotations.ConnectionTimeoutSeconds = src.Annotations.ConnectionTimeoutSeconds;
     }
 
     private List<NamedValue> GetEditableHeaders(HttpRequestEntry entry)

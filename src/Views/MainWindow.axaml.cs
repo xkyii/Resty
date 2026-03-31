@@ -46,7 +46,8 @@ public partial class MainWindow : ChromelessWindow
 
     private static bool IsOverInteractiveControl(object? source, Visual? root)
     {
-        if (source is not Visual v)
+        var v = source as Visual;
+        if (v is null)
             return false;
 
         while (v != null && !ReferenceEquals(v, root))

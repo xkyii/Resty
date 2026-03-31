@@ -1,5 +1,6 @@
 using Kx.Resty.Models;
 using Kx.Resty.ViewModels;
+using Kx.Resty.Commands;
 using Xunit;
 
 namespace Kx.Resty.UnitTests.ViewModels;
@@ -285,5 +286,41 @@ public class RequestTabTests
         var headers = tab.HeadersTable.ToNamedValues();
         Assert.Contains(headers, x => x.Key == "Accept" && x.Value == "application/json");
         Assert.Contains(headers, x => x.Key == "Content-Type" && x.Value == "application/json");
+    }
+
+    [Fact]
+    public void RefreshFromFileCommand_ReloadsCurrentRequestFromDisk()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "demo.http");
+        File.WriteAllText(filePath, """
+            ### User
+            GET https://example.com/users
+            Accept: application/json
+
+            """);
+
+        try
+        {
+            var collection = HttpFileParser.Parse(filePath);
+            var entry = Assert.Single(collection.Requests);
+            var tab = new RequestTab(entry, collection);
+
+            tab.Url = "https://example.com/users?page=2";
+            tab.HeadersTable.AddRow(true, "X-Debug", "1");
+
+            tab.RefreshFromFile();
+
+            Assert.Equal("https://example.com/users", tab.Url);
+            var headers = tab.HeadersTable.ToNamedValues();
+            Assert.Single(headers);
+            Assert.Equal("Accept", headers[0].Key);
+            Assert.Equal("application/json", headers[0].Value);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
     }
 }
