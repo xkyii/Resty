@@ -1,12 +1,9 @@
-using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Kx.Resty.ViewModels;
 
 public partial class InputDialogViewModel : Popup
 {
-    [Required(ErrorMessage = "Input is required")]
-    [MinLength(1, ErrorMessage = "Input cannot be empty")]
     [ObservableProperty]
     private string _inputValue = string.Empty;
 
@@ -27,6 +24,18 @@ public partial class InputDialogViewModel : Popup
         InputValue = defaultValue;
         Prompt = prompt;
         Watermark = prompt;
+    }
+
+    public override bool Check()
+    {
+        if (!string.IsNullOrWhiteSpace(InputValue))
+        {
+            ProgressDescription = string.Empty;
+            return true;
+        }
+
+        ProgressDescription = "Input cannot be empty";
+        return false;
     }
 
     public override async Task<bool> Sure()

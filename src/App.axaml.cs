@@ -5,6 +5,7 @@ using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Styling;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows.Input;
 
 namespace Kx.Resty;
@@ -32,20 +33,6 @@ public partial class App : Application
 
     public static ICommand OpenPreferencesCommand { get; } =
         new SimpleCommand(_ => ShowDialog(new Views.Dialogs.Preferences()));
-
-    public static Control? CreateViewForViewModel(object data)
-    {
-        var dataTypeName = data.GetType().FullName;
-        if (string.IsNullOrEmpty(dataTypeName) || !dataTypeName.Contains(".ViewModels.", StringComparison.Ordinal))
-            return null;
-
-        var viewTypeName = dataTypeName.Replace(".ViewModels.", ".Views.");
-        var viewType = Type.GetType(viewTypeName);
-        if (viewType != null)
-            return Activator.CreateInstance(viewType) as Control;
-
-        return null;
-    }
 
     public static void SetLocale(string localeKey)
     {
@@ -86,7 +73,7 @@ public partial class App : Application
         return string.Format(fmt, args);
     }
 
-    public static System.Threading.Tasks.Task? ShowDialog(object data, Window? owner = null)
+    public static System.Threading.Tasks.Task? ShowDialog(Views.ChromelessWindow window, Window? owner = null)
     {
         if (owner == null)
         {
@@ -96,16 +83,7 @@ public partial class App : Application
                 return null;
         }
 
-        if (data is Views.ChromelessWindow window)
-            return window.ShowDialog(owner);
-
-        if (CreateViewForViewModel(data) is Views.ChromelessWindow vmWindow)
-        {
-            vmWindow.DataContext = data;
-            return vmWindow.ShowDialog(owner);
-        }
-
-        return null;
+        return window.ShowDialog(owner);
     }
 
     public override void Initialize()
@@ -119,6 +97,7 @@ public partial class App : Application
         SetTheme(pref.Theme);
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Avalonia validation plugin removal is a startup-only configuration step that remains valid in the published app.")]
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

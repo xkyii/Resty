@@ -51,7 +51,7 @@ public class Preferences : ObservableObject
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
-            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(this, PreferencesJsonContext.Default.Preferences);
             File.WriteAllText(Path.Combine(dir, "preferences.json"), json);
         }
         catch
@@ -68,7 +68,7 @@ public class Preferences : ObservableObject
             if (File.Exists(file))
             {
                 var json = File.ReadAllText(file);
-                var pref = JsonSerializer.Deserialize<Preferences>(json);
+                var pref = JsonSerializer.Deserialize(json, PreferencesJsonContext.Default.Preferences);
                 if (pref != null)
                     return pref;
             }
@@ -98,4 +98,10 @@ public class Preferences : ObservableObject
     private bool _isLoading = true;
     private string _locale = "en_US";
     private string _theme = "Dark";
+}
+
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(Preferences))]
+internal partial class PreferencesJsonContext : JsonSerializerContext
+{
 }

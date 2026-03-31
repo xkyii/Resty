@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Kx.Resty.ViewModels;
 
-public class Popup : ObservableValidator
+public class Popup : ObservableObject
 {
     public bool InProgress
     {
@@ -16,13 +16,7 @@ public class Popup : ObservableValidator
         set => SetProperty(ref _progressDescription, value);
     }
 
-    public bool Check()
-    {
-        if (HasErrors)
-            return false;
-        ValidateAllProperties();
-        return !HasErrors;
-    }
+    public virtual bool Check() => true;
 
     public virtual bool CanStartDirectly() => true;
 

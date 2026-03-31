@@ -1,12 +1,9 @@
-using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Kx.Resty.ViewModels;
 
 public partial class RenameDialogViewModel : Popup
 {
-    [Required(ErrorMessage = "Name is required")]
-    [MinLength(1, ErrorMessage = "Name cannot be empty")]
     [ObservableProperty]
     private string _name = string.Empty;
 
@@ -18,6 +15,18 @@ public partial class RenameDialogViewModel : Popup
     {
         _renameAction = renameAction;
         Name = currentName;
+    }
+
+    public override bool Check()
+    {
+        if (!string.IsNullOrWhiteSpace(Name))
+        {
+            ProgressDescription = string.Empty;
+            return true;
+        }
+
+        ProgressDescription = App.Text("Panel.EnterCollectionName");
+        return false;
     }
 
     public override async Task<bool> Sure()
