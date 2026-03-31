@@ -68,7 +68,7 @@ public partial class RequestTab : ObservableObject
 
         ReloadFromEntry();
 
-        HeadersTable.Changed += MarkDirty;
+        HeadersTable.Changed += OnHeadersTableChanged;
         ParamsTable.Changed  += OnParamsTableChanged;
     }
 
@@ -88,7 +88,7 @@ public partial class RequestTab : ObservableObject
         IsSaved        = false;
         UpdateSaveStatusText();
 
-        HeadersTable.Changed += MarkDirty;
+        HeadersTable.Changed += OnHeadersTableChanged;
         ParamsTable.Changed  += OnParamsTableChanged;
     }
 
@@ -207,14 +207,21 @@ public partial class RequestTab : ObservableObject
     partial void OnSelectedAuthTypeChanged(HttpAuthOption value)
     {
         OnPropertyChanged(nameof(HasCredentialsAuth));
+        SyncEntryHeaders();
         MarkDirty();
     }
 
     partial void OnAuthUsernameChanged(string value)
-        => MarkDirty();
+    {
+        SyncEntryHeaders();
+        MarkDirty();
+    }
 
     partial void OnAuthPasswordChanged(string value)
-        => MarkDirty();
+    {
+        SyncEntryHeaders();
+        MarkDirty();
+    }
 
     partial void OnRequestNameChanged(string value)
     {
@@ -250,9 +257,7 @@ public partial class RequestTab : ObservableObject
             _entry.Url = GetUrlBasePart(Url);
             ApplyEditableBodyToEntry();
 
-            _entry.Headers.Clear();
-            _entry.Headers.AddRange(HeadersTable.ToNamedValues());
-            AppendAuthorizationHeader(_entry.Headers);
+            SyncEntryHeaders();
             SyncEntryQueryParams();
             Commands.HttpFileWriter.Write(_collection);
             IsSaved = true;
@@ -447,6 +452,13 @@ public partial class RequestTab : ObservableObject
         NotifyTabStateChanged();
     }
 
+    private void OnHeadersTableChanged()
+    {
+        SyncEntryHeaders();
+        MarkDirty();
+        NotifyTabStateChanged();
+    }
+
     private void SyncParamsFromUrl(string url)
     {
         var (baseUrl, queryParams, _) = SplitUrlParts(url);
@@ -488,6 +500,16 @@ public partial class RequestTab : ObservableObject
     {
         _entry.QueryParams.Clear();
         _entry.QueryParams.AddRange(ParamsTable.ToNamedValues().Select(CloneNamedValue));
+    }
+
+    private void SyncEntryHeaders()
+    {
+        if (_suppressDirtyMark)
+            return;
+
+        _entry.Headers.Clear();
+        _entry.Headers.AddRange(HeadersTable.ToNamedValues().Select(CloneNamedValue));
+        AppendAuthorizationHeader(_entry.Headers);
     }
 
     private static NamedValue CloneNamedValue(NamedValue source) => new()

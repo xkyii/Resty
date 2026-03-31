@@ -259,4 +259,30 @@ public class RequestTabTests
         Assert.True(tab.HasCredentialsAuth);
         Assert.Equal("basic", tab.SelectedAuthType.Code);
     }
+
+    [Fact]
+    public void EditingHeaders_SynchronizesToEntryAndSurvivesReload()
+    {
+        var collection = new HttpCollection
+        {
+            FilePath = "d:/tmp/demo.http",
+            Name = "demo"
+        };
+        var entry = new HttpRequestEntry
+        {
+            Method = "POST",
+            Url = "https://example.com/users"
+        };
+        entry.Headers.Add(new NamedValue { Key = "Accept", Value = "application/json" });
+
+        var tab = new RequestTab(entry, collection);
+        tab.HeadersTable.AddRow(true, "Content-Type", "application/json");
+
+        Assert.Contains(entry.Headers, x => x.Key == "Content-Type" && x.Value == "application/json");
+
+        tab.ReloadFromEntry();
+        var headers = tab.HeadersTable.ToNamedValues();
+        Assert.Contains(headers, x => x.Key == "Accept" && x.Value == "application/json");
+        Assert.Contains(headers, x => x.Key == "Content-Type" && x.Value == "application/json");
+    }
 }
