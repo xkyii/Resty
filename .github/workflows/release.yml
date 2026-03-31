@@ -16,10 +16,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
@@ -30,7 +30,7 @@ jobs:
         run: dotnet build ./src/Kx.Resty.csproj -c Release --no-restore
 
       - name: Test
-        run: dotnet test ./tests/Kx.Resty.UnitTests/Kx.Resty.UnitTests.csproj -c Release --no-build
+        run: dotnet test ./tests/Kx.Resty.UnitTests/Kx.Resty.UnitTests.csproj -c Release --no-restore
 
   publish:
     name: Publish ${{ matrix.rid }}
