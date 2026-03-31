@@ -1,0 +1,21 @@
+﻿### GET request to example server
+
+GET https://examples.http-client.intellij.net/get?generated-in=JetBrains Rider
+
+### Request-1
+
+GET https://example-1.com/1?id=1&name=1
+
+### Request-2
+
+POST https://example-2.com?a=1&b=2
+Content-Type: application/json1
+Authorization: Basic username password2
+X-Authorization: X
+Cookie: a=1
+X-Cookie2: b=1
+
+{
+    "name": "Alice"
+}
+
