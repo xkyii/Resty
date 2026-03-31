@@ -161,6 +161,8 @@
                    TextWrapping="NoWrap"
                    FontFamily="{DynamicResource Fonts.Monospace}"
                    FontSize="13"
+                   HorizontalContentAlignment="Left"
+                   VerticalContentAlignment="Top"
                    HorizontalAlignment="Stretch"
                    VerticalAlignment="Stretch"
                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
