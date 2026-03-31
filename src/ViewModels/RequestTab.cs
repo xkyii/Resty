@@ -342,16 +342,18 @@ public partial class RequestTab : ObservableObject
     private List<NamedValue> GetEditableHeaders(HttpRequestEntry entry)
     {
         var result = new List<NamedValue>();
+        var authLoaded = false;
 
         foreach (var header in entry.Headers)
         {
             if (string.Equals(header.Key, "Authorization", StringComparison.OrdinalIgnoreCase) &&
+                !authLoaded &&
                 TryParseAuthorizationHeader(header.Value, out var authType, out var username, out var password))
             {
                 SelectedAuthType = authType;
                 AuthUsername = username;
                 AuthPassword = password;
-                continue;
+                authLoaded = true;
             }
 
             result.Add(new NamedValue
@@ -391,6 +393,9 @@ public partial class RequestTab : ObservableObject
 
     private void AppendAuthorizationHeader(List<NamedValue> headers)
     {
+        if (headers.Any(h => string.Equals(h.Key, "Authorization", StringComparison.OrdinalIgnoreCase)))
+            return;
+
         if (!HasCredentialsAuth)
             return;
 

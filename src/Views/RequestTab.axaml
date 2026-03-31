@@ -168,6 +168,44 @@
                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    MinHeight="80"/>
+          <!-- Auth -->
+          <Grid IsVisible="{Binding RequestTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=3}"
+                Margin="0,4,0,0"
+                RowDefinitions="Auto,Auto,Auto,*"
+                ColumnDefinitions="120,*"
+                RowSpacing="8"
+                ColumnSpacing="10">
+            <TextBlock Grid.Row="0" Grid.Column="0"
+                       Text="{DynamicResource Text.Request.Auth.Type}"
+                       VerticalAlignment="Center"/>
+            <ComboBox Grid.Row="0" Grid.Column="1"
+                      MinWidth="180"
+                      ItemsSource="{x:Static vm:RequestTab.AuthTypes}"
+                      SelectedItem="{Binding SelectedAuthType, Mode=TwoWay}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:HttpAuthOption">
+                  <TextBlock Text="{Binding Name}"/>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBlock Grid.Row="1" Grid.Column="0"
+                       Text="{DynamicResource Text.Request.Auth.Username}"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding HasCredentialsAuth}"/>
+            <TextBox Grid.Row="1" Grid.Column="1"
+                     Text="{Binding AuthUsername, Mode=TwoWay}"
+                     IsVisible="{Binding HasCredentialsAuth}"/>
+
+            <TextBlock Grid.Row="2" Grid.Column="0"
+                       Text="{DynamicResource Text.Request.Auth.Password}"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding HasCredentialsAuth}"/>
+            <TextBox Grid.Row="2" Grid.Column="1"
+                     Text="{Binding AuthPassword, Mode=TwoWay}"
+                     PasswordChar="*"
+                     IsVisible="{Binding HasCredentialsAuth}"/>
+          </Grid>
         </Grid>
       </Border>
 

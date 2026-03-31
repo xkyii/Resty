@@ -29,8 +29,9 @@ public class RequestTabTests
         Assert.Equal("alice", tab.AuthUsername);
         Assert.Equal("secret", tab.AuthPassword);
         var headers = tab.HeadersTable.ToNamedValues();
-        Assert.Single(headers);
-        Assert.Equal("Accept", headers[0].Key);
+        Assert.Equal(2, headers.Count);
+        Assert.Contains(headers, h => h.Key == "Authorization" && h.Value == "Basic alice secret");
+        Assert.Contains(headers, h => h.Key == "Accept" && h.Value == "application/json");
     }
 
     [Fact]
