@@ -1,6 +1,6 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <x:String x:Key="Text.App.Name">Kx.Resty</x:String>
+  <x:String x:Key="Text.App.Name">Resty</x:String>
 
   <!-- TitleBar / Menu -->
   <x:String x:Key="Text.Menu.Preferences">偏好设置</x:String>
@@ -8,7 +8,7 @@
   <x:String x:Key="Text.Menu.Quit">退出</x:String>
 
   <!-- Welcome -->
-  <x:String x:Key="Text.Welcome.Title">欢迎使用 Kx.Resty</x:String>
+  <x:String x:Key="Text.Welcome.Title">欢迎使用 Resty</x:String>
   <x:String x:Key="Text.Welcome.Subtitle">现代化的 REST API 客户端</x:String>
   <x:String x:Key="Text.Welcome.NewRequest">新建请求</x:String>
   <x:String x:Key="Text.Welcome.NewCollection">新建集合</x:String>

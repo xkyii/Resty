@@ -3,12 +3,12 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Kx.Resty</RootNamespace>
-    <AssemblyName>Kx.Resty</AssemblyName>
+    <AssemblyName>Resty</AssemblyName>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 
-    <Product>Kx.Resty</Product>
+    <Product>Resty</Product>
     <Description>A modern REST API client</Description>
     <Company>Kx</Company>
     <Copyright>Copyright © 2026 Kx.</Copyright>

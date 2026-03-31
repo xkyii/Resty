@@ -10,7 +10,7 @@ namespace Kx.Resty.ViewModels;
 
 public partial class MainWindow : ObservableObject
 {
-    public string Title => "Kx.Resty";
+    public string Title => "Resty";
 
     public ObservableCollection<WorkspaceTab> Workspaces { get; } = [];
 

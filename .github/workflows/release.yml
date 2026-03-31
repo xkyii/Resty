@@ -43,13 +43,13 @@ jobs:
         include:
           - os: windows-latest
             rid: win-x64
-            artifactName: Kx.Resty-win-x64
+            artifactName: Resty-win-x64
           - os: ubuntu-latest
             rid: linux-x64
-            artifactName: Kx.Resty-linux-x64
+            artifactName: Resty-linux-x64
           - os: macos-latest
             rid: osx-x64
-            artifactName: Kx.Resty-osx-x64
+            artifactName: Resty-osx-x64
 
     steps:
       - name: Checkout

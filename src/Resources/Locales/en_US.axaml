@@ -1,6 +1,6 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <x:String x:Key="Text.App.Name">Kx.Resty</x:String>
+  <x:String x:Key="Text.App.Name">Resty</x:String>
 
   <!-- TitleBar / Menu -->
   <x:String x:Key="Text.Menu.Preferences">Preferences</x:String>
@@ -8,7 +8,7 @@
   <x:String x:Key="Text.Menu.Quit">Quit</x:String>
 
   <!-- Welcome -->
-  <x:String x:Key="Text.Welcome.Title">Welcome to Kx.Resty</x:String>
+  <x:String x:Key="Text.Welcome.Title">Welcome to Resty</x:String>
   <x:String x:Key="Text.Welcome.Subtitle">A modern REST API client</x:String>
   <x:String x:Key="Text.Welcome.NewRequest">New Request</x:String>
   <x:String x:Key="Text.Welcome.NewCollection">New Collection</x:String>

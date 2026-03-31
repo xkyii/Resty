@@ -6,6 +6,13 @@ namespace Kx.Resty.ViewModels;
 
 public class Preferences : ObservableObject
 {
+    private const string CurrentWindowsDirName = "Resty";
+    private const string LegacyWindowsDirName = "Kx.Resty";
+    private const string CurrentMacDirName = "Resty";
+    private const string LegacyMacDirName = "Kx.Resty";
+    private const string CurrentLinuxDirName = ".resty";
+    private const string LegacyLinuxDirName = ".kx.resty";
+
     [JsonIgnore]
     public static Preferences Instance
     {
@@ -64,9 +71,12 @@ public class Preferences : ObservableObject
     {
         try
         {
-            var file = Path.Combine(DataDir, "preferences.json");
-            if (File.Exists(file))
+            foreach (var dataDir in EnumerateDataDirs())
             {
+                var file = Path.Combine(dataDir, "preferences.json");
+                if (!File.Exists(file))
+                    continue;
+
                 var json = File.ReadAllText(file);
                 var pref = JsonSerializer.Deserialize(json, PreferencesJsonContext.Default.Preferences);
                 if (pref != null)
@@ -86,11 +96,23 @@ public class Preferences : ObservableObject
         get
         {
             if (OperatingSystem.IsWindows())
-                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Kx.Resty");
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), CurrentWindowsDirName);
             if (OperatingSystem.IsMacOS())
-                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", "Kx.Resty");
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".kx.resty");
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", CurrentMacDirName);
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), CurrentLinuxDirName);
         }
+    }
+
+    private static IEnumerable<string> EnumerateDataDirs()
+    {
+        yield return DataDir;
+
+        if (OperatingSystem.IsWindows())
+            yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), LegacyWindowsDirName);
+        else if (OperatingSystem.IsMacOS())
+            yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", LegacyMacDirName);
+        else
+            yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), LegacyLinuxDirName);
     }
 
     private static Preferences? _instance = null;
