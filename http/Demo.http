@@ -1,21 +1,24 @@
-﻿### GET request to example server
+﻿### Api
+GET http://localhost:8080
 
-GET https://examples.http-client.intellij.net/get?generated-in=JetBrains Rider
+### PING
+GET http://localhost:8080/ping
 
-### Request-1
+### HEADERS
+GET http://localhost:8080/headers
 
-GET https://example-1.com/1?id=1&name=1
+### COOKIES
+GET http://localhost:8080/cookies
 
-### Request-2
+### SET-COOKIE
+GET http://localhost:8080/set-cookie
 
-POST https://example-2.com?a=1&b=2
-Content-Type: application/json1
-Authorization: Basic username password2
-X-Authorization: X
-Cookie: a=1
-X-Cookie2: b=1
+### STATUS
+GET http://localhost:8080/status/1
 
-{
-    "name": "Alice"
-}
+### DELAY
+GET http://localhost:8080/delay?ms=500
+
+### ECHO
+POST http://localhost:8080/echo
 

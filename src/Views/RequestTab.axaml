@@ -291,18 +291,58 @@
                        VerticalAlignment="Center"/>
 
             <!-- Body text -->
-            <TextBox IsVisible="{Binding HasResponse}"
-                     Text="{Binding ResponseBody}"
-                     IsReadOnly="True"
-                     AcceptsReturn="True"
-                     TextWrapping="NoWrap"
-                     FontFamily="{DynamicResource Fonts.Monospace}"
-                     FontSize="13"
-                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                     BorderThickness="0"
-                     Background="Transparent"
-                     Margin="12,8"/>
+            <Grid IsVisible="{Binding ResponseTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=0}">
+              <TextBox IsVisible="{Binding HasResponse}"
+                       Text="{Binding ResponseBody}"
+                       IsReadOnly="True"
+                       AcceptsReturn="True"
+                       TextWrapping="NoWrap"
+                       FontFamily="{DynamicResource Fonts.Monospace}"
+                       FontSize="13"
+                       HorizontalContentAlignment="Left"
+                       VerticalContentAlignment="Top"
+                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       BorderThickness="0"
+                       Background="Transparent"
+                       Margin="12,8"/>
+            </Grid>
+
+            <!-- Headers text -->
+            <Grid IsVisible="{Binding ResponseTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=1}">
+              <TextBox IsVisible="{Binding HasResponse}"
+                       Text="{Binding ResponseHeaders}"
+                       IsReadOnly="True"
+                       AcceptsReturn="True"
+                       TextWrapping="NoWrap"
+                       FontFamily="{DynamicResource Fonts.Monospace}"
+                       FontSize="13"
+                       HorizontalContentAlignment="Left"
+                       VerticalContentAlignment="Top"
+                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       BorderThickness="0"
+                       Background="Transparent"
+                       Margin="12,8"/>
+            </Grid>
+
+            <!-- Cookies text -->
+            <Grid IsVisible="{Binding ResponseTabIndex, Converter={x:Static c:IntConverters.IndexToBool}, ConverterParameter=2}">
+              <TextBox IsVisible="{Binding HasResponse}"
+                       Text="{Binding ResponseCookies}"
+                       IsReadOnly="True"
+                       AcceptsReturn="True"
+                       TextWrapping="NoWrap"
+                       FontFamily="{DynamicResource Fonts.Monospace}"
+                       FontSize="13"
+                       HorizontalContentAlignment="Left"
+                       VerticalContentAlignment="Top"
+                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       BorderThickness="0"
+                       Background="Transparent"
+                       Margin="12,8"/>
+            </Grid>
           </Grid>
         </Grid>
       </Border>
