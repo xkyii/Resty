@@ -99,10 +99,23 @@
                                FontWeight="SemiBold"/>
                 </Border>
 
-                <ComboBox Width="220"
-                          Height="32"
-                          ItemsSource="{Binding OpenWorkspaces}"
-                          SelectedItem="{Binding SelectedWorkspaceName}"/>
+                <!-- Context-aware button in title bar right-center -->
+                <Button Width="36" Height="32" BorderThickness="0" Background="Transparent">
+                    <Panel>
+                        <!-- Directory Manager mode: folder icon -->
+                        <TextBlock IsVisible="{Binding IsDirectoryManagerMode}"
+                                   Text="📁"
+                                   FontSize="18"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                        <!-- Workspace mode: dropdown icon -->
+                        <TextBlock IsVisible="{Binding IsWorkspaceMode}"
+                                   Text="▼"
+                                   FontSize="14"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Panel>
+                </Button>
             </StackPanel>
 
             <!-- Right: caption buttons -->
