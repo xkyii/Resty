@@ -76,60 +76,37 @@
       </StackPanel>
 
       <!-- Workspace tabs bar -->
-      <ScrollViewer Grid.Column="2"
-                    HorizontalScrollBarVisibility="Auto"
-                    VerticalScrollBarVisibility="Disabled"
-                    HorizontalContentAlignment="Center"
-                    VerticalAlignment="Stretch">
-        <ItemsControl ItemsSource="{Binding Workspaces}"
-                      VerticalAlignment="Stretch"
-                      HorizontalAlignment="Center">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <StackPanel Orientation="Horizontal"/>
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:WorkspaceTab">
-              <Border MinWidth="140" MaxWidth="220" Height="32"
-                      BorderThickness="0,0,1,0"
-                      BorderBrush="{DynamicResource Brush.Border0}"
-                      Background="Transparent"
-                      Classes.active_tab="{Binding IsActive}"
-                      Cursor="Hand">
-                <Grid ColumnDefinitions="*,24">
-                  <!-- Selected background for workspace tab -->
-                  <Border Grid.Column="0" Grid.ColumnSpan="2"
-                          Background="{DynamicResource Brush.AccentSelected}"
-                          IsVisible="{Binding IsActive}"/>
+      <Grid Grid.Column="2" HorizontalAlignment="Center" ColumnDefinitions="Auto,*">
+        <Button Grid.Column="0"
+                Classes="icon_button"
+                Width="32" Height="32"
+          Click="ToggleDirectoryManagerMode">
+            <Grid>
+          <Path Width="14" Height="14"
+            Data="{StaticResource Icons.Folder}"
+            IsVisible="{Binding ShowCurrentDirectoryIcon}"/>
+          <Path Width="14" Height="14"
+            Data="{StaticResource Icons.Collection}"
+            IsVisible="{Binding ShowDirectoryManagerIcon}"/>
+            </Grid>
+        </Button>
 
-                  <Button Grid.Column="0"
-                          Classes="icon_button"
-                          HorizontalAlignment="Stretch"
-                      HorizontalContentAlignment="Center"
-                          Command="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).SwitchWorkspaceCommand}"
-                          CommandParameter="{Binding}">
-                    <TextBlock Text="{Binding Name}"
-                           HorizontalAlignment="Center"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center"
-                               FontSize="12"/>
-                  </Button>
-                  <Button Grid.Column="1"
-                      Classes="icon_button"
-                          Width="20" Height="20"
-                          Margin="0,0,4,0"
-                      IsVisible="{Binding $parent[Border].IsPointerOver}"
-                          Command="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).CloseWorkspaceCommand}"
-                          CommandParameter="{Binding}">
-                    <Path Width="8" Height="8" Data="{StaticResource Icons.Window.Close}"/>
-                  </Button>
-                </Grid>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
+        <Border Grid.Column="1"
+                Margin="8,0,0,0"
+                MinWidth="140" MaxWidth="220" Height="32"
+                BorderThickness="0,0,1,0"
+                BorderBrush="{DynamicResource Brush.Border0}"
+                Background="Transparent">
+          <Grid>
+            <Border Background="{DynamicResource Brush.AccentSelected}"/>
+            <TextBlock VerticalAlignment="Center"
+                       HorizontalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       Text="{Binding CenterModeTitle}"
+                       FontSize="12"/>
+          </Grid>
+        </Border>
+      </Grid>
 
       <!-- Windows/Linux caption buttons -->
       <StackPanel Grid.Column="3"
@@ -159,18 +136,18 @@
       </Grid.ColumnDefinitions>
 
       <!-- Left sidebar (per-workspace) -->
-      <v:CollectionPanel Grid.Column="0"
-             Width="260" MinWidth="260"
-             DataContext="{Binding ActiveWorkspace.SidePanel}"
-             Background="{DynamicResource Brush.Sidebar}"
-             IsVisible="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).HasWorkspaces}"/>
+      <Border Grid.Column="0" IsVisible="{Binding ShowWorkspaceContent}">
+        <v:CollectionPanel Width="260" MinWidth="260"
+                   DataContext="{Binding ActiveWorkspace.SidePanel}"
+                   Background="{DynamicResource Brush.Sidebar}"/>
+      </Border>
 
       <!-- Splitter -->
       <GridSplitter Grid.Column="1"
                     Width="1"
                     HorizontalAlignment="Stretch"
                     ResizeDirection="Columns"
-                    IsVisible="{Binding HasWorkspaces}"/>
+                    IsVisible="{Binding ShowWorkspaceContent}"/>
 
       <!-- Right content -->
       <Grid Grid.Column="2" Background="{DynamicResource Brush.Window}" RowDefinitions="Auto,*">
@@ -178,7 +155,7 @@
         <!-- ── Request sub-tab bar ─────────────────────────────────── -->
         <Border Grid.Row="0"
                 Background="{DynamicResource Brush.TitleBar}"
-                IsVisible="{Binding HasCollections}"
+          IsVisible="{Binding ShowRequestTabs}"
                 BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource Brush.Border0}">
         <Grid ColumnDefinitions="*,32">
@@ -246,13 +223,29 @@
         <Grid Grid.Row="1">
           <!-- Welcome page (no workspace open) -->
           <v:Welcome DataContext="{Binding}"
-                     IsVisible="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).HasNoWorkspaces}"/>
+                     IsVisible="{Binding ShowDirectoryManager}"/>
+
+          <!-- Current-directory mode but no directory opened -->
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="8"
+                      IsVisible="{Binding ShowNoWorkspaceInCurrentMode}">
+            <TextBlock Text="{DynamicResource Text.Welcome.OpenDirectory}"
+                       Classes="dim"
+                       HorizontalAlignment="Center"
+                       FontSize="14"/>
+            <TextBlock Text="{DynamicResource Text.Welcome.OpenDirectoryHint}"
+                       Classes="dim"
+                       HorizontalAlignment="Center"
+                       FontSize="12"
+                       Opacity="0.6"/>
+          </StackPanel>
 
           <!-- No collections in current workspace -->
           <StackPanel HorizontalAlignment="Center"
                       VerticalAlignment="Center"
                       Spacing="8"
-                      IsVisible="{Binding HasNoCollections}">
+                      IsVisible="{Binding ShowNoCollectionsHint}">
             <TextBlock Text="{DynamicResource Text.Empty.NoCollections}"
                        Classes="dim"
                        HorizontalAlignment="Center"
@@ -274,7 +267,7 @@
           <StackPanel HorizontalAlignment="Center"
                       VerticalAlignment="Center"
                       Spacing="6"
-                      IsVisible="{Binding HasCollectionsButNoRequest}">
+                      IsVisible="{Binding ShowNoRequestHint}">
             <TextBlock Text="{DynamicResource Text.Empty.NoRequest}"
                        Classes="dim"
                        HorizontalAlignment="Center"
@@ -287,8 +280,9 @@
           </StackPanel>
 
           <!-- Active request editor -->
-          <v:RequestTab DataContext="{Binding ActiveWorkspace.ActiveRequest.Content}"
-                        IsVisible="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).HasActiveRequest}"/>
+          <Border IsVisible="{Binding ShowActiveRequest}">
+            <v:RequestTab DataContext="{Binding ActiveWorkspace.ActiveRequest.Content}"/>
+          </Border>
         </Grid>
       </Grid>
     </Grid>

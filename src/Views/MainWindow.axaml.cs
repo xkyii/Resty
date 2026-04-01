@@ -77,6 +77,14 @@ public partial class MainWindow : ChromelessWindow
         MaximizeOrRestoreWindow(sender, e);
     }
 
+    public void ToggleDirectoryManagerMode(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is ViewModels.MainWindow vm)
+            vm.ToggleDirectoryManagerModeCommand.Execute(null);
+
+        e.Handled = true;
+    }
+
     private static bool IsOverInteractiveControl(object? source, Visual? root)
     {
         var v = source as Visual;

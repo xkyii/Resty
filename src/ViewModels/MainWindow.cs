@@ -24,12 +24,26 @@ public partial class MainWindow : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasCollectionsButNoRequest))]
     private WorkspaceTab? _activeWorkspace;
 
+    [ObservableProperty]
+    private bool _isDirectoryManagerMode;
+
     public bool HasWorkspaces             => Workspaces.Count > 0;
     public bool HasNoWorkspaces           => !HasWorkspaces;
     public bool HasCollections            => ActiveWorkspace?.SidePanel.RootNodes.Count > 0;
     public bool HasNoCollections          => HasWorkspaces && !HasCollections;
     public bool HasActiveRequest          => ActiveWorkspace?.ActiveRequest is not null;
     public bool HasCollectionsButNoRequest => HasCollections && !HasActiveRequest;
+    public bool IsInDirectoryManagerView  => IsDirectoryManagerMode;
+    public bool ShowDirectoryManagerIcon  => IsInDirectoryManagerView;
+    public bool ShowCurrentDirectoryIcon  => !IsInDirectoryManagerView;
+    public string CenterModeTitle         => IsInDirectoryManagerView ? "目录管理" : "目录名称";
+    public bool ShowDirectoryManager      => IsDirectoryManagerMode;
+    public bool ShowWorkspaceContent      => HasWorkspaces && !IsDirectoryManagerMode;
+    public bool ShowNoWorkspaceInCurrentMode => !IsDirectoryManagerMode && HasNoWorkspaces;
+    public bool ShowRequestTabs           => ShowWorkspaceContent && HasCollections;
+    public bool ShowNoCollectionsHint     => ShowWorkspaceContent && HasNoCollections;
+    public bool ShowNoRequestHint         => ShowWorkspaceContent && HasCollectionsButNoRequest;
+    public bool ShowActiveRequest         => ShowWorkspaceContent && HasActiveRequest;
 
     private ObservableCollection<CollectionTreeNode>? _trackedRootNodes;
 
@@ -51,6 +65,7 @@ public partial class MainWindow : ObservableObject
             OnPropertyChanged(nameof(HasCollections));
             OnPropertyChanged(nameof(HasNoCollections));
             OnPropertyChanged(nameof(HasCollectionsButNoRequest));
+            NotifyContentVisibility();
         };
     }
 
@@ -63,6 +78,12 @@ public partial class MainWindow : ObservableObject
         if (string.IsNullOrEmpty(path)) return;
         AddOrUpdateRecent(path, Path.GetFileName(path));
         OpenDirectoryPath(path);
+    }
+
+    [RelayCommand]
+    public void ToggleDirectoryManagerMode()
+    {
+        IsDirectoryManagerMode = !IsDirectoryManagerMode;
     }
 
     // ─── Workspace management (Welcome page) ─────────────────────────────────
@@ -181,7 +202,13 @@ public partial class MainWindow : ObservableObject
         ws.Dispose();
         Workspaces.Remove(ws);
 
-        if (Workspaces.Count == 0) { ActiveWorkspace = null; return; }
+        if (Workspaces.Count == 0)
+        {
+            ActiveWorkspace = null;
+            IsDirectoryManagerMode = false;
+            return;
+        }
+
         SetActiveWorkspace(Workspaces[Math.Clamp(idx, 0, Workspaces.Count - 1)]);
     }
 
@@ -204,12 +231,18 @@ public partial class MainWindow : ObservableObject
     private void OpenDirectoryPath(string path)
     {
         var existing = Workspaces.FirstOrDefault(w => w.DirectoryPath == path);
-        if (existing is not null) { SetActiveWorkspace(existing); return; }
+        if (existing is not null)
+        {
+            SetActiveWorkspace(existing);
+            IsDirectoryManagerMode = false;
+            return;
+        }
 
         var ws = new WorkspaceTab { DirectoryPath = path, Name = Path.GetFileName(path) };
         ws.StartScanning();
         Workspaces.Add(ws);
         SetActiveWorkspace(ws);
+        IsDirectoryManagerMode = false;
     }
 
     private void AddOrUpdateRecent(string path, string name)
@@ -256,6 +289,8 @@ public partial class MainWindow : ObservableObject
         OnPropertyChanged(nameof(HasCollections));
         OnPropertyChanged(nameof(HasNoCollections));
         OnPropertyChanged(nameof(HasCollectionsButNoRequest));
+        NotifyContentVisibility();
+
         // Forward active-request change notifications from the new workspace.
         if (value is not null)
             value.PropertyChanged += (_, e) =>
@@ -264,8 +299,14 @@ public partial class MainWindow : ObservableObject
                 {
                     OnPropertyChanged(nameof(HasActiveRequest));
                     OnPropertyChanged(nameof(HasCollectionsButNoRequest));
+                    NotifyContentVisibility();
                 }
             };
+    }
+
+    partial void OnIsDirectoryManagerModeChanged(bool value)
+    {
+        NotifyContentVisibility();
     }
 
     private void OnRootNodesChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -273,5 +314,21 @@ public partial class MainWindow : ObservableObject
         OnPropertyChanged(nameof(HasCollections));
         OnPropertyChanged(nameof(HasNoCollections));
         OnPropertyChanged(nameof(HasCollectionsButNoRequest));
+        NotifyContentVisibility();
+    }
+
+    private void NotifyContentVisibility()
+    {
+        OnPropertyChanged(nameof(IsInDirectoryManagerView));
+        OnPropertyChanged(nameof(ShowDirectoryManagerIcon));
+        OnPropertyChanged(nameof(ShowCurrentDirectoryIcon));
+        OnPropertyChanged(nameof(CenterModeTitle));
+        OnPropertyChanged(nameof(ShowDirectoryManager));
+        OnPropertyChanged(nameof(ShowWorkspaceContent));
+        OnPropertyChanged(nameof(ShowNoWorkspaceInCurrentMode));
+        OnPropertyChanged(nameof(ShowRequestTabs));
+        OnPropertyChanged(nameof(ShowNoCollectionsHint));
+        OnPropertyChanged(nameof(ShowNoRequestHint));
+        OnPropertyChanged(nameof(ShowActiveRequest));
     }
 }
