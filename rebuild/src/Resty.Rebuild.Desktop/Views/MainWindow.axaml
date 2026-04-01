@@ -156,20 +156,17 @@
             <!-- Directory Manager mode -->
             <Grid Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsDirectoryManagerMode}" RowDefinitions="Auto,*" RowSpacing="8">
                 <Border Grid.Row="0" Classes="panel_card">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                            <Button Content="在资源管理器中显示"
-                                    IsEnabled="{Binding DirectoryManager.HasSelection}"
-                                    Command="{Binding DirectoryManager.RevealInExplorerCommand}"/>
-                            <Button Content="移除"
-                                    IsEnabled="{Binding DirectoryManager.HasSelection}"
-                                    Command="{Binding DirectoryManager.RemoveEntryCommand}"/>
-                            <Button Content="加入目录管理"
-                                    IsVisible="{Binding DirectoryManager.CanAddToManaged}"
-                                    Command="{Binding DirectoryManager.AddToManagedCommand}"/>
-                        </StackPanel>
-                        <Button Grid.Column="2" Content="打开目录" Command="{Binding DirectoryManager.OpenDirectoryCommand}"/>
-                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="在资源管理器中显示"
+                                IsEnabled="{Binding DirectoryManager.HasSelection}"
+                                Command="{Binding DirectoryManager.RevealInExplorerCommand}"/>
+                        <Button Content="移除"
+                                IsEnabled="{Binding DirectoryManager.HasSelection}"
+                                Command="{Binding DirectoryManager.RemoveEntryCommand}"/>
+                        <Button Content="加入目录管理"
+                                IsVisible="{Binding DirectoryManager.CanAddToManaged}"
+                                Command="{Binding DirectoryManager.AddToManagedCommand}"/>
+                    </StackPanel>
                 </Border>
 
                 <Border Grid.Row="1" Classes="panel_card">

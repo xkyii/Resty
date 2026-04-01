@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using ReactiveUI;
 using Resty.Rebuild.Desktop.Features.DirectoryManager.ViewModels;
+using Resty.Rebuild.Desktop.Features.Workspace.ViewModels;
 
 namespace Resty.Rebuild.Desktop.ViewModels;
 
@@ -12,6 +13,7 @@ public class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         DirectoryManager = new DirectoryManagerViewModel();
+        WorkspaceNavigation = new WorkspaceNavigationViewModel();
 
         OpenWorkspaces =
         [
@@ -27,6 +29,8 @@ public class MainWindowViewModel : ViewModelBase
     }
 
     public DirectoryManagerViewModel DirectoryManager { get; }
+
+    public WorkspaceNavigationViewModel WorkspaceNavigation { get; }
 
     public ObservableCollection<string> OpenWorkspaces { get; }
 

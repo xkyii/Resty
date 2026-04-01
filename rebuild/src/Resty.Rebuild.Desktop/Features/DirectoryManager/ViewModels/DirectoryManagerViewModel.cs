@@ -71,7 +71,6 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
         RevealInExplorerCommand = ReactiveCommand.Create(RevealInExplorer);
         RemoveEntryCommand = ReactiveCommand.Create(RemoveEntry);
         AddToManagedCommand = ReactiveCommand.Create(AddToManaged);
-        OpenDirectoryCommand = ReactiveCommand.Create(OpenDirectory);
 
         ApplyFilter();
     }
@@ -91,8 +90,6 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
     public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> RemoveEntryCommand { get; }
 
     public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> AddToManagedCommand { get; }
-
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> OpenDirectoryCommand { get; }
 
     public string SearchText
     {
@@ -145,11 +142,6 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
     private void RevealInExplorer()
     {
         // M3 先完成状态流，M6 再接入真实平台能力。
-    }
-
-    private void OpenDirectory()
-    {
-        // M4 实现打开目录对话框选择
     }
 
     private void RemoveEntry()
