@@ -100,7 +100,7 @@
                 </Border>
 
                 <!-- Context-aware button in title bar right-center -->
-                <Button Width="36" Height="32" BorderThickness="0" Background="Transparent">
+                <Button Width="48" Height="32" Padding="4,0" BorderThickness="0" Background="Transparent">
                     <Panel>
                         <!-- Directory Manager mode: folder icon -->
                         <TextBlock IsVisible="{Binding IsDirectoryManagerMode}"
