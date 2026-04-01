@@ -2,6 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:s="using:Kx.Resty"
                     xmlns:vm="using:Kx.Resty.ViewModels"
                     xmlns:v="using:Kx.Resty.Views"
                     mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
@@ -41,6 +42,38 @@
               IsVisible="{OnPlatform True, macOS=False}">
         <Path Width="16" Height="16" Data="{StaticResource Icons.Resty}"/>
       </Border>
+
+      <!-- Top-left menu (Windows/Linux) -->
+      <StackPanel Grid.Column="1"
+                  Orientation="Horizontal"
+                  IsVisible="{OnPlatform True, macOS=False}">
+        <Button Classes="icon_button"
+                Height="32"
+                Padding="10,0">
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedLeft" VerticalOffset="-6">
+              <MenuItem Header="{DynamicResource Text.Menu.Preferences}"
+                        Command="{x:Static s:App.OpenPreferencesCommand}"/>
+              <MenuItem Header="-"/>
+              <MenuItem Header="{DynamicResource Text.Menu.Quit}"
+                        Command="{x:Static v:MainWindow.QuitCommand}"/>
+            </MenuFlyout>
+          </Button.Flyout>
+          <TextBlock Text="{DynamicResource Text.Menu.File}" FontSize="14"/>
+        </Button>
+
+        <Button Classes="icon_button"
+                Height="32"
+                Padding="10,0">
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedLeft" VerticalOffset="-6">
+              <MenuItem Header="{DynamicResource Text.Menu.About}"
+                        Command="{x:Static v:MainWindow.OpenAboutCommand}"/>
+            </MenuFlyout>
+          </Button.Flyout>
+          <TextBlock Text="{DynamicResource Text.Menu.Help}" FontSize="14"/>
+        </Button>
+      </StackPanel>
 
       <!-- Workspace tabs bar -->
       <ScrollViewer Grid.Column="2"

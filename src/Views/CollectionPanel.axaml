@@ -5,11 +5,10 @@
              xmlns:vm="using:Kx.Resty.ViewModels"
              xmlns:models="using:Kx.Resty.Models"
              xmlns:v="using:Kx.Resty.Views"
-             xmlns:s="using:Kx.Resty"
              mc:Ignorable="d" d:DesignWidth="260" d:DesignHeight="700"
              x:Class="Kx.Resty.Views.CollectionPanel"
              x:DataType="vm:CollectionPanel">
-  <Grid RowDefinitions="Auto,*,Auto">
+  <Grid RowDefinitions="Auto,*">
 
     <!-- Search box -->
     <Border Grid.Row="0"
@@ -130,24 +129,5 @@
       </StackPanel>
     </ScrollViewer>
 
-    <!-- Bottom: Preferences button -->
-    <Border Grid.Row="2"
-            BorderThickness="0,1,0,0"
-            BorderBrush="{DynamicResource Brush.Border0}"
-            Padding="4,4">
-      <Button Classes="icon_button"
-              Height="32"
-              Padding="8,0"
-              HorizontalAlignment="Stretch"
-              HorizontalContentAlignment="Left"
-              Command="{x:Static s:App.OpenPreferencesCommand}">
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Path Width="14" Height="14" Data="{StaticResource Icons.Settings}"/>
-          <TextBlock Text="{DynamicResource Text.Menu.Preferences}"
-                     FontSize="12"
-                     VerticalAlignment="Center"/>
-        </StackPanel>
-      </Button>
-    </Border>
   </Grid>
 </UserControl>

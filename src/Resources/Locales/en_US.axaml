@@ -3,6 +3,8 @@
   <x:String x:Key="Text.App.Name">Resty</x:String>
 
   <!-- TitleBar / Menu -->
+  <x:String x:Key="Text.Menu.File">File</x:String>
+  <x:String x:Key="Text.Menu.Help">Help</x:String>
   <x:String x:Key="Text.Menu.Preferences">Preferences</x:String>
   <x:String x:Key="Text.Menu.About">About</x:String>
   <x:String x:Key="Text.Menu.Quit">Quit</x:String>
