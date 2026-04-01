@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Kx.Resty.Models;
 
 namespace Kx.Resty.ViewModels;
 
@@ -120,10 +121,14 @@ public class Preferences : ObservableObject
     private bool _isLoading = true;
     private string _locale = "en_US";
     private string _theme = "Dark";
+
+    public List<WorkspaceEntry> ManagedWorkspaces { get; set; } = [];
+    public List<WorkspaceEntry> RecentWorkspaces  { get; set; } = [];
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(Preferences))]
+[JsonSerializable(typeof(List<WorkspaceEntry>))]
 internal partial class PreferencesJsonContext : JsonSerializerContext
 {
 }

@@ -153,14 +153,14 @@
     <!-- ══════════════════════════ Body ══════════════════════════ -->
       <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="260"/>
+        <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="1"/>
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
 
       <!-- Left sidebar (per-workspace) -->
       <v:CollectionPanel Grid.Column="0"
-             MinWidth="260"
+             Width="260" MinWidth="260"
              DataContext="{Binding ActiveWorkspace.SidePanel}"
              Background="{DynamicResource Brush.Sidebar}"
              IsVisible="{Binding $parent[v:MainWindow].((vm:MainWindow)DataContext).HasWorkspaces}"/>
