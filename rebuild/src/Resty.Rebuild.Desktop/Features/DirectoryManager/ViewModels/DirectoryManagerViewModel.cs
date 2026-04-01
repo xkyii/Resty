@@ -22,10 +22,20 @@ public sealed class DirectoryEntryItem
     public DirectoryEntryKind Kind { get; init; }
 }
 
+public sealed class DirectoryMenuNode
+{
+    public required string Header { get; init; }
+
+    public ObservableCollection<DirectoryMenuNode> Children { get; } = [];
+
+    public DirectoryEntryItem? Entry { get; init; }
+}
+
 public sealed class DirectoryManagerViewModel : ReactiveObject
 {
     private string _searchText = string.Empty;
     private DirectoryEntryItem? _selectedEntry;
+    private DirectoryMenuNode? _selectedMenuNode;
 
     public DirectoryManagerViewModel()
     {
@@ -58,10 +68,10 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
             }
         ];
 
-        SelectEntryCommand = ReactiveCommand.Create<DirectoryEntryItem>(SelectEntry);
         RevealInExplorerCommand = ReactiveCommand.Create(RevealInExplorer);
         RemoveEntryCommand = ReactiveCommand.Create(RemoveEntry);
         AddToManagedCommand = ReactiveCommand.Create(AddToManaged);
+        OpenDirectoryCommand = ReactiveCommand.Create(OpenDirectory);
 
         ApplyFilter();
     }
@@ -74,13 +84,15 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
 
     public ObservableCollection<DirectoryEntryItem> FilteredManagedEntries { get; } = [];
 
-    public ReactiveCommand<DirectoryEntryItem, System.Reactive.Unit> SelectEntryCommand { get; }
+    public ObservableCollection<DirectoryMenuNode> MenuRoots { get; } = [];
 
     public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> RevealInExplorerCommand { get; }
 
     public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> RemoveEntryCommand { get; }
 
     public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> AddToManagedCommand { get; }
+
+    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> OpenDirectoryCommand { get; }
 
     public string SearchText
     {
@@ -107,6 +119,16 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
         }
     }
 
+    public DirectoryMenuNode? SelectedMenuNode
+    {
+        get => _selectedMenuNode;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedMenuNode, value);
+            SelectedEntry = value?.Entry;
+        }
+    }
+
     public bool HasSelection => SelectedEntry is not null;
 
     public bool CanAddToManaged => SelectedEntry?.Kind == DirectoryEntryKind.Recent;
@@ -120,14 +142,14 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
     public string SelectedLastOpenedText =>
         SelectedEntry is null ? "-" : SelectedEntry.LastOpenedAt.ToString("yyyy-MM-dd HH:mm");
 
-    private void SelectEntry(DirectoryEntryItem entry)
-    {
-        SelectedEntry = entry;
-    }
-
     private void RevealInExplorer()
     {
         // M3 先完成状态流，M6 再接入真实平台能力。
+    }
+
+    private void OpenDirectory()
+    {
+        // M4 实现打开目录对话框选择
     }
 
     private void RemoveEntry()
@@ -141,6 +163,7 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
             ManagedEntries.Remove(SelectedEntry);
 
         SelectedEntry = null;
+        SelectedMenuNode = null;
         ApplyFilter();
     }
 
@@ -175,6 +198,36 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
 
         foreach (var entry in ManagedEntries.Where(x => MatchEntry(x, query)))
             FilteredManagedEntries.Add(entry);
+
+        RebuildMenuRoots();
+    }
+
+    private void RebuildMenuRoots()
+    {
+        MenuRoots.Clear();
+
+        var recentRoot = new DirectoryMenuNode { Header = "最近" };
+        foreach (var entry in FilteredRecentEntries)
+        {
+            recentRoot.Children.Add(new DirectoryMenuNode
+            {
+                Header = entry.Name,
+                Entry = entry
+            });
+        }
+
+        var managedRoot = new DirectoryMenuNode { Header = "目录" };
+        foreach (var entry in FilteredManagedEntries)
+        {
+            managedRoot.Children.Add(new DirectoryMenuNode
+            {
+                Header = entry.Name,
+                Entry = entry
+            });
+        }
+
+        MenuRoots.Add(recentRoot);
+        MenuRoots.Add(managedRoot);
     }
 
     private static bool MatchEntry(DirectoryEntryItem entry, string query)

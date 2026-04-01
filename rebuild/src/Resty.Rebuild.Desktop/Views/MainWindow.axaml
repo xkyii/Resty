@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Resty.Rebuild.Desktop.ViewModels"
-        xmlns:dmvm="using:Resty.Rebuild.Desktop.Features.DirectoryManager.ViewModels"
+    xmlns:u="https://irihi.tech/ursa"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -132,72 +132,44 @@
 
                     <TextBox IsVisible="{Binding IsWorkspaceMode}"
                              Watermark="搜索&quot;集合&quot;或&quot;历史&quot;"
+                             Text="{Binding WorkspaceNavigation.SearchText, Mode=TwoWay}"
                              Height="32"/>
 
                     <Border Height="1" Background="#337D7D7D"/>
 
-                    <StackPanel Spacing="8" IsVisible="{Binding IsDirectoryManagerMode}">
-                        <Expander Header="最近" IsExpanded="True">
-                            <ItemsControl ItemsSource="{Binding DirectoryManager.FilteredRecentEntries}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="dmvm:DirectoryEntryItem">
-                                        <Button HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Left"
-                                                Margin="0,2,0,2"
-                                                Command="{Binding $parent[Window].DataContext.DirectoryManager.SelectEntryCommand}"
-                                                CommandParameter="{Binding}">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding Path}" Opacity="0.7" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Expander>
+                    <u:NavMenu Grid.Row="2"
+                               IsVisible="{Binding IsDirectoryManagerMode}"
+                               ItemsSource="{Binding DirectoryManager.MenuRoots}"
+                               HeaderBinding="{Binding Header}"
+                               SubMenuBinding="{Binding Children}"
+                               SelectedItem="{Binding DirectoryManager.SelectedMenuNode, Mode=TwoWay}"/>
 
-                        <Expander Header="目录" IsExpanded="True">
-                            <ItemsControl ItemsSource="{Binding DirectoryManager.FilteredManagedEntries}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="dmvm:DirectoryEntryItem">
-                                        <Button HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Left"
-                                                Margin="0,2,0,2"
-                                                Command="{Binding $parent[Window].DataContext.DirectoryManager.SelectEntryCommand}"
-                                                CommandParameter="{Binding}">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding Path}" Opacity="0.7" FontSize="11"/>
-                                            </StackPanel>
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Expander>
-                    </StackPanel>
-
-                    <StackPanel Spacing="8" IsVisible="{Binding IsWorkspaceMode}">
-                        <TextBlock Text="导航" FontWeight="SemiBold"/>
-                        <TextBlock Text="集合"/>
-                        <TextBlock Text="历史"/>
-                    </StackPanel>
+                    <u:NavMenu Grid.Row="2"
+                               IsVisible="{Binding IsWorkspaceMode}"
+                               ItemsSource="{Binding WorkspaceNavigation.MenuRoots}"
+                               HeaderBinding="{Binding Header}"
+                               SubMenuBinding="{Binding Children}"
+                               SelectedItem="{Binding WorkspaceNavigation.SelectedNode, Mode=TwoWay}"/>
                 </Grid>
             </Border>
 
             <!-- Directory Manager mode -->
             <Grid Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsDirectoryManagerMode}" RowDefinitions="Auto,*" RowSpacing="8">
                 <Border Grid.Row="0" Classes="panel_card">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="在资源管理器中显示"
-                                IsEnabled="{Binding DirectoryManager.HasSelection}"
-                                Command="{Binding DirectoryManager.RevealInExplorerCommand}"/>
-                        <Button Content="移除"
-                                IsEnabled="{Binding DirectoryManager.HasSelection}"
-                                Command="{Binding DirectoryManager.RemoveEntryCommand}"/>
-                        <Button Content="加入目录管理"
-                                IsVisible="{Binding DirectoryManager.CanAddToManaged}"
-                                Command="{Binding DirectoryManager.AddToManagedCommand}"/>
-                    </StackPanel>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                            <Button Content="在资源管理器中显示"
+                                    IsEnabled="{Binding DirectoryManager.HasSelection}"
+                                    Command="{Binding DirectoryManager.RevealInExplorerCommand}"/>
+                            <Button Content="移除"
+                                    IsEnabled="{Binding DirectoryManager.HasSelection}"
+                                    Command="{Binding DirectoryManager.RemoveEntryCommand}"/>
+                            <Button Content="加入目录管理"
+                                    IsVisible="{Binding DirectoryManager.CanAddToManaged}"
+                                    Command="{Binding DirectoryManager.AddToManagedCommand}"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Content="打开目录" Command="{Binding DirectoryManager.OpenDirectoryCommand}"/>
+                    </Grid>
                 </Border>
 
                 <Border Grid.Row="1" Classes="panel_card">
