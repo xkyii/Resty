@@ -14,6 +14,7 @@ public class MainWindowViewModel : ViewModelBase
     {
         DirectoryManager = new DirectoryManagerViewModel();
         WorkspaceNavigation = new WorkspaceNavigationViewModel();
+        WorkspaceEditor = new WorkspaceEditorViewModel();
 
         OpenWorkspaces =
         [
@@ -31,6 +32,8 @@ public class MainWindowViewModel : ViewModelBase
     public DirectoryManagerViewModel DirectoryManager { get; }
 
     public WorkspaceNavigationViewModel WorkspaceNavigation { get; }
+
+    public WorkspaceEditorViewModel WorkspaceEditor { get; }
 
     public ObservableCollection<string> OpenWorkspaces { get; }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using ReactiveUI;
@@ -29,6 +30,7 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
 {
     private string _searchText = string.Empty;
     private WorkspaceNavNode? _selectedNode;
+    private bool _isCollectionsMode = true;
 
     public WorkspaceNavigationViewModel()
     {
@@ -61,6 +63,9 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
             new WorkspaceNavNode { Header = "POST /login", Kind = WorkspaceNavItemKind.History, Method = "POST", Url = "https://api.example.com/login" }
         ];
 
+        ShowCollectionsCommand = ReactiveCommand.Create(() => { IsCollectionsMode = true; });
+        ShowHistoryCommand = ReactiveCommand.Create(() => { IsCollectionsMode = false; });
+
         RebuildMenu();
     }
 
@@ -68,7 +73,15 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
 
     public ObservableCollection<WorkspaceNavNode> HistoryNodes { get; }
 
-    public ObservableCollection<WorkspaceNavNode> MenuRoots { get; } = [];
+    public ObservableCollection<WorkspaceNavNode> CollectionMenuRoots { get; } = [];
+
+    public ObservableCollection<WorkspaceNavNode> HistoryMenuRoots { get; } = [];
+
+    public ObservableCollection<WorkspaceNavNode> ActiveMenuRoots { get; } = [];
+
+    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> ShowCollectionsCommand { get; }
+
+    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> ShowHistoryCommand { get; }
 
     public string SearchText
     {
@@ -80,6 +93,19 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
         }
     }
 
+    public bool IsCollectionsMode
+    {
+        get => _isCollectionsMode;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _isCollectionsMode, value);
+            this.RaisePropertyChanged(nameof(IsHistoryMode));
+            RefreshActiveMenuRoots();
+        }
+    }
+
+    public bool IsHistoryMode => !IsCollectionsMode;
+
     public WorkspaceNavNode? SelectedNode
     {
         get => _selectedNode;
@@ -90,46 +116,39 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
     {
         var query = SearchText.Trim();
 
-        MenuRoots.Clear();
-
-        var collectionsRoot = new WorkspaceNavNode
+        CollectionMenuRoots.Clear();
+        foreach (var node in CollectionNodes)
         {
-            Header = "集合",
-            Kind = WorkspaceNavItemKind.Collection
-        };
-
-        foreach (var collection in CollectionNodes)
-        {
-            var cloned = CloneFiltered(collection, query);
-            if (cloned is not null)
-                collectionsRoot.Children.Add(cloned);
+            var filtered = CloneFiltered(node, query);
+            if (filtered is not null)
+                CollectionMenuRoots.Add(filtered);
         }
 
-        var historyRoot = new WorkspaceNavNode
+        HistoryMenuRoots.Clear();
+        foreach (var node in HistoryNodes.Where(n => MatchNode(n, query)))
         {
-            Header = "历史",
-            Kind = WorkspaceNavItemKind.History
-        };
-
-        foreach (var history in HistoryNodes.Where(x => MatchNode(x, query)))
-        {
-            historyRoot.Children.Add(new WorkspaceNavNode
+            HistoryMenuRoots.Add(new WorkspaceNavNode
             {
-                Header = history.Header,
-                Kind = history.Kind,
-                Method = history.Method,
-                Url = history.Url
+                Header = node.Header,
+                Kind = node.Kind,
+                Method = node.Method,
+                Url = node.Url
             });
         }
 
-        MenuRoots.Add(collectionsRoot);
-        MenuRoots.Add(historyRoot);
+        RefreshActiveMenuRoots();
+    }
+
+    private void RefreshActiveMenuRoots()
+    {
+        ActiveMenuRoots.Clear();
+        IEnumerable<WorkspaceNavNode> source = IsCollectionsMode ? CollectionMenuRoots : HistoryMenuRoots;
+        foreach (var node in source)
+            ActiveMenuRoots.Add(node);
     }
 
     private static WorkspaceNavNode? CloneFiltered(WorkspaceNavNode source, string query)
     {
-        var matchSelf = MatchNode(source, query);
-
         var clone = new WorkspaceNavNode
         {
             Header = source.Header,
@@ -145,7 +164,7 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
                 clone.Children.Add(filteredChild);
         }
 
-        if (matchSelf || clone.Children.Count > 0)
+        if (MatchNode(source, query) || clone.Children.Count > 0)
             return clone;
 
         return null;
