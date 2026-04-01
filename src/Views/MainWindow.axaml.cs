@@ -3,19 +3,11 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
-using CommunityToolkit.Mvvm.Input;
 
 namespace Kx.Resty.Views;
 
 public partial class MainWindow : ChromelessWindow
 {
-    public static readonly IRelayCommand QuitCommand = new RelayCommand(() =>
-    {
-        if (Avalonia.Application.Current?.ApplicationLifetime is
-            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.Shutdown(0);
-    });
-
     public MainWindow()
     {
         InitializeComponent();
