@@ -8,7 +8,20 @@
              mc:Ignorable="d" d:DesignWidth="260" d:DesignHeight="700"
              x:Class="Kx.Resty.Views.CollectionPanel"
              x:DataType="vm:CollectionPanel">
-  <Grid RowDefinitions="Auto,*">
+  <UserControl.Styles>
+    <Style Selector="Button.sidebar_tab">
+      <Setter Property="Width" Value="32"/>
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Margin" Value="0,0,4,0"/>
+    </Style>
+    <Style Selector="Button.sidebar_tab.active_tab /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource Brush.AccentSelected}"/>
+      <Setter Property="Opacity" Value="1"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*">
 
     <!-- Search box -->
     <Border Grid.Row="0"
@@ -28,104 +41,107 @@
       </TextBox>
     </Border>
 
-    <!-- Expander groups -->
-    <ScrollViewer Grid.Row="1"
-                  HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto">
-      <StackPanel Orientation="Vertical">
+    <!-- Sidebar tabs -->
+    <Border Grid.Row="1"
+      Padding="8,6,8,6"
+      BorderThickness="0,0,0,1"
+      BorderBrush="{DynamicResource Brush.Border0}">
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+        <Button Classes="icon_button sidebar_tab"
+                Classes.active_tab="{Binding IsCollectionsTab}"
+                ToolTip.Tip="{DynamicResource Text.Panel.Collections}"
+                Command="{Binding ShowCollectionsTabCommand}">
+          <Path Width="14" Height="14" Data="{StaticResource Icons.Collection}"/>
+        </Button>
+        <Button Classes="icon_button sidebar_tab"
+                Classes.active_tab="{Binding IsEnvironmentsTab}"
+                ToolTip.Tip="{DynamicResource Text.Panel.Environments}"
+                Command="{Binding ShowEnvironmentsTabCommand}">
+          <Path Width="14" Height="14" Data="{StaticResource Icons.Environment}"/>
+        </Button>
+      </StackPanel>
+    </Border>
 
-        <!-- 鈹€鈹€ Collections 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ -->
-        <Expander IsExpanded="True" Margin="0,2,0,0">
-          <Expander.Header>
-            <Border Background="Transparent" Padding="8,0">
-              <Border.ContextMenu>
-                <ContextMenu Opened="OnCollectionsContextMenuOpened">
-                  <MenuItem x:Name="CreateCollectionMenuItem"
-                            Header="{DynamicResource Text.Panel.NewCollection}"
-                            Click="OnCreateCollectionClicked"/>
-                  <MenuItem x:Name="ImportCollectionMenuItem"
-                            Header="{DynamicResource Text.Panel.ImportCollection}"
-                            Command="{Binding ImportCollectionCommand}"/>
-                </ContextMenu>
-              </Border.ContextMenu>
-              <TextBlock Text="{DynamicResource Text.Panel.Collections}"
-                         Classes="bold" FontSize="12"
-                         Foreground="{DynamicResource Brush.FG2}"/>
-            </Border>
-          </Expander.Header>
-          <ItemsControl ItemsSource="{Binding FilteredRootNodes}" Margin="0,2,0,4">
+    <!-- Collections tab -->
+    <ScrollViewer Grid.Row="2"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto"
+                  IsVisible="{Binding IsCollectionsTab}">
+      <Border Background="Transparent">
+        <Border.ContextMenu>
+          <ContextMenu Opened="OnCollectionsContextMenuOpened">
+            <MenuItem x:Name="CreateCollectionMenuItem"
+                      Header="{DynamicResource Text.Panel.NewCollection}"
+                      Click="OnCreateCollectionClicked"/>
+            <MenuItem x:Name="ImportCollectionMenuItem"
+                      Header="{DynamicResource Text.Panel.ImportCollection}"
+                      Command="{Binding ImportCollectionCommand}"/>
+          </ContextMenu>
+        </Border.ContextMenu>
+        <ItemsControl ItemsSource="{Binding FilteredRootNodes}" Margin="0,4,0,4">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:CollectionTreeNode">
+              <v:CollectionNodeView DataContext="{Binding}"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+    </ScrollViewer>
+
+    <!-- Environments tab -->
+    <ScrollViewer Grid.Row="2"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto"
+                  IsVisible="{Binding IsEnvironmentsTab}">
+      <StackPanel Margin="0,4,0,4">
+        <ItemsControl ItemsSource="{Binding Environments}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:EnvironmentSet">
+              <Button Classes="icon_button"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Left"
+                      Height="26"
+                      Command="{Binding $parent[v:CollectionPanel].((vm:CollectionPanel)DataContext).SelectEnvironmentCommand}"
+                      CommandParameter="{Binding}">
+                <Grid ColumnDefinitions="Auto,*" Margin="16,0,0,0">
+                  <TextBlock Grid.Column="0"
+                             Text="{Binding ActiveIndicator}"
+                             Width="16" FontSize="10"
+                             VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Name}"
+                             FontSize="12"
+                             VerticalAlignment="Center"/>
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Margin="8,4,8,0"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource Brush.Border0}"
+                IsVisible="{Binding ActiveEnvironment, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <ItemsControl ItemsSource="{Binding ActiveEnvironment.Variables}" Margin="0,4,0,0">
             <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:CollectionTreeNode">
-                <v:CollectionNodeView DataContext="{Binding}"/>
+              <DataTemplate x:DataType="models:EnvironmentVariable">
+                <Grid ColumnDefinitions="*,*" Height="22" Margin="8,0">
+                  <TextBlock Grid.Column="0"
+                             Text="{Binding Name}"
+                             FontSize="11"
+                             Foreground="{DynamicResource Brush.FG2}"
+                             TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Value}"
+                             FontSize="11"
+                             TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center"/>
+                </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-        </Expander>
-
-        <!-- Divider -->
-        <Border Height="1" Background="{DynamicResource Brush.Border0}" Margin="8,2"/>
-
-        <!-- 鈹€鈹€ Environments 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ -->
-        <Expander IsExpanded="False" Margin="0,2,0,0">
-          <Expander.Header>
-            <TextBlock Text="{DynamicResource Text.Panel.Environments}"
-                       Classes="bold" FontSize="12"
-                       Foreground="{DynamicResource Brush.FG2}"/>
-          </Expander.Header>
-          <StackPanel Margin="0,2,0,4">
-            <!-- Environment selector rows -->
-            <ItemsControl ItemsSource="{Binding Environments}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:EnvironmentSet">
-                  <Button Classes="icon_button"
-                          HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Left"
-                          Height="26"
-                          Command="{Binding $parent[v:CollectionPanel].((vm:CollectionPanel)DataContext).SelectEnvironmentCommand}"
-                          CommandParameter="{Binding}">
-                    <Grid ColumnDefinitions="Auto,*" Margin="16,0,0,0">
-                      <TextBlock Grid.Column="0"
-                                 Text="{Binding ActiveIndicator}"
-                                 Width="16" FontSize="10"
-                                 VerticalAlignment="Center"/>
-                      <TextBlock Grid.Column="1"
-                                 Text="{Binding Name}"
-                                 FontSize="12"
-                                 VerticalAlignment="Center"/>
-                    </Grid>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <!-- Active environment's variables -->
-            <Border Margin="8,4,8,0"
-                    BorderThickness="0,1,0,0"
-                    BorderBrush="{DynamicResource Brush.Border0}"
-                    IsVisible="{Binding ActiveEnvironment, Converter={x:Static ObjectConverters.IsNotNull}}">
-              <ItemsControl ItemsSource="{Binding ActiveEnvironment.Variables}" Margin="0,4,0,0">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="models:EnvironmentVariable">
-                    <Grid ColumnDefinitions="*,*" Height="22" Margin="8,0">
-                      <TextBlock Grid.Column="0"
-                                 Text="{Binding Name}"
-                                 FontSize="11"
-                                 Foreground="{DynamicResource Brush.FG2}"
-                                 TextTrimming="CharacterEllipsis"
-                                 VerticalAlignment="Center"/>
-                      <TextBlock Grid.Column="1"
-                                 Text="{Binding Value}"
-                                 FontSize="11"
-                                 TextTrimming="CharacterEllipsis"
-                                 VerticalAlignment="Center"/>
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </Border>
-          </StackPanel>
-        </Expander>
-
+        </Border>
       </StackPanel>
     </ScrollViewer>
 

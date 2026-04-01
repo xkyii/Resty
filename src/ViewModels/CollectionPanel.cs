@@ -13,6 +13,11 @@ public partial class CollectionPanel : ObservableObject
     [ObservableProperty] private EnvironmentSet? _activeEnvironment;
     [ObservableProperty] private HttpCollection? _selectedCollection;
     [ObservableProperty] private string          _workspacePath      = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEnvironmentsTab))]
+    private bool _isCollectionsTab = true;
+
+    public bool IsEnvironmentsTab => !IsCollectionsTab;
 
     public bool CanManageCollections =>
         !string.IsNullOrWhiteSpace(WorkspacePath) && Directory.Exists(WorkspacePath);
@@ -309,6 +314,12 @@ public partial class CollectionPanel : ObservableObject
             e.IsActive = e == env;
         ActiveEnvironment = env;
     }
+
+    [RelayCommand]
+    public void ShowCollectionsTab() => IsCollectionsTab = true;
+
+    [RelayCommand]
+    public void ShowEnvironmentsTab() => IsCollectionsTab = false;
 
     partial void OnSearchTextChanged(string value)
         => ApplyFilter();

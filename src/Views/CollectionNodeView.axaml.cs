@@ -32,10 +32,24 @@ public partial class CollectionNodeView : UserControl
     private void OnCollectionNodePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (DataContext is not CollectionTreeNode node) return;
-        if (node.IsDirectory) return;  // only highlight .http collection nodes
-
+        // Allow selecting both directories and collection (.http) nodes.
         var panelView = this.FindAncestorOfType<CollectionPanel>();
-        (panelView?.DataContext as ViewModels.CollectionPanel)?.SelectCollectionNode(node);
+        var panelVm = panelView?.DataContext as ViewModels.CollectionPanel;
+        if (panelVm is null) return;
+
+        panelVm.SelectCollectionNode(node);
+    }
+
+    private void OnCollectionNodeDoubleTapped(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not CollectionTreeNode node) return;
+        node.ToggleExpanded();
+    }
+
+    private void OnToggleClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not CollectionTreeNode node) return;
+        node.ToggleExpanded();
     }
 
     private async void OnRenameCollectionClicked(object? sender, RoutedEventArgs e)

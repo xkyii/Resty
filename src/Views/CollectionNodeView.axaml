@@ -8,9 +8,10 @@
   <StackPanel Orientation="Vertical">
 
     <!-- ── Node header row ──────────────────────────────────────── -->
-        <Border Height="26" Cursor="Hand" Background="Transparent"
-          Classes.selected="{Binding IsSelected}"
-          PointerPressed="OnCollectionNodePointerPressed">
+            <Border Height="26" Cursor="Hand"
+              Classes.selected="{Binding IsSelected}"
+              PointerPressed="OnCollectionNodePointerPressed"
+              DoubleTapped="OnCollectionNodeDoubleTapped">
       <Border.ContextMenu>
         <ContextMenu>
           <MenuItem Header="{DynamicResource Text.Panel.RenameCollection}"
@@ -18,35 +19,33 @@
                     Click="OnRenameCollectionClicked"/>
         </ContextMenu>
       </Border.ContextMenu>
+      <Border.Background>
+        <Binding Path="IsSelected" Converter="{x:Static c:SelectionBrushConverters.SelectedBrush}"/>
+      </Border.Background>
       <Border.Styles>
-        <Style Selector="Border.selected">
-          <Setter Property="Background" Value="{DynamicResource Brush.AccentSelected}"/>
-          <Setter Property="BorderThickness" Value="2,0,0,0"/>
-          <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
-        </Style>
-        <Style Selector="Border.selected:pointerover">
-          <Setter Property="Background" Value="{DynamicResource Brush.AccentSelected}"/>
-          <Setter Property="BorderThickness" Value="2,0,0,0"/>
-          <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
-        </Style>
         <Style Selector="Border:pointerover">
           <Setter Property="Background" Value="{DynamicResource Brush.AccentHovered}"/>
         </Style>
       </Border.Styles>
       <Grid ColumnDefinitions="Auto,Auto,*">
 
-        <!-- Expand/collapse chevron -->
+        <!-- Expand/collapse chevron: two static paths avoid RenderTransform offset -->
         <Button Grid.Column="0"
                 Classes="icon_button"
-                Width="28" Height="26"
-                Margin="8,0,0,0"
-                Command="{Binding ToggleExpandedCommand}">
-          <Path Width="8" Height="8"
-                Data="{StaticResource Icons.Chevron.Down}">
-            <Path.RenderTransform>
-              <RotateTransform Angle="{Binding ChevronAngle}"/>
-            </Path.RenderTransform>
-          </Path>
+                Width="36" Height="26"
+                Margin="0"
+                Padding="0"
+                Click="OnToggleClicked">
+          <Panel Width="8" Height="8"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center">
+            <Path Width="8" Height="8"
+                  Data="{StaticResource Icons.Chevron.Down}"
+                  IsVisible="{Binding IsExpanded}"/>
+            <Path Width="8" Height="8"
+                  Data="{StaticResource Icons.Chevron.Right}"
+                  IsVisible="{Binding !IsExpanded}"/>
+          </Panel>
         </Button>
 
         <!-- Icon: folder (directory) or file icon (.http collection) -->
@@ -84,28 +83,20 @@
       <ItemsControl ItemsSource="{Binding Collection.Requests}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:HttpRequestEntry">
-            <Border Height="26"
-                    Cursor="Hand"
-                    Background="Transparent"
-                    Classes.selected="{Binding IsSelected}"
-                  PointerPressed="OnRequestEntryPointerPressed">
+              <Border Height="26"
+                Cursor="Hand"
+                Classes.selected="{Binding IsSelected}"
+                PointerPressed="OnRequestEntryPointerPressed">
               <Border.ContextMenu>
                 <ContextMenu>
                   <MenuItem Header="{DynamicResource Text.Panel.RenameRequest}"
                             Click="OnRenameRequestClicked"/>
                 </ContextMenu>
               </Border.ContextMenu>
+              <Border.Background>
+                <Binding Path="IsSelected" Converter="{x:Static c:SelectionBrushConverters.SelectedBrush}"/>
+              </Border.Background>
               <Border.Styles>
-                <Style Selector="Border.selected">
-                  <Setter Property="Background" Value="{DynamicResource Brush.AccentSelected}"/>
-                  <Setter Property="BorderThickness" Value="2,0,0,0"/>
-                  <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
-                </Style>
-                <Style Selector="Border.selected:pointerover">
-                  <Setter Property="Background" Value="{DynamicResource Brush.AccentSelected}"/>
-                  <Setter Property="BorderThickness" Value="2,0,0,0"/>
-                  <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
-                </Style>
                 <Style Selector="Border:pointerover">
                   <Setter Property="Background" Value="{DynamicResource Brush.AccentHovered}"/>
                 </Style>

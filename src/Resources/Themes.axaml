@@ -23,7 +23,7 @@
       <Color x:Key="Color.Method.PUT">#FFFF8C00</Color>
       <Color x:Key="Color.Method.DELETE">#FFE81123</Color>
       <Color x:Key="Color.Method.PATCH">#FF744DA9</Color>
-      <Color x:Key="Color.AccentSelected">#FFC1D8EA</Color>
+      <Color x:Key="Color.AccentSelected">#FFE0E0E0</Color>
       <Color x:Key="Color.Status.2xx">#FF107C10</Color>
       <Color x:Key="Color.Status.3xx">#FFFF8C00</Color>
       <Color x:Key="Color.Status.4xx">#FFE81123</Color>
@@ -52,7 +52,7 @@
       <Color x:Key="Color.Method.PUT">#FFFFB900</Color>
       <Color x:Key="Color.Method.DELETE">#FFFF6B6B</Color>
       <Color x:Key="Color.Method.PATCH">#FFB29BEB</Color>
-      <Color x:Key="Color.AccentSelected">#FF2D4A5E</Color>
+      <Color x:Key="Color.AccentSelected">#FF404040</Color>
       <Color x:Key="Color.Status.2xx">#FF6CCB5F</Color>
       <Color x:Key="Color.Status.3xx">#FFFFB900</Color>
       <Color x:Key="Color.Status.4xx">#FFFF6B6B</Color>
