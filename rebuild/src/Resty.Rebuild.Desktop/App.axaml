@@ -1,0 +1,13 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:semi="https://irihi.tech/semi"
+             xmlns:uSemi="https://irihi.tech/ursa/themes/semi"
+             x:Class="Resty.Rebuild.Desktop.App"
+             RequestedThemeVariant="Default">
+             <!-- "Default" follows system theme. -->
+
+    <Application.Styles>
+        <semi:SemiTheme Locale="zh-CN" />
+        <uSemi:SemiTheme Locale="zh-CN" />
+    </Application.Styles>
+</Application>
