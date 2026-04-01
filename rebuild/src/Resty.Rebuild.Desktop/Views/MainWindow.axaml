@@ -148,8 +148,6 @@
                              Text="{Binding WorkspaceNavigation.SearchText, Mode=TwoWay}"
                              Height="32"/>
 
-                    <Border Height="1" Background="#337D7D7D"/>
-
                     <u:NavMenu Grid.Row="2"
                                IsVisible="{Binding IsDirectoryManagerMode}"
                                ItemsSource="{Binding DirectoryManager.MenuRoots}"
