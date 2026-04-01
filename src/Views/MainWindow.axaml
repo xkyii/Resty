@@ -54,7 +54,7 @@
             <MenuFlyout Placement="BottomEdgeAlignedLeft" VerticalOffset="-6">
               <MenuItem Header="{DynamicResource Text.Menu.Preferences}"
                         Command="{x:Static s:App.OpenPreferencesCommand}"/>
-              <MenuItem Header="-"/>
+              <Separator Margin="0,2"/>
               <MenuItem Header="{DynamicResource Text.Menu.Quit}"
                         Command="{x:Static v:MainWindow.QuitCommand}"/>
             </MenuFlyout>
