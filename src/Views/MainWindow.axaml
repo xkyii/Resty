@@ -21,12 +21,12 @@
     <!-- ══════════════════════════ TitleBar ══════════════════════════ -->
     <Grid Grid.Row="0"
           Background="{DynamicResource Brush.TitleBar}"
-          ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+          ColumnDefinitions="Auto,Auto,*,Auto"
           PointerPressed="TitleBarPointerPressed"
           DoubleTapped="TitleBarDoubleTapped">
 
       <!-- Bottom border -->
-      <Border Grid.Column="0" Grid.ColumnSpan="5"
+      <Border Grid.Column="0" Grid.ColumnSpan="4"
               BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Brush.Border0}"/>
 
       <!-- macOS: left caption button placeholder -->
@@ -98,17 +98,8 @@
         </ItemsControl>
       </ScrollViewer>
 
-      <!-- Open directory button -->
-      <Button Grid.Column="3"
-              Classes="icon_button"
-              Width="32" Height="32"
-              ToolTip.Tip="Open Directory"
-              Command="{Binding OpenDirectoryCommand}">
-        <Path Width="14" Height="14" Data="{StaticResource Icons.Folder}"/>
-      </Button>
-
       <!-- Windows/Linux caption buttons -->
-      <StackPanel Grid.Column="4"
+      <StackPanel Grid.Column="3"
                   Orientation="Horizontal"
                   IsVisible="{OnPlatform True, macOS=False}">
         <Button Classes="caption_button"
