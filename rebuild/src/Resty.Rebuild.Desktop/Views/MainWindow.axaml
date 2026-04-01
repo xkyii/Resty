@@ -1,13 +1,46 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Resty.Rebuild.Desktop.ViewModels"
+        xmlns:dmvm="using:Resty.Rebuild.Desktop.Features.DirectoryManager.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Resty.Rebuild.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Resty.Rebuild.Desktop">
+        Title="Resty.Rebuild"
+        Width="1280"
+        Height="800"
+        MinWidth="1000"
+        MinHeight="640"
+        SystemDecorations="None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="40">
+
+    <Window.Styles>
+        <Style Selector="Button.caption_btn">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.caption_btn:pointerover">
+            <Setter Property="Background" Value="#22000000"/>
+        </Style>
+        <Style Selector="Button.close_btn:pointerover">
+            <Setter Property="Background" Value="#E81123"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="Border.panel_card">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#3A7D7D7D"/>
+            <Setter Property="Background" Value="#11FFFFFF"/>
+        </Style>
+    </Window.Styles>
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -15,6 +48,228 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <Grid RowDefinitions="40,*">
+
+        <!-- Title bar -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="Auto,*,Auto"
+              Background="#1EFFFFFF"
+              PointerPressed="TitleBarPointerPressed"
+              DoubleTapped="TitleBarDoubleTapped">
+
+            <!-- Left: File / Help -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button Height="40" Padding="12,0" BorderThickness="0" Background="Transparent">
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="偏好设置"/>
+                            <Separator/>
+                            <MenuItem Header="退出" Click="CloseWindow"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                    <TextBlock Text="File" VerticalAlignment="Center"/>
+                </Button>
+
+                <Button Height="40" Padding="12,0" BorderThickness="0" Background="Transparent">
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="关于"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                    <TextBlock Text="Help" VerticalAlignment="Center"/>
+                </Button>
+            </StackPanel>
+
+            <!-- Center: mode switch + workspace name + workspace quick switch -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+                <Button Width="36"
+                        Height="32"
+                        Command="{Binding ToggleModeCommand}">
+                    <TextBlock Text="⇄" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+
+                <Border Width="180" Height="32" CornerRadius="6" Background="#22000000">
+                    <TextBlock Text="{Binding ModeTitle}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold"/>
+                </Border>
+
+                <ComboBox Width="220"
+                          Height="32"
+                          ItemsSource="{Binding OpenWorkspaces}"
+                          SelectedItem="{Binding SelectedWorkspaceName}"/>
+            </StackPanel>
+
+            <!-- Right: caption buttons -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Classes="caption_btn" Click="MinimizeWindow">
+                    <TextBlock Text="-" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+                <Button Classes="caption_btn" Click="ToggleMaximizeWindow">
+                    <TextBlock Text="□" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+                <Button Classes="caption_btn close_btn" Click="CloseWindow">
+                    <TextBlock Text="×" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Body -->
+        <Grid Grid.Row="1" Margin="8" ColumnDefinitions="300,*,*" ColumnSpacing="8">
+
+            <!-- Left shared panel -->
+            <Border Grid.Column="0" Classes="panel_card">
+                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                    <TextBox IsVisible="{Binding IsDirectoryManagerMode}"
+                             Watermark="搜索&quot;最近&quot;或&quot;目录&quot;"
+                             Text="{Binding DirectoryManager.SearchText, Mode=TwoWay}"
+                             Height="32"/>
+
+                    <TextBox IsVisible="{Binding IsWorkspaceMode}"
+                             Watermark="搜索&quot;集合&quot;或&quot;历史&quot;"
+                             Height="32"/>
+
+                    <Border Height="1" Background="#337D7D7D"/>
+
+                    <StackPanel Spacing="8" IsVisible="{Binding IsDirectoryManagerMode}">
+                        <Expander Header="最近" IsExpanded="True">
+                            <ItemsControl ItemsSource="{Binding DirectoryManager.FilteredRecentEntries}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="dmvm:DirectoryEntryItem">
+                                        <Button HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left"
+                                                Margin="0,2,0,2"
+                                                Command="{Binding $parent[Window].DataContext.DirectoryManager.SelectEntryCommand}"
+                                                CommandParameter="{Binding}">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Path}" Opacity="0.7" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Expander>
+
+                        <Expander Header="目录" IsExpanded="True">
+                            <ItemsControl ItemsSource="{Binding DirectoryManager.FilteredManagedEntries}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="dmvm:DirectoryEntryItem">
+                                        <Button HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left"
+                                                Margin="0,2,0,2"
+                                                Command="{Binding $parent[Window].DataContext.DirectoryManager.SelectEntryCommand}"
+                                                CommandParameter="{Binding}">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Path}" Opacity="0.7" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Expander>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8" IsVisible="{Binding IsWorkspaceMode}">
+                        <TextBlock Text="导航" FontWeight="SemiBold"/>
+                        <TextBlock Text="集合"/>
+                        <TextBlock Text="历史"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Directory Manager mode -->
+            <Grid Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsDirectoryManagerMode}" RowDefinitions="Auto,*" RowSpacing="8">
+                <Border Grid.Row="0" Classes="panel_card">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="在资源管理器中显示"
+                                IsEnabled="{Binding DirectoryManager.HasSelection}"
+                                Command="{Binding DirectoryManager.RevealInExplorerCommand}"/>
+                        <Button Content="移除"
+                                IsEnabled="{Binding DirectoryManager.HasSelection}"
+                                Command="{Binding DirectoryManager.RemoveEntryCommand}"/>
+                        <Button Content="加入目录管理"
+                                IsVisible="{Binding DirectoryManager.CanAddToManaged}"
+                                Command="{Binding DirectoryManager.AddToManagedCommand}"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1" Classes="panel_card">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="目录信息" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding DirectoryManager.HasSelection, StringFormat=选中项元信息}"/>
+                        <TextBlock Text="{Binding DirectoryManager.SelectedTypeText, StringFormat=类型: {0}}"/>
+                        <TextBlock Text="{Binding DirectoryManager.SelectedName, StringFormat=名称: {0}}"/>
+                        <TextBlock Text="{Binding DirectoryManager.SelectedPath, StringFormat=路径: {0}}"/>
+                        <TextBlock Text="{Binding DirectoryManager.SelectedLastOpenedText, StringFormat=最近打开: {0}}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Workspace mode -->
+            <Grid Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsWorkspaceMode}" RowDefinitions="Auto,Auto,*,Auto,*" RowSpacing="8">
+                <Border Grid.Row="0" Classes="panel_card">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="request-1"/>
+                        <Button Content="request-2"/>
+                        <Button Content="+" Width="32"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1" Classes="panel_card">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Text="集合A / 示例请求" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="保存"/>
+                        <Button Grid.Column="2" Content="刷新"/>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2" Classes="panel_card">
+                    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                            <ComboBox Width="120" SelectedIndex="0">
+                                <ComboBoxItem Content="GET"/>
+                                <ComboBoxItem Content="POST"/>
+                                <ComboBoxItem Content="PUT"/>
+                                <ComboBoxItem Content="DELETE"/>
+                            </ComboBox>
+                            <TextBox Grid.Column="1" Text="https://api.example.com/users"/>
+                            <Button Grid.Column="2" Content="Send"/>
+                        </Grid>
+
+                        <TabControl>
+                            <TabItem Header="Queries"/>
+                            <TabItem Header="Headers"/>
+                            <TabItem Header="Body"/>
+                            <TabItem Header="Auth"/>
+                        </TabControl>
+
+                        <TextBlock Text="请求编辑区" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="3" Classes="panel_card">
+                    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Text="200" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="1" Text="120 ms"/>
+                        <TextBlock Grid.Column="2" Text="3.2 KB"/>
+                        <Button Grid.Column="4" Content="Body"/>
+                        <Button Grid.Column="5" Content="Headers"/>
+                        <Button Grid.Column="6" Content="Cookies"/>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="4" Classes="panel_card">
+                    <TextBlock Text="响应内容区" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
 
 </Window>
