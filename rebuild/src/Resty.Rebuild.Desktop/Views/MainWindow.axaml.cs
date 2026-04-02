@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -160,16 +161,24 @@ public partial class MainWindow : Window
         cancelButton.Click += (_, _) => dialog.Close();
         okButton.Click += (_, _) =>
         {
-            var selectedTheme = themeCombo.SelectedItem as string ?? "跟随系统";
-            app.RequestedThemeVariant = selectedTheme switch
+            try
             {
-                "浅色" => ThemeVariant.Light,
-                "深色" => ThemeVariant.Dark,
-                _ => ThemeVariant.Default
-            };
+                var selectedTheme = themeCombo.SelectedItem as string ?? "跟随系统";
+                app.RequestedThemeVariant = selectedTheme switch
+                {
+                    "浅色" => ThemeVariant.Light,
+                    "深色" => ThemeVariant.Dark,
+                    _ => ThemeVariant.Default
+                };
 
-            var selectedLang = languageCombo.SelectedItem as string ?? "简体中文";
-            ApplyLocale(selectedLang == "英语" ? "en-US" : "zh-CN");
+                var selectedLang = languageCombo.SelectedItem as string ?? "简体中文";
+                ApplyLocale(selectedLang == "英语" ? "en-US" : "zh-CN");
+            }
+            catch
+            {
+                // 设置应用失败时，避免对话框点击“确定”导致崩溃。
+            }
+
             dialog.Close();
         };
 
@@ -243,13 +252,47 @@ public partial class MainWindow : Window
         if (app is null)
             return;
 
-        // Semi/Ursa 主题对象都包含 Locale 属性，用反射统一设置。
+        // Semi/Ursa 主题对象都可能包含 Locale 属性，但属性类型不一定一致。
+        // 仅在可安全赋值时写入，避免类型不匹配引发崩溃。
         foreach (var style in app.Styles)
         {
-            var localeProp = style.GetType().GetProperty("Locale");
-            if (localeProp?.CanWrite == true)
+            try
             {
-                localeProp.SetValue(style, locale);
+                var localeProp = style.GetType().GetProperty("Locale");
+                if (localeProp?.CanWrite != true)
+                    continue;
+
+                var propType = localeProp.PropertyType;
+                if (propType == typeof(string))
+                {
+                    localeProp.SetValue(style, locale);
+                    continue;
+                }
+
+                if (propType.IsEnum)
+                {
+                    // 尝试按名称匹配枚举值。
+                    var enumName = locale.StartsWith("zh", StringComparison.OrdinalIgnoreCase)
+                        ? "zhCN"
+                        : locale.StartsWith("en", StringComparison.OrdinalIgnoreCase)
+                            ? "enUS"
+                            : null;
+
+                    if (enumName is not null)
+                    {
+                        var names = Enum.GetNames(propType);
+                        var matched = names.FirstOrDefault(n => string.Equals(n, enumName, StringComparison.OrdinalIgnoreCase));
+                        if (matched is not null)
+                        {
+                            var enumValue = Enum.Parse(propType, matched, ignoreCase: true);
+                            localeProp.SetValue(style, enumValue);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // 忽略单个样式的 locale 设置异常，确保整体不崩溃。
             }
         }
     }
