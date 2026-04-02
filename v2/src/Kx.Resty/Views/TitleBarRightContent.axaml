@@ -26,11 +26,6 @@
                        FontWeight="SemiBold"/>
         </Border>
 
-        <!-- Workspace selector (workspace mode only) -->
-        <ComboBox Height="28" MinWidth="140"
-                  IsVisible="{Binding IsWorkspaceMode}"
-                  ItemsSource="{Binding OpenWorkspaces}"
-                  SelectedItem="{Binding SelectedWorkspaceName, Mode=TwoWay}"/>
     </StackPanel>
 
 </UserControl>
