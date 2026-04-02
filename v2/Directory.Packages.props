@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <AvaloniaVersion>11.3.12</AvaloniaVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Avalonia"                       Version="$(AvaloniaVersion)"/>
+    <PackageVersion Include="Avalonia.Desktop"               Version="$(AvaloniaVersion)"/>
+    <PackageVersion Include="Avalonia.Diagnostics"           Version="$(AvaloniaVersion)"/>
+    <PackageVersion Include="ReactiveUI"                     Version="20.1.1"/>
+    <PackageVersion Include="ReactiveUI.Avalonia"            Version="14.7.1"/>
+    <PackageVersion Include="Semi.Avalonia"                  Version="11.3.7.3"/>
+    <PackageVersion Include="Irihi.Ursa"                     Version="1.15.0"/>
+    <PackageVersion Include="Irihi.Ursa.Themes.Semi"         Version="1.15.0"/>
+    <PackageVersion Include="Irihi.Ursa.ReactiveUIExtension" Version="1.1.0"/>
+  </ItemGroup>
+</Project>
