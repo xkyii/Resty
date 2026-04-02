@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using Resty.Rebuild.Desktop.ViewModels;
 
 namespace Resty.Rebuild.Desktop.Views;
@@ -61,12 +62,23 @@ public partial class MainWindow : Window
         if (!vm.IsDirectoryManagerMode)
             return;
 
-        var dlg = new OpenFolderDialog();
-        var path = await dlg.ShowAsync(this);
+        if (!StorageProvider.CanPickFolder)
+            return;
+
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "选择文件夹",
+            AllowMultiple = false
+        });
+
+        if (folders.Count == 0)
+            return;
+
+        var path = folders[0].Path.LocalPath;
         if (string.IsNullOrWhiteSpace(path))
             return;
 
         // 将选中路径交给 DirectoryManager 处理（会校验、加入最近并触发打开）
-        await vm.DirectoryManager.OpenPathAsync(path).ConfigureAwait(false);
+        await vm.DirectoryManager.OpenPathAsync(path);
     }
 }
