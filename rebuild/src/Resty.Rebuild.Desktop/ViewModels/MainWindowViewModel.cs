@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System;
 using ReactiveUI;
+using Resty.Rebuild.Application.Abstractions;
 using Resty.Rebuild.Desktop.Features.DirectoryManager.ViewModels;
 using Resty.Rebuild.Desktop.Features.Workspace.ViewModels;
 
@@ -11,11 +12,11 @@ public class MainWindowViewModel : ViewModelBase
     private bool _isDirectoryManagerMode = true;
     private string? _selectedWorkspaceName;
 
-    public MainWindowViewModel()
+    public MainWindowViewModel(IHttpRequestExecutor? requestExecutor = null)
     {
         DirectoryManager = new DirectoryManagerViewModel();
         WorkspaceNavigation = new WorkspaceNavigationViewModel();
-        WorkspaceEditor = new WorkspaceEditorViewModel();
+        WorkspaceEditor = new WorkspaceEditorViewModel(requestExecutor);
 
         OpenWorkspaces =
         [
@@ -54,6 +55,8 @@ public class MainWindowViewModel : ViewModelBase
             {
                 WorkspaceEditor.ApplyWorkspaceSelection(SelectedWorkspaceName, hasCollections);
             });
+
+        WorkspaceEditor.RequestSent += (method, url) => WorkspaceNavigation.AddHistoryEntry(method, url);
 
         WorkspaceNavigation.LoadWorkspace(_selectedWorkspaceName);
         WorkspaceEditor.ApplyWorkspaceSelection(_selectedWorkspaceName, WorkspaceNavigation.HasCollections);

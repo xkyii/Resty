@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using ReactiveUI;
+using Resty.Rebuild.Application.Abstractions;
+using Resty.Rebuild.Domain.Http;
 
 namespace Resty.Rebuild.Desktop.Features.Workspace.ViewModels;
 
@@ -168,12 +170,15 @@ public sealed class RequestTabItem : ReactiveObject
 
 public sealed class WorkspaceEditorViewModel : ReactiveObject
 {
+    private readonly IHttpRequestExecutor? _requestExecutor;
     private RequestTabItem? _selectedTab;
     private WorkspaceUiState _currentState;
     private string? _collectionPrompt;
 
-    public WorkspaceEditorViewModel()
+    public WorkspaceEditorViewModel(IHttpRequestExecutor? requestExecutor = null)
     {
+        _requestExecutor = requestExecutor;
+
         var usersTab = CreateTab("用户服务", "获取用户列表", "GET", "https://api.example.com/users");
         usersTab.ResponseCode = "200";
         usersTab.ResponseTime = "120 ms";
@@ -342,6 +347,8 @@ public sealed class WorkspaceEditorViewModel : ReactiveObject
         CurrentState = WorkspaceUiState.CollectionBrowsing;
     }
 
+    public event Action<string, string>? RequestSent;
+
     private RequestTabItem CreateTab(string collectionName, string requestName, string method, string url)
         => new(collectionName, requestName, method, url, MarkEditing, MarkEditing, SendRequestAsync);
 
@@ -358,16 +365,61 @@ public sealed class WorkspaceEditorViewModel : ReactiveObject
         tab.IsSending = true;
 
         CurrentState = WorkspaceUiState.Sending;
-        await Task.Delay(650);
+        try
+        {
+            if (_requestExecutor is null)
+            {
+                await Task.Delay(450);
+                tab.ResponseCode = "200";
+                tab.ResponseTime = "76 ms";
+                tab.ResponseSize = "1.4 KB";
+                tab.ResponseBodyContent = "{\n  \"ok\": true,\n  \"url\": \"" + tab.Url + "\"\n}";
+                tab.ResponseHeadersContent = "content-type: application/json\nx-powered-by: resty-rebuild";
+                tab.ResponseCookiesContent = "trace_id=demo-123; Path=/; HttpOnly";
+            }
+            else
+            {
+                var response = await _requestExecutor.SendAsync(new HttpRequestData
+                {
+                    Method = tab.Method,
+                    Url = tab.Url
+                });
 
-        tab.ResponseCode = "200";
-        tab.ResponseTime = "76 ms";
-        tab.ResponseSize = "1.4 KB";
-        tab.ResponseBodyContent = "{\n  \"ok\": true,\n  \"url\": \"" + tab.Url + "\"\n}";
-        tab.ResponseHeadersContent = "content-type: application/json\nx-powered-by: resty-rebuild";
-        tab.ResponseCookiesContent = "trace_id=demo-123; Path=/; HttpOnly";
+                tab.ResponseCode = response.StatusCode.ToString();
+                tab.ResponseTime = $"{response.ElapsedMilliseconds} ms";
+                tab.ResponseSize = FormatSize(response.SizeBytes);
+                tab.ResponseBodyContent = response.BodyContent;
+                tab.ResponseHeadersContent = response.HeadersContent;
+                tab.ResponseCookiesContent = response.CookiesContent;
+            }
+
+            RequestSent?.Invoke(tab.Method, tab.Url);
+            CurrentState = WorkspaceUiState.ResponseReady;
+        }
+        catch (Exception ex)
+        {
+            tab.ResponseCode = "ERR";
+            tab.ResponseTime = "-";
+            tab.ResponseSize = "-";
+            tab.ResponseBodyContent = ex.Message;
+            tab.ResponseHeadersContent = "(请求执行失败)";
+            tab.ResponseCookiesContent = "(无 Cookies)";
+            CurrentState = WorkspaceUiState.ResponseReady;
+        }
+
         tab.IsSending = false;
+    }
 
-        CurrentState = WorkspaceUiState.ResponseReady;
+    private static string FormatSize(long sizeBytes)
+    {
+        if (sizeBytes < 1024)
+            return $"{sizeBytes} B";
+
+        var kb = sizeBytes / 1024.0;
+        if (kb < 1024)
+            return $"{kb:F1} KB";
+
+        var mb = kb / 1024.0;
+        return $"{mb:F1} MB";
     }
 }

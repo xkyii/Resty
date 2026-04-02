@@ -193,6 +193,39 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
         this.RaisePropertyChanged(nameof(HasCollections));
     }
 
+    public void AddHistoryEntry(string method, string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+
+        var header = $"{method.ToUpperInvariant()} {ExtractPath(url)}";
+
+        var existed = HistoryNodes.FirstOrDefault(x =>
+            string.Equals(x.Method, method, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(x.Url, url, StringComparison.OrdinalIgnoreCase));
+
+        if (existed is not null)
+            HistoryNodes.Remove(existed);
+
+        HistoryNodes.Insert(0, new WorkspaceNavNode
+        {
+            Header = header,
+            Kind = WorkspaceNavItemKind.History,
+            Method = method.ToUpperInvariant(),
+            Url = url
+        });
+
+        RebuildMenu();
+    }
+
+    private static string ExtractPath(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return url;
+
+        return string.IsNullOrWhiteSpace(uri.PathAndQuery) ? "/" : uri.PathAndQuery;
+    }
+
     private void RebuildMenu()
     {
         var query = SearchText.Trim();
