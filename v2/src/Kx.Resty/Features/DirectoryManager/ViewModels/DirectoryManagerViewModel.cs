@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using ReactiveUI;
 using Kx.Resty.Domain.Abstractions;
 using Kx.Resty.Domain.Directories;
@@ -85,10 +86,10 @@ public sealed class DirectoryManagerViewModel : ViewModelBase
         RecentEntries = [];
         ManagedEntries = [];
 
-        RevealInExplorerCommand = ReactiveCommand.Create(RevealInExplorer);
-        RemoveEntryCommand = ReactiveCommand.Create(RemoveEntry);
-        AddToManagedCommand = ReactiveCommand.Create(AddToManaged);
-        OpenInWorkspaceCommand = ReactiveCommand.Create(OpenSelectedToWorkspace);
+        RevealInExplorerCommand = new SimpleCommand(RevealInExplorer);
+        RemoveEntryCommand = new SimpleCommand(RemoveEntry);
+        AddToManagedCommand = new SimpleCommand(AddToManaged);
+        OpenInWorkspaceCommand = new SimpleCommand(OpenSelectedToWorkspace);
 
         _ = LoadFromStoreAsync();
     }
@@ -97,10 +98,10 @@ public sealed class DirectoryManagerViewModel : ViewModelBase
     public ObservableCollection<DirectoryEntryItem> ManagedEntries { get; }
     public ObservableCollection<DirectoryMenuNode> MenuRoots { get; } = [];
 
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> RevealInExplorerCommand { get; }
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> RemoveEntryCommand { get; }
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> AddToManagedCommand { get; }
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> OpenInWorkspaceCommand { get; }
+    public ICommand RevealInExplorerCommand { get; }
+    public ICommand RemoveEntryCommand { get; }
+    public ICommand AddToManagedCommand { get; }
+    public ICommand OpenInWorkspaceCommand { get; }
 
     public Action<DirectoryEntryItem>? OpenInWorkspaceRequested { get; set; }
 
@@ -177,7 +178,7 @@ public sealed class DirectoryManagerViewModel : ViewModelBase
         }
 
         SelectedEntry = entry;
-        await ValidateEntryAsync(entry).ConfigureAwait(false);
+        await ValidateEntryAsync(entry);
         TryInvokeOpen(entry);
     }
 
@@ -185,8 +186,15 @@ public sealed class DirectoryManagerViewModel : ViewModelBase
     {
         if (SelectedEntry is null) return;
         ErrorBanner = string.Empty;
-        SelectedEntry.ValidationState = Validate(SelectedEntry.Path);
-        TryInvokeOpen(SelectedEntry);
+        try
+        {
+            SelectedEntry.ValidationState = Validate(SelectedEntry.Path);
+            TryInvokeOpen(SelectedEntry);
+        }
+        catch (Exception ex)
+        {
+            ErrorBanner = $"⚠ 打开失败：{ex.Message}";
+        }
     }
 
     private void TryInvokeOpen(DirectoryEntryItem entry)

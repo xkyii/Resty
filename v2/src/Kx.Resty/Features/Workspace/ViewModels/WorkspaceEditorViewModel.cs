@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using ReactiveUI;
 using Kx.Resty.Domain.Abstractions;
 using Kx.Resty.Domain.Http;
 using Kx.Resty.Features.Workspace.Services;
+using Kx.Resty.ViewModels;
 
 namespace Kx.Resty.Features.Workspace.ViewModels;
 
@@ -55,9 +57,12 @@ public sealed class RequestTabItem : ReactiveObject
         _headersText = headersText;
         _bodyText = bodyText;
 
-        SaveCommand = ReactiveCommand.Create(() => (onSave ?? (_ => { }))(this));
-        RefreshCommand = ReactiveCommand.Create(() => (onRefresh ?? (_ => { }))(this));
-        SendCommand = ReactiveCommand.CreateFromTask(async () => await (onSend ?? (_ => Task.CompletedTask))(this));
+        SaveCommand = new SimpleCommand(() => (onSave ?? (_ => { }))(this));
+        RefreshCommand = new SimpleCommand(() => (onRefresh ?? (_ => { }))(this));
+        SendCommand = new SimpleCommand(() =>
+        {
+            _ = (onSend ?? (_ => Task.CompletedTask))(this);
+        });
     }
 
     public static IReadOnlyList<string> HttpMethods { get; } =
@@ -106,9 +111,9 @@ public sealed class RequestTabItem : ReactiveObject
         _ => ResponseBodyContent
     };
 
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> SaveCommand { get; }
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> RefreshCommand { get; }
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> SendCommand { get; }
+    public ICommand SaveCommand { get; }
+    public ICommand RefreshCommand { get; }
+    public ICommand SendCommand { get; }
 }
 
 public sealed class WorkspaceEditorViewModel : ReactiveObject

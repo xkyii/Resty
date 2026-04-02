@@ -4,7 +4,9 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Windows.Input;
 using ReactiveUI;
+using Kx.Resty.ViewModels;
 using Kx.Resty.Features.Workspace.Models;
 using Kx.Resty.Features.Workspace.Services;
 
@@ -50,8 +52,8 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
         HistoryMenuRoots = [];
         ActiveMenuRoots = [];
 
-        ShowCollectionsCommand = ReactiveCommand.Create(() => { IsCollectionsMode = true; });
-        ShowHistoryCommand = ReactiveCommand.Create(() => { IsCollectionsMode = false; });
+        ShowCollectionsCommand = new SimpleCommand(() => { IsCollectionsMode = true; });
+        ShowHistoryCommand = new SimpleCommand(() => { IsCollectionsMode = false; });
 
         RebuildMenu();
     }
@@ -62,8 +64,8 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
     public ObservableCollection<WorkspaceNavNode> HistoryMenuRoots { get; }
     public ObservableCollection<WorkspaceNavNode> ActiveMenuRoots { get; }
 
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> ShowCollectionsCommand { get; }
-    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> ShowHistoryCommand { get; }
+    public ICommand ShowCollectionsCommand { get; }
+    public ICommand ShowHistoryCommand { get; }
 
     public string? WorkspaceRootPath => _workspaceRootPath;
 

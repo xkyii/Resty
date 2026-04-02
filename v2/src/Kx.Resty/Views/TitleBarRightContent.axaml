@@ -4,7 +4,11 @@
              x:Class="Kx.Resty.Views.TitleBarRightContent"
              x:DataType="vm:MainWindowViewModel">
 
-    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,4,0">
+    <StackPanel Orientation="Horizontal"
+                Spacing="6"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                Margin="0,0,4,0">
 
         <!-- Mode toggle button -->
         <Button Width="36" Height="28"
@@ -27,20 +31,6 @@
                   IsVisible="{Binding IsWorkspaceMode}"
                   ItemsSource="{Binding OpenWorkspaces}"
                   SelectedItem="{Binding SelectedWorkspaceName, Mode=TwoWay}"/>
-
-        <!-- Settings/About menu -->
-        <Button Width="28" Height="28" Padding="0">
-            <Button.Flyout>
-                <MenuFlyout Placement="BottomEdgeAlignedRight">
-                    <MenuItem Header="关于 Resty"
-                              Command="{Binding ShowAboutCommand}"/>
-                    <Separator/>
-                    <MenuItem Header="退出"
-                              Command="{Binding QuitCommand}"/>
-                </MenuFlyout>
-            </Button.Flyout>
-            <TextBlock Text="⋮" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Button>
     </StackPanel>
 
 </UserControl>
