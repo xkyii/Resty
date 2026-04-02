@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Resty.Rebuild.Desktop.ViewModels;
 
 namespace Resty.Rebuild.Desktop.Views;
 
@@ -35,5 +36,19 @@ public partial class MainWindow : Window
     private void CloseWindow(object? sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void DirectoryMenuDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+            return;
+
+        if (!vm.IsDirectoryManagerMode)
+            return;
+
+        if (!vm.DirectoryManager.HasSelection)
+            return;
+
+        vm.DirectoryManager.OpenSelectedInWorkspace();
     }
 }

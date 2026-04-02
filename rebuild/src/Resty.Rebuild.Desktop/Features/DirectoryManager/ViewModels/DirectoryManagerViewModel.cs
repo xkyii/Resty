@@ -71,6 +71,7 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
         RevealInExplorerCommand = ReactiveCommand.Create(RevealInExplorer);
         RemoveEntryCommand = ReactiveCommand.Create(RemoveEntry);
         AddToManagedCommand = ReactiveCommand.Create(AddToManaged);
+        OpenInWorkspaceCommand = ReactiveCommand.Create(OpenSelectedToWorkspace);
 
         ApplyFilter();
     }
@@ -90,6 +91,10 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
     public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> RemoveEntryCommand { get; }
 
     public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> AddToManagedCommand { get; }
+
+    public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> OpenInWorkspaceCommand { get; }
+
+    public Action<DirectoryEntryItem>? OpenInWorkspaceRequested { get; set; }
 
     public string SearchText
     {
@@ -128,6 +133,8 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
 
     public bool HasSelection => SelectedEntry is not null;
 
+    public bool HasOpenableProjects => RecentEntries.Count > 0 || ManagedEntries.Count > 0;
+
     public bool CanAddToManaged => SelectedEntry?.Kind == DirectoryEntryKind.Recent;
 
     public string SelectedTypeText => SelectedEntry?.Kind == DirectoryEntryKind.Recent ? "最近" : "目录";
@@ -138,6 +145,11 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
 
     public string SelectedLastOpenedText =>
         SelectedEntry is null ? "-" : SelectedEntry.LastOpenedAt.ToString("yyyy-MM-dd HH:mm");
+
+    public void OpenSelectedInWorkspace()
+    {
+        OpenSelectedToWorkspace();
+    }
 
     private void RevealInExplorer()
     {
@@ -157,6 +169,7 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
         SelectedEntry = null;
         SelectedMenuNode = null;
         ApplyFilter();
+        this.RaisePropertyChanged(nameof(HasOpenableProjects));
     }
 
     private void AddToManaged()
@@ -176,6 +189,15 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
         });
 
         ApplyFilter();
+        this.RaisePropertyChanged(nameof(HasOpenableProjects));
+    }
+
+    private void OpenSelectedToWorkspace()
+    {
+        if (SelectedEntry is null)
+            return;
+
+        OpenInWorkspaceRequested?.Invoke(SelectedEntry);
     }
 
     private void ApplyFilter()

@@ -109,7 +109,88 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
     public WorkspaceNavNode? SelectedNode
     {
         get => _selectedNode;
-        set => this.RaiseAndSetIfChanged(ref _selectedNode, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedNode, value);
+            this.RaisePropertyChanged(nameof(IsCollectionNodeSelected));
+            this.RaisePropertyChanged(nameof(SelectedCollectionHasRequests));
+        }
+    }
+
+    public bool HasCollections => CollectionNodes.Count > 0;
+
+    public bool IsCollectionNodeSelected => SelectedNode?.Kind == WorkspaceNavItemKind.Collection;
+
+    public bool SelectedCollectionHasRequests =>
+        SelectedNode?.Kind != WorkspaceNavItemKind.Collection || SelectedNode.Children.Count > 0;
+
+    public void LoadWorkspace(string? workspaceName)
+    {
+        CollectionNodes.Clear();
+        HistoryNodes.Clear();
+        SelectedNode = null;
+
+        if (string.IsNullOrWhiteSpace(workspaceName) || workspaceName == "未打开工作区")
+        {
+            RebuildMenu();
+            this.RaisePropertyChanged(nameof(HasCollections));
+            return;
+        }
+
+        if (workspaceName == "sandbox")
+        {
+            RebuildMenu();
+            this.RaisePropertyChanged(nameof(HasCollections));
+            return;
+        }
+
+        if (workspaceName == "backend-service")
+        {
+            CollectionNodes.Add(new WorkspaceNavNode
+            {
+                Header = "后端集合",
+                Kind = WorkspaceNavItemKind.Collection
+            });
+
+            HistoryNodes.Add(new WorkspaceNavNode
+            {
+                Header = "GET /health",
+                Kind = WorkspaceNavItemKind.History,
+                Method = "GET",
+                Url = "https://api.example.com/health"
+            });
+
+            RebuildMenu();
+            this.RaisePropertyChanged(nameof(HasCollections));
+            return;
+        }
+
+        CollectionNodes.Add(new WorkspaceNavNode
+        {
+            Header = "用户服务集合",
+            Kind = WorkspaceNavItemKind.Collection,
+            Children =
+            {
+                new WorkspaceNavNode { Header = "GET /users", Kind = WorkspaceNavItemKind.Request, Method = "GET", Url = "https://api.example.com/users" },
+                new WorkspaceNavNode { Header = "POST /users", Kind = WorkspaceNavItemKind.Request, Method = "POST", Url = "https://api.example.com/users" }
+            }
+        });
+
+        CollectionNodes.Add(new WorkspaceNavNode
+        {
+            Header = "认证集合",
+            Kind = WorkspaceNavItemKind.Collection,
+            Children =
+            {
+                new WorkspaceNavNode { Header = "POST /login", Kind = WorkspaceNavItemKind.Request, Method = "POST", Url = "https://api.example.com/login" }
+            }
+        });
+
+        HistoryNodes.Add(new WorkspaceNavNode { Header = "GET /users", Kind = WorkspaceNavItemKind.History, Method = "GET", Url = "https://api.example.com/users" });
+        HistoryNodes.Add(new WorkspaceNavNode { Header = "POST /login", Kind = WorkspaceNavItemKind.History, Method = "POST", Url = "https://api.example.com/login" });
+
+        RebuildMenu();
+        this.RaisePropertyChanged(nameof(HasCollections));
     }
 
     private void RebuildMenu()

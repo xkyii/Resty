@@ -89,6 +89,8 @@
                         Spacing="8">
                 <Button Width="36"
                         Height="32"
+                        IsEnabled="{Binding IsModeSwitchEnabled}"
+                    ToolTip.Tip="{Binding WorkspaceSwitchHint}"
                         Command="{Binding ToggleModeCommand}">
                     <TextBlock Text="⇄" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Button>
@@ -165,6 +167,7 @@
                                ItemsSource="{Binding DirectoryManager.MenuRoots}"
                                HeaderBinding="{Binding Header}"
                                SubMenuBinding="{Binding Children}"
+                               DoubleTapped="DirectoryMenuDoubleTapped"
                                SelectedItem="{Binding DirectoryManager.SelectedMenuNode, Mode=TwoWay}"/>
 
                     <u:NavMenu Grid.Row="2"
@@ -180,6 +183,9 @@
             <Grid Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsDirectoryManagerMode}" RowDefinitions="Auto,*" RowSpacing="8">
                 <Border Grid.Row="0" Classes="panel_card">
                     <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="打开"
+                                IsEnabled="{Binding DirectoryManager.HasSelection}"
+                                Command="{Binding DirectoryManager.OpenInWorkspaceCommand}"/>
                         <Button Content="在资源管理器中显示"
                                 IsEnabled="{Binding DirectoryManager.HasSelection}"
                                 Command="{Binding DirectoryManager.RevealInExplorerCommand}"/>
@@ -189,6 +195,11 @@
                         <Button Content="加入目录管理"
                                 IsVisible="{Binding DirectoryManager.CanAddToManaged}"
                                 Command="{Binding DirectoryManager.AddToManagedCommand}"/>
+                        <TextBlock Text="请先打开文件夹后再切换到工作区"
+                                   IsVisible="{Binding ShouldShowOpenFolderHint}"
+                                   VerticalAlignment="Center"
+                                   Foreground="#D46B08"
+                                   FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
 
@@ -205,98 +216,122 @@
             </Grid>
 
             <!-- Workspace mode -->
-            <TabControl Grid.Column="1" Grid.ColumnSpan="2"
-                        IsVisible="{Binding IsWorkspaceMode}"
-                        ItemsSource="{Binding WorkspaceEditor.OpenTabs}"
-                        SelectedItem="{Binding WorkspaceEditor.SelectedTab, Mode=TwoWay}">
-                <TabControl.ItemTemplate>
-                    <DataTemplate x:DataType="wvm:RequestTabItem">
-                        <TextBlock Text="{Binding RequestName}"/>
-                    </DataTemplate>
-                </TabControl.ItemTemplate>
-                <TabControl.ContentTemplate>
-                    <DataTemplate x:DataType="wvm:RequestTabItem">
-                        <Grid RowDefinitions="*,1,*" Margin="8" RowSpacing="8">
+            <Grid Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding IsWorkspaceMode}">
+                <Border Classes="panel_card"
+                        IsVisible="{Binding WorkspaceEditor.IsNoWorkspaceState}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                        <TextBlock Text="{Binding WorkspaceEditor.StateTitle}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding WorkspaceEditor.StateDescription}" Opacity="0.8" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
 
-                            <!-- Top half: Request editor -->
-                            <Border Grid.Row="0" Classes="panel_card">
-                                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                <Border Classes="panel_card"
+                        IsVisible="{Binding WorkspaceEditor.IsEmptyWorkspaceState}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                        <TextBlock Text="{Binding WorkspaceEditor.StateTitle}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding WorkspaceEditor.StateDescription}" Opacity="0.8" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
 
-                                    <!-- Info row: 集合名 / 请求名  Save  Refresh -->
-                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
-                                        <TextBlock Text="{Binding CollectionName}" VerticalAlignment="Center" Opacity="0.7"/>
-                                        <TextBlock Grid.Column="1" Text=" /" VerticalAlignment="Center" Opacity="0.7"/>
-                                        <TextBox Grid.Column="2" Text="{Binding RequestName, Mode=TwoWay}"/>
-                                        <Button Grid.Column="3" Content="保存"/>
-                                        <Button Grid.Column="4" Content="刷新"/>
+                <Border Classes="panel_card"
+                        IsVisible="{Binding WorkspaceEditor.IsCollectionBrowsingState}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                        <TextBlock Text="{Binding WorkspaceEditor.StateTitle}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding WorkspaceEditor.StateDescription}" Opacity="0.8" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <TabControl x:Name="WorkspaceTabs"
+                            IsVisible="{Binding WorkspaceEditor.IsEditorVisible}"
+                            ItemsSource="{Binding WorkspaceEditor.OpenTabs}"
+                            SelectedItem="{Binding WorkspaceEditor.SelectedTab, Mode=TwoWay}">
+                    <TabControl.ItemTemplate>
+                        <DataTemplate x:DataType="wvm:RequestTabItem">
+                            <TextBlock Text="{Binding RequestName}"/>
+                        </DataTemplate>
+                    </TabControl.ItemTemplate>
+                    <TabControl.ContentTemplate>
+                        <DataTemplate x:DataType="wvm:RequestTabItem">
+                            <Grid RowDefinitions="*,1,*" Margin="8" RowSpacing="8">
+
+                                <!-- Top half: Request editor -->
+                                <Border Grid.Row="0" Classes="panel_card">
+                                    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+
+                                        <!-- Info row: 集合名 / 请求名  Save  Refresh -->
+                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+                                            <TextBlock Text="{Binding CollectionName}" VerticalAlignment="Center" Opacity="0.7"/>
+                                            <TextBlock Grid.Column="1" Text=" /" VerticalAlignment="Center" Opacity="0.7"/>
+                                            <TextBox Grid.Column="2" Text="{Binding RequestName, Mode=TwoWay}"/>
+                                            <Button Grid.Column="3" Content="保存" Command="{Binding SaveCommand}"/>
+                                            <Button Grid.Column="4" Content="刷新" Command="{Binding RefreshCommand}"/>
+                                        </Grid>
+
+                                        <!-- Method + URL + Send -->
+                                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <ComboBox Width="110"
+                                                      ItemsSource="{Binding HttpMethods}"
+                                                      SelectedItem="{Binding Method, Mode=TwoWay}"/>
+                                            <TextBox Grid.Column="1" Text="{Binding Url, Mode=TwoWay}"/>
+                                            <Button Grid.Column="2"
+                                                    Content="Send"
+                                                    Command="{Binding SendCommand}"/>
+                                        </Grid>
+
+                                        <!-- Queries / Headers / Body / Auth -->
+                                        <TabControl Grid.Row="2" SelectedIndex="{Binding ActiveRequestTab, Mode=TwoWay}">
+                                            <TabItem Header="Queries">
+                                                <TextBlock Text="请求参数" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </TabItem>
+                                            <TabItem Header="Headers">
+                                                <TextBlock Text="请求头" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </TabItem>
+                                            <TabItem Header="Body">
+                                                <TextBlock Text="请求体" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </TabItem>
+                                            <TabItem Header="Auth">
+                                                <TextBlock Text="认证信息" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </TabItem>
+                                        </TabControl>
                                     </Grid>
+                                </Border>
 
-                                    <!-- Method + URL + Send -->
-                                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                                        <ComboBox Width="110"
-                                                  ItemsSource="{Binding HttpMethods}"
-                                                  SelectedItem="{Binding Method, Mode=TwoWay}"/>
-                                        <TextBox Grid.Column="1" Text="{Binding Url, Mode=TwoWay}"/>
-                                        <Button Grid.Column="2" Content="Send"/>
-                                    </Grid>
+                                <!-- Separator -->
+                                <Border Grid.Row="1" Height="1" Background="#337D7D7D"/>
 
-                                    <!-- Queries / Headers / Body / Auth -->
-                                    <TabControl Grid.Row="2" SelectedIndex="{Binding ActiveRequestTab, Mode=TwoWay}">
-                                        <TabItem Header="Queries">
-                                            <TextBlock Text="请求参数" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </TabItem>
-                                        <TabItem Header="Headers">
-                                            <TextBlock Text="请求头" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </TabItem>
-                                        <TabItem Header="Body">
-                                            <TextBlock Text="请求体" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </TabItem>
-                                        <TabItem Header="Auth">
-                                            <TextBlock Text="认证信息" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </TabItem>
-                                    </TabControl>
-                                </Grid>
-                            </Border>
+                                <!-- Bottom half: Response viewer -->
+                                <Border Grid.Row="2" Classes="panel_card">
+                                    <Grid RowDefinitions="Auto,*" RowSpacing="8">
 
-                            <!-- Separator -->
-                            <Border Grid.Row="1" Height="1" Background="#337D7D7D"/>
+                                        <!-- Response meta + Body/Headers/Cookies strip -->
+                                        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+                                            <TextBlock Text="{Binding ResponseCode}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding ResponseTime}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding ResponseSize}" VerticalAlignment="Center"/>
+                                            <TabStrip Grid.Column="4" SelectedIndex="{Binding ActiveResponseTab, Mode=TwoWay}">
+                                                <TabStripItem>Body</TabStripItem>
+                                                <TabStripItem>Headers</TabStripItem>
+                                                <TabStripItem>Cookies</TabStripItem>
+                                            </TabStrip>
+                                        </Grid>
 
-                            <!-- Bottom half: Response viewer -->
-                            <Border Grid.Row="2" Classes="panel_card">
-                                <Grid RowDefinitions="Auto,*" RowSpacing="8">
-
-                                    <!-- Response meta + Body/Headers/Cookies strip -->
-                                    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
-                                        <TextBlock Text="{Binding ResponseCode}" FontWeight="Bold" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding ResponseTime}" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding ResponseSize}" VerticalAlignment="Center"/>
-                                        <TabStrip Grid.Column="4" SelectedIndex="{Binding ActiveResponseTab, Mode=TwoWay}">
-                                            <TabStripItem>Body</TabStripItem>
-                                            <TabStripItem>Headers</TabStripItem>
-                                            <TabStripItem>Cookies</TabStripItem>
-                                        </TabStrip>
-                                    </Grid>
-
-                                    <!-- Response content area -->
-                                    <Border Grid.Row="1" Background="#0A000000" CornerRadius="4">
-                                        <Grid RowDefinitions="Auto,*" RowSpacing="8" Margin="12">
-                                            <TextBlock Text="{Binding ActiveResponseTabHeader, StringFormat=当前视图: {0}}"
-                                                       FontWeight="SemiBold"/>
-                                            <TextBox Grid.Row="1"
+                                        <!-- Response content area -->
+                                        <Border Grid.Row="1" Background="#0A000000" CornerRadius="4">
+                                            <TextBox Margin="12"
                                                      Text="{Binding CurrentResponseContent}"
                                                      IsReadOnly="True"
                                                      AcceptsReturn="True"
                                                      TextWrapping="Wrap"
                                                      HorizontalAlignment="Stretch"
                                                      VerticalAlignment="Stretch"/>
-                                        </Grid>
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </DataTemplate>
-                </TabControl.ContentTemplate>
-            </TabControl>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </TabControl.ContentTemplate>
+                </TabControl>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
