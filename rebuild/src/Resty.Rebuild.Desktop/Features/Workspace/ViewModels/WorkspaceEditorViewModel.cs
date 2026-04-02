@@ -52,7 +52,12 @@ public sealed class RequestTabItem : ReactiveObject
     public int ActiveResponseTab
     {
         get => _activeResponseTab;
-        set => this.RaiseAndSetIfChanged(ref _activeResponseTab, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _activeResponseTab, value);
+            this.RaisePropertyChanged(nameof(ActiveResponseTabHeader));
+            this.RaisePropertyChanged(nameof(CurrentResponseContent));
+        }
     }
 
     public string ResponseCode { get; set; } = "-";
@@ -60,6 +65,26 @@ public sealed class RequestTabItem : ReactiveObject
     public string ResponseTime { get; set; } = "-";
 
     public string ResponseSize { get; set; } = "-";
+
+    public string ResponseBodyContent { get; set; } = "";
+
+    public string ResponseHeadersContent { get; set; } = "";
+
+    public string ResponseCookiesContent { get; set; } = "";
+
+    public string ActiveResponseTabHeader => ActiveResponseTab switch
+    {
+        1 => "Headers",
+        2 => "Cookies",
+        _ => "Body"
+    };
+
+    public string CurrentResponseContent => ActiveResponseTab switch
+    {
+        1 => ResponseHeadersContent,
+        2 => ResponseCookiesContent,
+        _ => ResponseBodyContent
+    };
 }
 
 public sealed class WorkspaceEditorViewModel : ReactiveObject
@@ -74,9 +99,20 @@ public sealed class WorkspaceEditorViewModel : ReactiveObject
             {
                 ResponseCode = "200",
                 ResponseTime = "120 ms",
-                ResponseSize = "3.2 KB"
+                ResponseSize = "3.2 KB",
+                ResponseBodyContent = "{\n  \"users\": [\n    { \"id\": 1, \"name\": \"Alice\" },\n    { \"id\": 2, \"name\": \"Bob\" }\n  ]\n}",
+                ResponseHeadersContent = "content-type: application/json\ndate: Tue, 02 Apr 2026 08:00:00 GMT\nserver: kestrel",
+                ResponseCookiesContent = "session_id=abc123; Path=/; HttpOnly\nlocale=zh-CN; Path=/"
             },
             new RequestTabItem("认证", "用户登录", "POST", "https://api.example.com/login")
+            {
+                ResponseCode = "401",
+                ResponseTime = "89 ms",
+                ResponseSize = "512 B",
+                ResponseBodyContent = "{\n  \"error\": \"invalid credentials\"\n}",
+                ResponseHeadersContent = "content-type: application/json\nwww-authenticate: Bearer realm=api",
+                ResponseCookiesContent = "(无 Cookies)"
+            }
         ];
 
         _selectedTab = OpenTabs[0];

@@ -279,7 +279,17 @@
 
                                     <!-- Response content area -->
                                     <Border Grid.Row="1" Background="#0A000000" CornerRadius="4">
-                                        <TextBlock Text="响应内容" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Grid RowDefinitions="Auto,*" RowSpacing="8" Margin="12">
+                                            <TextBlock Text="{Binding ActiveResponseTabHeader, StringFormat=当前视图: {0}}"
+                                                       FontWeight="SemiBold"/>
+                                            <TextBox Grid.Row="1"
+                                                     Text="{Binding CurrentResponseContent}"
+                                                     IsReadOnly="True"
+                                                     AcceptsReturn="True"
+                                                     TextWrapping="Wrap"
+                                                     HorizontalAlignment="Stretch"
+                                                     VerticalAlignment="Stretch"/>
+                                        </Grid>
                                     </Border>
                                 </Grid>
                             </Border>
