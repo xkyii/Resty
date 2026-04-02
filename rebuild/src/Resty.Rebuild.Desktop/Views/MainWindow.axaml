@@ -16,19 +16,34 @@
         MinHeight="640"
         SystemDecorations="None"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaChromeHints="PreferSystemChrome"
         ExtendClientAreaTitleBarHeightHint="40">
 
     <Window.Styles>
+        <Style Selector="Window">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#111111"/>
+        </Style>
+        <Style Selector="Menu.title_menu">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="MenuItem.title_menu_item">
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Height" Value="40"/>
+        </Style>
+        <Style Selector="MenuItem.title_menu_item:pointerover">
+            <Setter Property="Background" Value="#F2F2F2"/>
+        </Style>
         <Style Selector="Button.caption_btn">
             <Setter Property="Width" Value="44"/>
             <Setter Property="Height" Value="40"/>
             <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#111111"/>
         </Style>
         <Style Selector="Button.caption_btn:pointerover">
-            <Setter Property="Background" Value="#22000000"/>
+            <Setter Property="Background" Value="#F2F2F2"/>
         </Style>
         <Style Selector="Button.close_btn:pointerover">
             <Setter Property="Background" Value="#E81123"/>
@@ -54,31 +69,23 @@
         <!-- Title bar -->
         <Grid Grid.Row="0"
               ColumnDefinitions="Auto,*,Auto"
-              Background="#1EFFFFFF"
+              Background="#FFFFFF"
               PointerPressed="TitleBarPointerPressed"
               DoubleTapped="TitleBarDoubleTapped">
 
             <!-- Left: File / Help -->
-            <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <Button Height="40" Padding="12,0" BorderThickness="0" Background="Transparent">
-                    <Button.Flyout>
-                        <MenuFlyout>
-                            <MenuItem Header="偏好设置"/>
-                            <Separator/>
-                            <MenuItem Header="退出" Click="CloseWindow"/>
-                        </MenuFlyout>
-                    </Button.Flyout>
-                    <TextBlock Text="File" VerticalAlignment="Center"/>
-                </Button>
-
-                <Button Height="40" Padding="12,0" BorderThickness="0" Background="Transparent">
-                    <Button.Flyout>
-                        <MenuFlyout>
-                            <MenuItem Header="关于"/>
-                        </MenuFlyout>
-                    </Button.Flyout>
-                    <TextBlock Text="Help" VerticalAlignment="Center"/>
-                </Button>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
+                <Image Source="/Assets/avalonia-logo.ico" Width="16" Height="16" Margin="10,0,4,0"/>
+                <Menu Classes="title_menu" VerticalAlignment="Stretch">
+                    <MenuItem Classes="title_menu_item" Header="文件">
+                        <MenuItem Header="偏好设置" Click="OpenSettingsDialog"/>
+                        <Separator/>
+                        <MenuItem Header="退出" Click="CloseWindow"/>
+                    </MenuItem>
+                    <MenuItem Classes="title_menu_item" Header="帮助">
+                        <MenuItem Header="关于" Click="OpenAboutDialog"/>
+                    </MenuItem>
+                </Menu>
             </StackPanel>
 
             <!-- Center: mode switch + workspace name + workspace quick switch -->
