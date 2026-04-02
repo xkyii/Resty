@@ -15,6 +15,20 @@ public sealed class SystemHttpRequestExecutor : IHttpRequestExecutor
         var method = ParseMethod(request.Method);
         using var req = new HttpRequestMessage(method, request.Url);
 
+        foreach (var header in request.Headers)
+        {
+            if (!req.Headers.TryAddWithoutValidation(header.Key, header.Value))
+            {
+                req.Content ??= new StringContent(string.Empty);
+                req.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(request.Body) && method != HttpMethod.Get && method != HttpMethod.Head)
+        {
+            req.Content = new StringContent(request.Body, Encoding.UTF8);
+        }
+
         var sw = Stopwatch.StartNew();
         using var res = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         var bytes = await res.Content.ReadAsByteArrayAsync(cancellationToken);

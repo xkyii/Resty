@@ -296,10 +296,18 @@
                                                 <TextBlock Text="请求参数" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </TabItem>
                                             <TabItem Header="Headers">
-                                                <TextBlock Text="请求头" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <TextBox AcceptsReturn="True"
+                                                         Text="{Binding HeadersText, Mode=TwoWay}"
+                                                         HorizontalAlignment="Stretch"
+                                                         VerticalAlignment="Stretch"
+                                                         Watermark="每行一个 Header，例如: Content-Type: application/json"/>
                                             </TabItem>
                                             <TabItem Header="Body">
-                                                <TextBlock Text="请求体" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <TextBox AcceptsReturn="True"
+                                                         Text="{Binding BodyText, Mode=TwoWay}"
+                                                         HorizontalAlignment="Stretch"
+                                                         VerticalAlignment="Stretch"
+                                                         Watermark="请求体"/>
                                             </TabItem>
                                             <TabItem Header="Auth">
                                                 <TextBlock Text="认证信息" HorizontalAlignment="Center" VerticalAlignment="Center"/>

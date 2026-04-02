@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using ReactiveUI;
+using Resty.Rebuild.Desktop.Features.Workspace.Models;
+using Resty.Rebuild.Desktop.Features.Workspace.Services;
 
 namespace Resty.Rebuild.Desktop.Features.Workspace.ViewModels;
 
@@ -17,21 +20,31 @@ public enum WorkspaceNavItemKind
 public sealed class WorkspaceNavNode
 {
     public required string Header { get; init; }
-
     public ObservableCollection<WorkspaceNavNode> Children { get; } = [];
-
     public WorkspaceNavItemKind Kind { get; init; }
 
     public string? Method { get; init; }
-
     public string? Url { get; init; }
+
+    public string? FilePath { get; init; }
+    public string? RelativePath { get; init; }
+    public int SegmentIndex { get; init; } = -1;
+    public string? RequestId { get; init; }
+    public string? HeadersText { get; init; }
+    public string? BodyText { get; init; }
+    public bool NoLog { get; init; }
 }
 
 public sealed class WorkspaceNavigationViewModel : ReactiveObject
 {
+    private const int MaxHistoryItems = 300;
+
     private string _searchText = string.Empty;
     private WorkspaceNavNode? _selectedNode;
     private bool _isCollectionsMode = true;
+    private string? _workspaceRootPath;
+
+    private readonly Dictionary<string, ParsedHttpCollection> _collectionsByFile = new(StringComparer.OrdinalIgnoreCase);
 
     public WorkspaceNavigationViewModel()
     {
@@ -45,18 +58,16 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
     }
 
     public ObservableCollection<WorkspaceNavNode> CollectionNodes { get; }
-
     public ObservableCollection<WorkspaceNavNode> HistoryNodes { get; }
 
     public ObservableCollection<WorkspaceNavNode> CollectionMenuRoots { get; } = [];
-
     public ObservableCollection<WorkspaceNavNode> HistoryMenuRoots { get; } = [];
-
     public ObservableCollection<WorkspaceNavNode> ActiveMenuRoots { get; } = [];
 
     public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> ShowCollectionsCommand { get; }
-
     public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> ShowHistoryCommand { get; }
+
+    public string? WorkspaceRootPath => _workspaceRootPath;
 
     public string SearchText
     {
@@ -99,46 +110,137 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
     public bool SelectedCollectionHasRequests =>
         SelectedNode?.Kind != WorkspaceNavItemKind.Collection || SelectedNode.Children.Count > 0;
 
-    /// <summary>
-    /// 从磁盘路径加载工作区。若路径有效则扫描 .http 文件作为集合；
-    /// 传 null 或空字符串表示清空（无工作区状态）。
-    /// </summary>
     public void LoadWorkspace(string? workspacePath)
     {
+        _workspaceRootPath = workspacePath;
+
         CollectionNodes.Clear();
         HistoryNodes.Clear();
+        _collectionsByFile.Clear();
         SelectedNode = null;
 
         if (!string.IsNullOrWhiteSpace(workspacePath) && Directory.Exists(workspacePath))
         {
-            LoadFromDirectory(workspacePath);
+            LoadCollectionsFromDirectory(workspacePath);
+            LoadHistoryFromDisk();
         }
 
         RebuildMenu();
         this.RaisePropertyChanged(nameof(HasCollections));
     }
 
+    public IReadOnlyDictionary<string, string> GetFileVariables(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return new Dictionary<string, string>();
+
+        if (_collectionsByFile.TryGetValue(filePath, out var collection))
+            return collection.FileVariables;
+
+        return new Dictionary<string, string>();
+    }
+
+    public void AddHistoryEntry(string method, string url, bool persist = true)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+
+        var normalizedMethod = string.IsNullOrWhiteSpace(method) ? "GET" : method.ToUpperInvariant();
+        var header = $"{normalizedMethod} {ExtractPath(url)}";
+
+        var existed = HistoryNodes.FirstOrDefault(x =>
+            string.Equals(x.Method, normalizedMethod, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(x.Url, url, StringComparison.OrdinalIgnoreCase));
+
+        if (existed is not null)
+            HistoryNodes.Remove(existed);
+
+        HistoryNodes.Insert(0, new WorkspaceNavNode
+        {
+            Header = header,
+            Kind = WorkspaceNavItemKind.History,
+            Method = normalizedMethod,
+            Url = url
+        });
+
+        while (HistoryNodes.Count > MaxHistoryItems)
+            HistoryNodes.RemoveAt(HistoryNodes.Count - 1);
+
+        RebuildMenu();
+
+        if (persist)
+            SaveHistoryToDisk();
+    }
+
+    public void SaveRequestChanges(WorkspaceNavNode requestNode, string name, string method, string url, string headersText, string bodyText)
+    {
+        if (requestNode.Kind != WorkspaceNavItemKind.Request || string.IsNullOrWhiteSpace(requestNode.FilePath) || requestNode.SegmentIndex < 0)
+            return;
+
+        var req = new ParsedHttpRequest
+        {
+            Id = requestNode.RequestId ?? $"{requestNode.FilePath}::{requestNode.SegmentIndex}",
+            Name = string.IsNullOrWhiteSpace(name) ? $"{method} {ExtractPath(url)}" : name,
+            Method = method,
+            Url = url,
+            HeadersText = headersText,
+            BodyText = bodyText,
+            SegmentIndex = requestNode.SegmentIndex,
+            NoLog = requestNode.NoLog
+        };
+
+        if (!HttpFileParser.TrySaveRequestBlock(requestNode.FilePath, requestNode.SegmentIndex, req))
+            return;
+
+        // reload keeps tree in sync with file content
+        LoadWorkspace(_workspaceRootPath);
+    }
+
     private static readonly string[] SkippedFolders = [".git", "bin", "obj", "node_modules", ".vs"];
 
-    private void LoadFromDirectory(string rootPath)
+    private void LoadCollectionsFromDirectory(string rootPath)
     {
         try
         {
-            var httpFiles = FindHttpFiles(rootPath);
-            foreach (var filePath in httpFiles.OrderBy(f => f))
+            var httpFiles = FindHttpFiles(rootPath).OrderBy(f => f).ToList();
+            foreach (var filePath in httpFiles)
             {
-                var fileName = Path.GetFileNameWithoutExtension(filePath);
-                var relPath = Path.GetRelativePath(rootPath, filePath);
+                var parsed = HttpFileParser.ParseCollection(rootPath, filePath);
+                _collectionsByFile[filePath] = parsed;
+
                 var collectionNode = new WorkspaceNavNode
                 {
-                    Header = fileName,
-                    Kind = WorkspaceNavItemKind.Collection
+                    Header = parsed.Name,
+                    Kind = WorkspaceNavItemKind.Collection,
+                    FilePath = parsed.FilePath,
+                    RelativePath = parsed.RelativePath
                 };
-                // P3 将在此处解析 ### block；目前只显示集合节点
+
+                foreach (var request in parsed.Requests)
+                {
+                    collectionNode.Children.Add(new WorkspaceNavNode
+                    {
+                        Header = request.Name,
+                        Kind = WorkspaceNavItemKind.Request,
+                        Method = request.Method,
+                        Url = request.Url,
+                        FilePath = parsed.FilePath,
+                        RelativePath = parsed.RelativePath,
+                        SegmentIndex = request.SegmentIndex,
+                        RequestId = request.Id,
+                        HeadersText = request.HeadersText,
+                        BodyText = request.BodyText,
+                        NoLog = request.NoLog
+                    });
+                }
+
                 CollectionNodes.Add(collectionNode);
             }
         }
-        catch { /* 权限或 IO 异常：静默跳过，外层已做校验 */ }
+        catch
+        {
+            // IO exceptions are ignored to keep UI responsive
+        }
     }
 
     private static IEnumerable<string> FindHttpFiles(string directory)
@@ -155,33 +257,12 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
                 result.AddRange(FindHttpFiles(subDir));
             }
         }
-        catch { /* 权限异常跳过该子目录 */ }
-        return result;
-    }
-
-    public void AddHistoryEntry(string method, string url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-            return;
-
-        var header = $"{method.ToUpperInvariant()} {ExtractPath(url)}";
-
-        var existed = HistoryNodes.FirstOrDefault(x =>
-            string.Equals(x.Method, method, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(x.Url, url, StringComparison.OrdinalIgnoreCase));
-
-        if (existed is not null)
-            HistoryNodes.Remove(existed);
-
-        HistoryNodes.Insert(0, new WorkspaceNavNode
+        catch
         {
-            Header = header,
-            Kind = WorkspaceNavItemKind.History,
-            Method = method.ToUpperInvariant(),
-            Url = url
-        });
+            // skip folders without permission
+        }
 
-        RebuildMenu();
+        return result;
     }
 
     private static string ExtractPath(string url)
@@ -207,13 +288,7 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
         HistoryMenuRoots.Clear();
         foreach (var node in HistoryNodes.Where(n => MatchNode(n, query)))
         {
-            HistoryMenuRoots.Add(new WorkspaceNavNode
-            {
-                Header = node.Header,
-                Kind = node.Kind,
-                Method = node.Method,
-                Url = node.Url
-            });
+            HistoryMenuRoots.Add(CloneNode(node));
         }
 
         RefreshActiveMenuRoots();
@@ -229,13 +304,7 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
 
     private static WorkspaceNavNode? CloneFiltered(WorkspaceNavNode source, string query)
     {
-        var clone = new WorkspaceNavNode
-        {
-            Header = source.Header,
-            Kind = source.Kind,
-            Method = source.Method,
-            Url = source.Url
-        };
+        var clone = CloneNode(source);
 
         foreach (var child in source.Children)
         {
@@ -250,6 +319,22 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
         return null;
     }
 
+    private static WorkspaceNavNode CloneNode(WorkspaceNavNode source)
+        => new()
+        {
+            Header = source.Header,
+            Kind = source.Kind,
+            Method = source.Method,
+            Url = source.Url,
+            FilePath = source.FilePath,
+            RelativePath = source.RelativePath,
+            SegmentIndex = source.SegmentIndex,
+            RequestId = source.RequestId,
+            HeadersText = source.HeadersText,
+            BodyText = source.BodyText,
+            NoLog = source.NoLog
+        };
+
     private static bool MatchNode(WorkspaceNavNode node, string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -257,6 +342,72 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
 
         return node.Header.Contains(query, StringComparison.OrdinalIgnoreCase)
                || (node.Method?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
-               || (node.Url?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false);
+               || (node.Url?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+               || (node.RelativePath?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private string? GetHistoryFilePath()
+    {
+        if (string.IsNullOrWhiteSpace(_workspaceRootPath))
+            return null;
+
+        var folder = Path.Combine(_workspaceRootPath, ".resty");
+        return Path.Combine(folder, "history.json");
+    }
+
+    private void SaveHistoryToDisk()
+    {
+        var filePath = GetHistoryFilePath();
+        if (string.IsNullOrWhiteSpace(filePath))
+            return;
+
+        try
+        {
+            var dir = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrWhiteSpace(dir))
+                Directory.CreateDirectory(dir);
+
+            var data = HistoryNodes.Select(n => new HistoryRecord
+            {
+                Method = n.Method ?? "GET",
+                Url = n.Url ?? string.Empty,
+                CreatedAt = DateTimeOffset.Now
+            }).ToList();
+
+            var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(filePath, json);
+        }
+        catch
+        {
+            // ignore persistence errors
+        }
+    }
+
+    private void LoadHistoryFromDisk()
+    {
+        var filePath = GetHistoryFilePath();
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            return;
+
+        try
+        {
+            var json = File.ReadAllText(filePath);
+            var records = JsonSerializer.Deserialize<List<HistoryRecord>>(json) ?? [];
+            foreach (var r in records.OrderByDescending(x => x.CreatedAt))
+            {
+                AddHistoryEntry(r.Method ?? "GET", r.Url ?? string.Empty, persist: false);
+            }
+        }
+        catch
+        {
+            // ignore invalid history file
+        }
+    }
+
+    private sealed class HistoryRecord
+    {
+        public string? Method { get; set; }
+        public string? Url { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
     }
 }

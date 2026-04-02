@@ -20,7 +20,7 @@ public class MainWindowViewModel : ViewModelBase
     {
         DirectoryManager = new DirectoryManagerViewModel(directoryStore);
         WorkspaceNavigation = new WorkspaceNavigationViewModel();
-        WorkspaceEditor = new WorkspaceEditorViewModel(requestExecutor);
+        WorkspaceEditor = new WorkspaceEditorViewModel(WorkspaceNavigation, requestExecutor);
 
         const string noWorkspace = "未打开工作区";
         OpenWorkspaces = [noWorkspace];
@@ -57,7 +57,11 @@ public class MainWindowViewModel : ViewModelBase
                 WorkspaceEditor.ApplyWorkspaceSelection(SelectedWorkspaceName, hasCollections);
             });
 
-        WorkspaceEditor.RequestSent += (method, url) => WorkspaceNavigation.AddHistoryEntry(method, url);
+        WorkspaceEditor.RequestSent += (method, url, shouldLog) =>
+        {
+            if (shouldLog)
+                WorkspaceNavigation.AddHistoryEntry(method, url, persist: true);
+        };
 
         WorkspaceNavigation.LoadWorkspace(null);
         WorkspaceEditor.ApplyWorkspaceSelection(_selectedWorkspaceName, WorkspaceNavigation.HasCollections);

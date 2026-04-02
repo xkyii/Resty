@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ReactiveUI;
 using Resty.Rebuild.Application.Abstractions;
+using Resty.Rebuild.Desktop.Features.Workspace.Services;
 using Resty.Rebuild.Domain.Http;
 
 namespace Resty.Rebuild.Desktop.Features.Workspace.ViewModels;
@@ -24,6 +25,8 @@ public sealed class RequestTabItem : ReactiveObject
     private string _requestName;
     private string _method;
     private string _url;
+    private string _headersText;
+    private string _bodyText;
     private int _activeRequestTab;
     private int _activeResponseTab;
     private bool _isSending;
@@ -37,8 +40,10 @@ public sealed class RequestTabItem : ReactiveObject
     public RequestTabItem(
         string collectionName,
         string requestName,
-        string method = "GET",
-        string url = "",
+        string method,
+        string url,
+        string headersText,
+        string bodyText,
         Action<RequestTabItem>? onSave = null,
         Action<RequestTabItem>? onRefresh = null,
         Func<RequestTabItem, Task>? onSend = null)
@@ -47,6 +52,8 @@ public sealed class RequestTabItem : ReactiveObject
         _requestName = requestName;
         _method = method;
         _url = url;
+        _headersText = headersText;
+        _bodyText = bodyText;
 
         SaveCommand = ReactiveCommand.Create(() => (onSave ?? (_ => { }))(this));
         RefreshCommand = ReactiveCommand.Create(() => (onRefresh ?? (_ => { }))(this));
@@ -57,6 +64,12 @@ public sealed class RequestTabItem : ReactiveObject
         ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
 
     public string CollectionName { get; }
+
+    public string? SourceFilePath { get; init; }
+
+    public int SourceSegmentIndex { get; init; } = -1;
+
+    public bool NoLog { get; init; }
 
     public string RequestName
     {
@@ -76,6 +89,18 @@ public sealed class RequestTabItem : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _url, value);
     }
 
+    public string HeadersText
+    {
+        get => _headersText;
+        set => this.RaiseAndSetIfChanged(ref _headersText, value);
+    }
+
+    public string BodyText
+    {
+        get => _bodyText;
+        set => this.RaiseAndSetIfChanged(ref _bodyText, value);
+    }
+
     public int ActiveRequestTab
     {
         get => _activeRequestTab;
@@ -88,7 +113,6 @@ public sealed class RequestTabItem : ReactiveObject
         set
         {
             this.RaiseAndSetIfChanged(ref _activeResponseTab, value);
-            this.RaisePropertyChanged(nameof(ActiveResponseTabHeader));
             this.RaisePropertyChanged(nameof(CurrentResponseContent));
         }
     }
@@ -147,13 +171,6 @@ public sealed class RequestTabItem : ReactiveObject
         }
     }
 
-    public string ActiveResponseTabHeader => ActiveResponseTab switch
-    {
-        1 => "Headers",
-        2 => "Cookies",
-        _ => "Body"
-    };
-
     public string CurrentResponseContent => ActiveResponseTab switch
     {
         1 => ResponseHeadersContent,
@@ -171,37 +188,17 @@ public sealed class RequestTabItem : ReactiveObject
 public sealed class WorkspaceEditorViewModel : ReactiveObject
 {
     private readonly IHttpRequestExecutor? _requestExecutor;
+    private readonly WorkspaceNavigationViewModel _navigation;
+
     private RequestTabItem? _selectedTab;
     private WorkspaceUiState _currentState;
     private string? _collectionPrompt;
 
-    public WorkspaceEditorViewModel(IHttpRequestExecutor? requestExecutor = null)
+    public WorkspaceEditorViewModel(WorkspaceNavigationViewModel navigation, IHttpRequestExecutor? requestExecutor = null)
     {
+        _navigation = navigation;
         _requestExecutor = requestExecutor;
-
-        var usersTab = CreateTab("用户服务", "获取用户列表", "GET", "https://api.example.com/users");
-        usersTab.ResponseCode = "200";
-        usersTab.ResponseTime = "120 ms";
-        usersTab.ResponseSize = "3.2 KB";
-        usersTab.ResponseBodyContent = "{\n  \"users\": [\n    { \"id\": 1, \"name\": \"Alice\" },\n    { \"id\": 2, \"name\": \"Bob\" }\n  ]\n}";
-        usersTab.ResponseHeadersContent = "content-type: application/json\ndate: Tue, 02 Apr 2026 08:00:00 GMT\nserver: kestrel";
-        usersTab.ResponseCookiesContent = "session_id=abc123; Path=/; HttpOnly\nlocale=zh-CN; Path=/";
-
-        var loginTab = CreateTab("认证", "用户登录", "POST", "https://api.example.com/login");
-        loginTab.ResponseCode = "401";
-        loginTab.ResponseTime = "89 ms";
-        loginTab.ResponseSize = "512 B";
-        loginTab.ResponseBodyContent = "{\n  \"error\": \"invalid credentials\"\n}";
-        loginTab.ResponseHeadersContent = "content-type: application/json\nwww-authenticate: Bearer realm=api";
-        loginTab.ResponseCookiesContent = "(无 Cookies)";
-
-        OpenTabs =
-        [
-            usersTab,
-            loginTab
-        ];
-
-        _selectedTab = OpenTabs[0];
+        OpenTabs = [];
 
         CurrentState = WorkspaceUiState.NoWorkspace;
     }
@@ -229,27 +226,19 @@ public sealed class WorkspaceEditorViewModel : ReactiveObject
             this.RaisePropertyChanged(nameof(IsEmptyWorkspaceState));
             this.RaisePropertyChanged(nameof(IsCollectionBrowsingState));
             this.RaisePropertyChanged(nameof(IsEditorVisible));
-            this.RaisePropertyChanged(nameof(IsSendingState));
-            this.RaisePropertyChanged(nameof(IsResponseReadyState));
             this.RaisePropertyChanged(nameof(StateTitle));
             this.RaisePropertyChanged(nameof(StateDescription));
         }
     }
 
     public bool IsNoWorkspaceState => CurrentState == WorkspaceUiState.NoWorkspace;
-
     public bool IsEmptyWorkspaceState => CurrentState == WorkspaceUiState.EmptyWorkspace;
-
     public bool IsCollectionBrowsingState => CurrentState == WorkspaceUiState.CollectionBrowsing;
 
     public bool IsEditorVisible =>
         CurrentState == WorkspaceUiState.RequestEditing
         || CurrentState == WorkspaceUiState.Sending
         || CurrentState == WorkspaceUiState.ResponseReady;
-
-    public bool IsSendingState => CurrentState == WorkspaceUiState.Sending;
-
-    public bool IsResponseReadyState => CurrentState == WorkspaceUiState.ResponseReady;
 
     public string StateTitle => CurrentState switch
     {
@@ -323,12 +312,24 @@ public sealed class WorkspaceEditorViewModel : ReactiveObject
         if (node.Kind == WorkspaceNavItemKind.Request || node.Kind == WorkspaceNavItemKind.History)
         {
             var matched = OpenTabs.FirstOrDefault(t =>
-                string.Equals(t.Method, node.Method, StringComparison.OrdinalIgnoreCase)
+                string.Equals(t.SourceFilePath, node.FilePath, StringComparison.OrdinalIgnoreCase)
+                && t.SourceSegmentIndex == node.SegmentIndex
+                && string.Equals(t.Method, node.Method, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(t.Url, node.Url, StringComparison.OrdinalIgnoreCase));
 
             if (matched is null)
             {
-                matched = CreateTab(node.Kind == WorkspaceNavItemKind.History ? "历史" : "集合", node.Header, node.Method ?? "GET", node.Url ?? "");
+                matched = CreateTab(
+                    collectionName: node.Kind == WorkspaceNavItemKind.History ? "历史" : (node.RelativePath ?? "集合"),
+                    requestName: node.Header,
+                    method: node.Method ?? "GET",
+                    url: node.Url ?? string.Empty,
+                    headersText: node.HeadersText ?? string.Empty,
+                    bodyText: node.BodyText ?? string.Empty,
+                    sourceFilePath: node.FilePath,
+                    sourceSegmentIndex: node.SegmentIndex,
+                    noLog: node.NoLog);
+
                 matched.ResponseCode = "-";
                 matched.ResponseTime = "-";
                 matched.ResponseSize = "-";
@@ -347,10 +348,46 @@ public sealed class WorkspaceEditorViewModel : ReactiveObject
         CurrentState = WorkspaceUiState.CollectionBrowsing;
     }
 
-    public event Action<string, string>? RequestSent;
+    public event Action<string, string, bool>? RequestSent;
 
-    private RequestTabItem CreateTab(string collectionName, string requestName, string method, string url)
-        => new(collectionName, requestName, method, url, MarkEditing, MarkEditing, SendRequestAsync);
+    private RequestTabItem CreateTab(
+        string collectionName,
+        string requestName,
+        string method,
+        string url,
+        string headersText,
+        string bodyText,
+        string? sourceFilePath,
+        int sourceSegmentIndex,
+        bool noLog)
+        => new(collectionName, requestName, method, url, headersText, bodyText, SaveRequestChanges, MarkEditing, SendRequestAsync)
+        {
+            SourceFilePath = sourceFilePath,
+            SourceSegmentIndex = sourceSegmentIndex,
+            NoLog = noLog
+        };
+
+    private void SaveRequestChanges(RequestTabItem tab)
+    {
+        if (string.IsNullOrWhiteSpace(tab.SourceFilePath) || tab.SourceSegmentIndex < 0)
+            return;
+
+        var node = new WorkspaceNavNode
+        {
+            Header = tab.RequestName,
+            Kind = WorkspaceNavItemKind.Request,
+            Method = tab.Method,
+            Url = tab.Url,
+            FilePath = tab.SourceFilePath,
+            SegmentIndex = tab.SourceSegmentIndex,
+            HeadersText = tab.HeadersText,
+            BodyText = tab.BodyText,
+            NoLog = tab.NoLog
+        };
+
+        _navigation.SaveRequestChanges(node, tab.RequestName, tab.Method, tab.Url, tab.HeadersText, tab.BodyText);
+        MarkEditing(tab);
+    }
 
     private void MarkEditing(RequestTabItem tab)
     {
@@ -363,27 +400,37 @@ public sealed class WorkspaceEditorViewModel : ReactiveObject
     {
         SelectedTab = tab;
         tab.IsSending = true;
-
         CurrentState = WorkspaceUiState.Sending;
+
         try
         {
+            var fileVars = _navigation.GetFileVariables(tab.SourceFilePath);
+            var envVars = WorkspaceVariableResolver.LoadEnvironmentVariables(_navigation.WorkspaceRootPath ?? string.Empty);
+
+            var resolvedUrl = WorkspaceVariableResolver.Resolve(tab.Url, fileVars, envVars);
+            var resolvedHeaders = WorkspaceVariableResolver.Resolve(tab.HeadersText, fileVars, envVars);
+            var resolvedBody = WorkspaceVariableResolver.Resolve(tab.BodyText, fileVars, envVars);
+
             if (_requestExecutor is null)
             {
-                await Task.Delay(450);
+                await Task.Delay(300);
                 tab.ResponseCode = "200";
-                tab.ResponseTime = "76 ms";
-                tab.ResponseSize = "1.4 KB";
-                tab.ResponseBodyContent = "{\n  \"ok\": true,\n  \"url\": \"" + tab.Url + "\"\n}";
+                tab.ResponseTime = "50 ms";
+                tab.ResponseSize = "1.2 KB";
+                tab.ResponseBodyContent = "{\n  \"ok\": true,\n  \"url\": \"" + resolvedUrl + "\"\n}";
                 tab.ResponseHeadersContent = "content-type: application/json\nx-powered-by: resty-rebuild";
                 tab.ResponseCookiesContent = "trace_id=demo-123; Path=/; HttpOnly";
             }
             else
             {
-                var response = await _requestExecutor.SendAsync(new HttpRequestData
+                var req = new HttpRequestData
                 {
                     Method = tab.Method,
-                    Url = tab.Url
-                });
+                    Url = resolvedUrl,
+                    Headers = ParseHeaders(resolvedHeaders),
+                    Body = resolvedBody
+                };
+                var response = await _requestExecutor.SendAsync(req);
 
                 tab.ResponseCode = response.StatusCode.ToString();
                 tab.ResponseTime = $"{response.ElapsedMilliseconds} ms";
@@ -393,7 +440,7 @@ public sealed class WorkspaceEditorViewModel : ReactiveObject
                 tab.ResponseCookiesContent = response.CookiesContent;
             }
 
-            RequestSent?.Invoke(tab.Method, tab.Url);
+            RequestSent?.Invoke(tab.Method, resolvedUrl, !tab.NoLog);
             CurrentState = WorkspaceUiState.ResponseReady;
         }
         catch (Exception ex)
@@ -408,6 +455,25 @@ public sealed class WorkspaceEditorViewModel : ReactiveObject
         }
 
         tab.IsSending = false;
+    }
+
+    private static Dictionary<string, string> ParseHeaders(string headersText)
+    {
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(headersText))
+            return dict;
+
+        foreach (var line in headersText.Replace("\r\n", "\n").Split('\n'))
+        {
+            var idx = line.IndexOf(':');
+            if (idx <= 0)
+                continue;
+            var k = line[..idx].Trim();
+            var v = line[(idx + 1)..].Trim();
+            if (!string.IsNullOrWhiteSpace(k))
+                dict[k] = v;
+        }
+        return dict;
     }
 
     private static string FormatSize(long sizeBytes)
