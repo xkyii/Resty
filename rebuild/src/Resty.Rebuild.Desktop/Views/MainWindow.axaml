@@ -192,7 +192,7 @@
                         <Button Content="移除"
                                 IsEnabled="{Binding DirectoryManager.HasSelection}"
                                 Command="{Binding DirectoryManager.RemoveEntryCommand}"/>
-                        <Button Content="加入目录管理"
+                        <Button Content="加入收藏"
                                 IsVisible="{Binding DirectoryManager.CanAddToManaged}"
                                 Command="{Binding DirectoryManager.AddToManagedCommand}"/>
                         <TextBlock Text="请先打开文件夹后再切换到工作区"
@@ -200,17 +200,29 @@
                                    VerticalAlignment="Center"
                                    Foreground="#D46B08"
                                    FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding DirectoryManager.ErrorBanner}"
+                                   IsVisible="{Binding DirectoryManager.HasError}"
+                                   VerticalAlignment="Center"
+                                   Foreground="#FF4D4F"
+                                   FontWeight="SemiBold"/>
                     </StackPanel>
                 </Border>
 
                 <Border Grid.Row="1" Classes="panel_card">
                     <StackPanel Spacing="10">
                         <TextBlock Text="目录信息" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding DirectoryManager.HasSelection, StringFormat=选中项元信息}"/>
                         <TextBlock Text="{Binding DirectoryManager.SelectedTypeText, StringFormat=类型: {0}}"/>
                         <TextBlock Text="{Binding DirectoryManager.SelectedName, StringFormat=名称: {0}}"/>
                         <TextBlock Text="{Binding DirectoryManager.SelectedPath, StringFormat=路径: {0}}"/>
                         <TextBlock Text="{Binding DirectoryManager.SelectedLastOpenedText, StringFormat=最近打开: {0}}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="状态: "/>
+                            <TextBlock Text="{Binding DirectoryManager.SelectedEntry.StatusText}"
+                                       Foreground="{Binding DirectoryManager.SelectedEntry.StatusColor}"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding DirectoryManager.SelectedEntry.HttpFileCountText, StringFormat=文件: {0}}"
+                                   IsVisible="{Binding DirectoryManager.HasSelection}"/>
                     </StackPanel>
                 </Border>
             </Grid>

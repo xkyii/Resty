@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System;
 using ReactiveUI;
 using Resty.Rebuild.Application.Abstractions;
@@ -12,21 +13,20 @@ public class MainWindowViewModel : ViewModelBase
     private bool _isDirectoryManagerMode = true;
     private string? _selectedWorkspaceName;
 
-    public MainWindowViewModel(IHttpRequestExecutor? requestExecutor = null)
+    // maps display name → real filesystem path (null = no real path, e.g. placeholder)
+    private readonly Dictionary<string, string?> _workspacePaths = new(StringComparer.OrdinalIgnoreCase);
+
+    public MainWindowViewModel(IHttpRequestExecutor? requestExecutor = null, IDirectoryStore? directoryStore = null)
     {
-        DirectoryManager = new DirectoryManagerViewModel();
+        DirectoryManager = new DirectoryManagerViewModel(directoryStore);
         WorkspaceNavigation = new WorkspaceNavigationViewModel();
         WorkspaceEditor = new WorkspaceEditorViewModel(requestExecutor);
 
-        OpenWorkspaces =
-        [
-            "未打开工作区",
-            "demo-api",
-            "backend-service",
-            "sandbox"
-        ];
+        const string noWorkspace = "未打开工作区";
+        OpenWorkspaces = [noWorkspace];
+        _workspacePaths[noWorkspace] = null;
 
-        _selectedWorkspaceName = OpenWorkspaces[0];
+        _selectedWorkspaceName = noWorkspace;
 
         ToggleModeCommand = ReactiveCommand.Create(ToggleMode);
 
@@ -43,7 +43,8 @@ public class MainWindowViewModel : ViewModelBase
         this.WhenAnyValue(x => x.SelectedWorkspaceName)
             .Subscribe(name =>
             {
-                WorkspaceNavigation.LoadWorkspace(name);
+                var path = name is not null && _workspacePaths.TryGetValue(name, out var p) ? p : null;
+                WorkspaceNavigation.LoadWorkspace(path);
                 WorkspaceEditor.ApplyWorkspaceSelection(name, WorkspaceNavigation.HasCollections);
             });
 
@@ -58,7 +59,7 @@ public class MainWindowViewModel : ViewModelBase
 
         WorkspaceEditor.RequestSent += (method, url) => WorkspaceNavigation.AddHistoryEntry(method, url);
 
-        WorkspaceNavigation.LoadWorkspace(_selectedWorkspaceName);
+        WorkspaceNavigation.LoadWorkspace(null);
         WorkspaceEditor.ApplyWorkspaceSelection(_selectedWorkspaceName, WorkspaceNavigation.HasCollections);
     }
 
@@ -118,7 +119,11 @@ public class MainWindowViewModel : ViewModelBase
     private void OpenDirectoryEntryInWorkspace(DirectoryEntryItem entry)
     {
         if (!OpenWorkspaces.Contains(entry.Name))
+        {
             OpenWorkspaces.Add(entry.Name);
+        }
+        // Always update the path mapping (in case path changed)
+        _workspacePaths[entry.Name] = entry.Path;
 
         SelectedWorkspaceName = entry.Name;
         IsDirectoryManagerMode = false;

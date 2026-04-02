@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using ReactiveUI;
 
@@ -34,34 +35,8 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
 
     public WorkspaceNavigationViewModel()
     {
-        CollectionNodes =
-        [
-            new WorkspaceNavNode
-            {
-                Header = "用户服务集合",
-                Kind = WorkspaceNavItemKind.Collection,
-                Children =
-                {
-                    new WorkspaceNavNode { Header = "GET /users", Kind = WorkspaceNavItemKind.Request, Method = "GET", Url = "https://api.example.com/users" },
-                    new WorkspaceNavNode { Header = "POST /users", Kind = WorkspaceNavItemKind.Request, Method = "POST", Url = "https://api.example.com/users" }
-                }
-            },
-            new WorkspaceNavNode
-            {
-                Header = "认证集合",
-                Kind = WorkspaceNavItemKind.Collection,
-                Children =
-                {
-                    new WorkspaceNavNode { Header = "POST /login", Kind = WorkspaceNavItemKind.Request, Method = "POST", Url = "https://api.example.com/login" }
-                }
-            }
-        ];
-
-        HistoryNodes =
-        [
-            new WorkspaceNavNode { Header = "GET /users", Kind = WorkspaceNavItemKind.History, Method = "GET", Url = "https://api.example.com/users" },
-            new WorkspaceNavNode { Header = "POST /login", Kind = WorkspaceNavItemKind.History, Method = "POST", Url = "https://api.example.com/login" }
-        ];
+        CollectionNodes = [];
+        HistoryNodes = [];
 
         ShowCollectionsCommand = ReactiveCommand.Create(() => { IsCollectionsMode = true; });
         ShowHistoryCommand = ReactiveCommand.Create(() => { IsCollectionsMode = false; });
@@ -124,73 +99,64 @@ public sealed class WorkspaceNavigationViewModel : ReactiveObject
     public bool SelectedCollectionHasRequests =>
         SelectedNode?.Kind != WorkspaceNavItemKind.Collection || SelectedNode.Children.Count > 0;
 
-    public void LoadWorkspace(string? workspaceName)
+    /// <summary>
+    /// 从磁盘路径加载工作区。若路径有效则扫描 .http 文件作为集合；
+    /// 传 null 或空字符串表示清空（无工作区状态）。
+    /// </summary>
+    public void LoadWorkspace(string? workspacePath)
     {
         CollectionNodes.Clear();
         HistoryNodes.Clear();
         SelectedNode = null;
 
-        if (string.IsNullOrWhiteSpace(workspaceName) || workspaceName == "未打开工作区")
+        if (!string.IsNullOrWhiteSpace(workspacePath) && Directory.Exists(workspacePath))
         {
-            RebuildMenu();
-            this.RaisePropertyChanged(nameof(HasCollections));
-            return;
+            LoadFromDirectory(workspacePath);
         }
-
-        if (workspaceName == "sandbox")
-        {
-            RebuildMenu();
-            this.RaisePropertyChanged(nameof(HasCollections));
-            return;
-        }
-
-        if (workspaceName == "backend-service")
-        {
-            CollectionNodes.Add(new WorkspaceNavNode
-            {
-                Header = "后端集合",
-                Kind = WorkspaceNavItemKind.Collection
-            });
-
-            HistoryNodes.Add(new WorkspaceNavNode
-            {
-                Header = "GET /health",
-                Kind = WorkspaceNavItemKind.History,
-                Method = "GET",
-                Url = "https://api.example.com/health"
-            });
-
-            RebuildMenu();
-            this.RaisePropertyChanged(nameof(HasCollections));
-            return;
-        }
-
-        CollectionNodes.Add(new WorkspaceNavNode
-        {
-            Header = "用户服务集合",
-            Kind = WorkspaceNavItemKind.Collection,
-            Children =
-            {
-                new WorkspaceNavNode { Header = "GET /users", Kind = WorkspaceNavItemKind.Request, Method = "GET", Url = "https://api.example.com/users" },
-                new WorkspaceNavNode { Header = "POST /users", Kind = WorkspaceNavItemKind.Request, Method = "POST", Url = "https://api.example.com/users" }
-            }
-        });
-
-        CollectionNodes.Add(new WorkspaceNavNode
-        {
-            Header = "认证集合",
-            Kind = WorkspaceNavItemKind.Collection,
-            Children =
-            {
-                new WorkspaceNavNode { Header = "POST /login", Kind = WorkspaceNavItemKind.Request, Method = "POST", Url = "https://api.example.com/login" }
-            }
-        });
-
-        HistoryNodes.Add(new WorkspaceNavNode { Header = "GET /users", Kind = WorkspaceNavItemKind.History, Method = "GET", Url = "https://api.example.com/users" });
-        HistoryNodes.Add(new WorkspaceNavNode { Header = "POST /login", Kind = WorkspaceNavItemKind.History, Method = "POST", Url = "https://api.example.com/login" });
 
         RebuildMenu();
         this.RaisePropertyChanged(nameof(HasCollections));
+    }
+
+    private static readonly string[] SkippedFolders = [".git", "bin", "obj", "node_modules", ".vs"];
+
+    private void LoadFromDirectory(string rootPath)
+    {
+        try
+        {
+            var httpFiles = FindHttpFiles(rootPath);
+            foreach (var filePath in httpFiles.OrderBy(f => f))
+            {
+                var fileName = Path.GetFileNameWithoutExtension(filePath);
+                var relPath = Path.GetRelativePath(rootPath, filePath);
+                var collectionNode = new WorkspaceNavNode
+                {
+                    Header = fileName,
+                    Kind = WorkspaceNavItemKind.Collection
+                };
+                // P3 将在此处解析 ### block；目前只显示集合节点
+                CollectionNodes.Add(collectionNode);
+            }
+        }
+        catch { /* 权限或 IO 异常：静默跳过，外层已做校验 */ }
+    }
+
+    private static IEnumerable<string> FindHttpFiles(string directory)
+    {
+        var result = new List<string>();
+        try
+        {
+            result.AddRange(Directory.GetFiles(directory, "*.http", SearchOption.TopDirectoryOnly));
+            foreach (var subDir in Directory.GetDirectories(directory))
+            {
+                var dirName = Path.GetFileName(subDir);
+                if (SkippedFolders.Contains(dirName, StringComparer.OrdinalIgnoreCase))
+                    continue;
+                result.AddRange(FindHttpFiles(subDir));
+            }
+        }
+        catch { /* 权限异常跳过该子目录 */ }
+        return result;
     }
 
     public void AddHistoryEntry(string method, string url)

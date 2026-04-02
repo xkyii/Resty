@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Resty.Rebuild.Infrastructure.Http;
+using Resty.Rebuild.Infrastructure.Persistence;
 using Resty.Rebuild.Desktop.ViewModels;
 using Resty.Rebuild.Desktop.Views;
 
@@ -19,9 +20,10 @@ public partial class App : Avalonia.Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var requestExecutor = new SystemHttpRequestExecutor();
+            var directoryStore = new JsonDirectoryStore();
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(requestExecutor),
+                DataContext = new MainWindowViewModel(requestExecutor, directoryStore),
             };
         }
 
