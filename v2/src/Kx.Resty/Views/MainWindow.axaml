@@ -3,8 +3,6 @@
              xmlns:u="https://irihi.tech/ursa"
              xmlns:vm="using:Kx.Resty.Features.Shell.ViewModels"
              xmlns:views="using:Kx.Resty.Views"
-             xmlns:dmViews="using:Kx.Resty.Features.DirectoryManager.Views"
-             xmlns:wsViews="using:Kx.Resty.Features.Workspace.Views"
              x:Class="Kx.Resty.Views.MainWindow"
              x:DataType="vm:MainWindowViewModel"
              Title="Resty"
@@ -16,114 +14,6 @@
         <views:TitleBarRightContent/>
     </u:UrsaWindow.RightContent>
 
-    <!-- Main body -->
-    <Grid Margin="8" ColumnDefinitions="300,*" ColumnSpacing="8">
-
-        <!-- Left: mode-aware NavMenu -->
-        <Border Grid.Column="0"
-                CornerRadius="8"
-                Padding="8"
-                BorderThickness="1"
-                BorderBrush="#3A7D7D7D"
-                Background="#11000000">
-            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
-
-                <!-- Search box -->
-                <TextBox Grid.Row="0"
-                         Watermark="{Binding SearchPlaceholder}"
-                         Text="{Binding DirectoryManager.SearchText, Mode=TwoWay}"
-                         IsVisible="{Binding IsDirectoryManagerMode}"
-                         Height="32"/>
-                <TextBox Grid.Row="0"
-                         Watermark="{Binding SearchPlaceholder}"
-                         Text="{Binding WorkspaceNavigation.SearchText, Mode=TwoWay}"
-                         IsVisible="{Binding IsWorkspaceMode}"
-                         Height="32"/>
-
-                <!-- Collection/History toggle (workspace mode only) -->
-                <StackPanel Grid.Row="1" IsVisible="{Binding IsWorkspaceMode}"
-                            Orientation="Horizontal" Spacing="4">
-                    <Button Content="集合"
-                            Classes.accent="{Binding WorkspaceNavigation.IsCollectionsMode}"
-                            Command="{Binding WorkspaceNavigation.ShowCollectionsCommand}"/>
-                    <Button Content="历史"
-                            Classes.accent="{Binding WorkspaceNavigation.IsHistoryMode}"
-                            Command="{Binding WorkspaceNavigation.ShowHistoryCommand}"/>
-                </StackPanel>
-
-                <!-- Directory NavMenu -->
-                <u:NavMenu Grid.Row="2"
-                           IsVisible="{Binding IsDirectoryManagerMode}"
-                           ItemsSource="{Binding DirectoryManager.MenuRoots}"
-                           HeaderBinding="{Binding Header}"
-                           SubMenuBinding="{Binding Children}"
-                           DoubleTapped="DirectoryMenuDoubleTapped"
-                           SelectedItem="{Binding DirectoryManager.SelectedMenuNode, Mode=TwoWay}"/>
-
-                <!-- Workspace NavMenu -->
-                <u:NavMenu Grid.Row="2"
-                           IsVisible="{Binding IsWorkspaceMode}"
-                           ItemsSource="{Binding WorkspaceNavigation.ActiveMenuRoots}"
-                           HeaderBinding="{Binding Header}"
-                           SubMenuBinding="{Binding Children}"
-                           SelectedItem="{Binding WorkspaceNavigation.SelectedNode, Mode=TwoWay}"/>
-            </Grid>
-        </Border>
-
-        <!-- Right: DirectoryManager detail or Workspace editor -->
-        <Grid Grid.Column="1">
-
-            <!-- DirectoryManager mode: toolbar + detail -->
-            <Grid IsVisible="{Binding IsDirectoryManagerMode}" RowDefinitions="Auto,*" RowSpacing="8">
-                <Border Grid.Row="0" CornerRadius="8" Padding="12"
-                        BorderThickness="1" BorderBrush="#3A7D7D7D" Background="#11000000">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="打开"
-                                IsEnabled="{Binding DirectoryManager.HasSelection}"
-                                Command="{Binding DirectoryManager.OpenInWorkspaceCommand}"/>
-                        <Button Content="在资源管理器中显示"
-                                IsEnabled="{Binding DirectoryManager.HasSelection}"
-                                Command="{Binding DirectoryManager.RevealInExplorerCommand}"/>
-                        <Button Content="移除"
-                                IsEnabled="{Binding DirectoryManager.HasSelection}"
-                                Command="{Binding DirectoryManager.RemoveEntryCommand}"/>
-                        <Button Content="加入收藏"
-                                IsVisible="{Binding DirectoryManager.CanAddToManaged}"
-                                Command="{Binding DirectoryManager.AddToManagedCommand}"/>
-                        <Button Content="打开文件夹" Click="OpenFolderButton_Click"/>
-                        <TextBlock Text="{Binding DirectoryManager.ErrorBanner}"
-                                   IsVisible="{Binding DirectoryManager.HasError}"
-                                   VerticalAlignment="Center"
-                                   Foreground="#FF4D4F"
-                                   FontWeight="SemiBold"/>
-                    </StackPanel>
-                </Border>
-
-                <Border Grid.Row="1" CornerRadius="8" Padding="16"
-                        BorderThickness="1" BorderBrush="#3A7D7D7D" Background="#11000000">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="目录信息" FontWeight="SemiBold" FontSize="14"/>
-                        <TextBlock Text="{Binding DirectoryManager.SelectedTypeText, StringFormat=类型: {0}}"/>
-                        <TextBlock Text="{Binding DirectoryManager.SelectedName, StringFormat=名称: {0}}"/>
-                        <TextBlock Text="{Binding DirectoryManager.SelectedPath, StringFormat=路径: {0}}"/>
-                        <TextBlock Text="{Binding DirectoryManager.SelectedLastOpenedText, StringFormat=最近打开: {0}}"/>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="状态: "/>
-                            <TextBlock Text="{Binding DirectoryManager.SelectedEntry.StatusText}"
-                                       Foreground="{Binding DirectoryManager.SelectedEntry.StatusColor}"
-                                       FontWeight="SemiBold"/>
-                        </StackPanel>
-                        <TextBlock Text="{Binding DirectoryManager.SelectedEntry.HttpFileCountText, StringFormat=文件: {0}}"
-                                   IsVisible="{Binding DirectoryManager.HasSelection}"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
-
-            <!-- Workspace mode -->
-            <Grid IsVisible="{Binding IsWorkspaceMode}">
-                <wsViews:WorkspaceEditorView DataContext="{Binding WorkspaceEditor}"/>
-            </Grid>
-        </Grid>
-    </Grid>
+    <views:MainView/>
 
 </u:UrsaWindow>
