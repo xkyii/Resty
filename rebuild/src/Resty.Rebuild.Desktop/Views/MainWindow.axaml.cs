@@ -51,4 +51,22 @@ public partial class MainWindow : Window
 
         vm.DirectoryManager.OpenSelectedInWorkspace();
     }
+
+    private async void OpenFolderButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+            return;
+
+        // 仅在目录管理模式下响应
+        if (!vm.IsDirectoryManagerMode)
+            return;
+
+        var dlg = new OpenFolderDialog();
+        var path = await dlg.ShowAsync(this);
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        // 将选中路径交给 DirectoryManager 处理（会校验、加入最近并触发打开）
+        await vm.DirectoryManager.OpenPathAsync(path).ConfigureAwait(false);
+    }
 }

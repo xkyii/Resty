@@ -176,6 +176,40 @@ public sealed class DirectoryManagerViewModel : ReactiveObject
     /// <summary>从 MainWindow.axaml.cs 双击事件调用</summary>
     public void OpenSelectedInWorkspace() => OpenSelectedToWorkspace();
 
+    /// <summary>外部打开指定路径（例如从打开文件夹对话）并触发打开流程</summary>
+    public async Task OpenPathAsync(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        var existing = RecentEntries.FirstOrDefault(x => string.Equals(x.Path, path, StringComparison.OrdinalIgnoreCase));
+        DirectoryEntryItem entry;
+        if (existing is not null)
+        {
+            existing.LastOpenedAt = DateTime.Now;
+            entry = existing;
+        }
+        else
+        {
+            var name = System.IO.Path.GetFileName(path.TrimEnd('/', '\\'));
+            if (string.IsNullOrEmpty(name)) name = path;
+            entry = new DirectoryEntryItem
+            {
+                Name = name,
+                Path = path,
+                LastOpenedAt = DateTime.Now,
+                Kind = DirectoryEntryKind.Recent
+            };
+            RecentEntries.Insert(0, entry);
+            if (RecentEntries.Count > 20)
+                RecentEntries.RemoveAt(RecentEntries.Count - 1);
+        }
+
+        SelectedEntry = entry;
+        await ValidateEntryAsync(entry).ConfigureAwait(false);
+        TryInvokeOpen(entry);
+    }
+
     // ── Private open logic ────────────────────────────────────────────────────
 
     private void OpenSelectedToWorkspace()

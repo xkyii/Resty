@@ -103,7 +103,7 @@
                 </Border>
 
                 <!-- Context-aware button in title bar right-center -->
-                <Button Width="48" Height="32" Padding="4,0" BorderThickness="0" Background="Transparent">
+                <Button Width="48" Height="32" Padding="4,0" BorderThickness="0" Background="Transparent" Click="OpenFolderButton_Click" ToolTip.Tip="打开文件夹">
                     <Panel>
                         <!-- Directory Manager mode: folder icon -->
                         <TextBlock IsVisible="{Binding IsDirectoryManagerMode}"
