@@ -9,5 +9,54 @@
     <Application.Styles>
         <semi:SemiTheme Locale="zh-CN" />
         <uSemi:SemiTheme Locale="zh-CN" />
+
+        <!-- Global monochrome style overrides -->
+        <Style Selector="Button">
+            <Setter Property="Foreground" Value="#111111"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#D9D9D9"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="Button:pointerover">
+            <Setter Property="Foreground" Value="#111111"/>
+            <Setter Property="Background" Value="#F2F2F2"/>
+            <Setter Property="BorderBrush" Value="#CFCFCF"/>
+        </Style>
+        <Style Selector="Button:pressed">
+            <Setter Property="Foreground" Value="#111111"/>
+            <Setter Property="Background" Value="#EAEAEA"/>
+        </Style>
+        <Style Selector="Button:disabled">
+            <Setter Property="Foreground" Value="#9A9A9A"/>
+            <Setter Property="Background" Value="#F8F8F8"/>
+            <Setter Property="BorderBrush" Value="#EAEAEA"/>
+        </Style>
+
+        <Style Selector="ToggleButton">
+            <Setter Property="Foreground" Value="#111111"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#D9D9D9"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="ToggleButton:pointerover">
+            <Setter Property="Foreground" Value="#111111"/>
+            <Setter Property="Background" Value="#F2F2F2"/>
+        </Style>
+
+        <Style Selector="MenuItem">
+            <Setter Property="Foreground" Value="#111111"/>
+        </Style>
+
+        <Style Selector="TextBox">
+            <Setter Property="Foreground" Value="#111111"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#D9D9D9"/>
+        </Style>
+
+        <Style Selector="ComboBox">
+            <Setter Property="Foreground" Value="#111111"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#D9D9D9"/>
+        </Style>
     </Application.Styles>
 </Application>
