@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Resty.Rebuild.Application/Resty.Rebuild.Application.csproj" />
-    <Project Path="src/Resty.Rebuild.Desktop/Resty.Rebuild.Desktop.csproj" />
-    <Project Path="src/Resty.Rebuild.Domain/Resty.Rebuild.Domain.csproj" />
-    <Project Path="src/Resty.Rebuild.Infrastructure/Resty.Rebuild.Infrastructure.csproj" />
-  </Folder>
-</Solution>

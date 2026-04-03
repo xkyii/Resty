@@ -1,46 +1,12 @@
-﻿.vs/
-.vscode/
-.idea/
-
-*.sln.docstates
-*.user
-*.suo
-*.code-workspace
-
-.DS_Store
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-
+## .NET
 bin/
 obj/
-# ignore ci node files
-node_modules/
-package.json
-package-lock.json
+*.user
+.vs/
 
+## Rider
+.idea/
 
-# Flatpak
-!build/resources/flatpak
-
-build/resources/
-build/Resty/
-build/Resty.app/
-build/*.zip
-build/*.tar.gz
-build/*.deb
-build/*.rpm
-build/*.AppImage
-Resty.app/
-build.command
-src/Properties/launchSettings.json
-artifacts
+## OS
+.DS_Store
+Thumbs.db
