@@ -63,9 +63,9 @@
                                     <TextBox Grid.Column="2"
                                              Text="{Binding RequestName, Mode=TwoWay}"
                                              Height="28"/>
-                                    <Button Grid.Column="3" Content="保存" Height="28"
+                                    <Button Grid.Column="3" Content="保存" Height="28" Classes="Tertiary"
                                             Command="{Binding SaveCommand}"/>
-                                    <Button Grid.Column="4" Content="刷新" Height="28"
+                                    <Button Grid.Column="4" Content="刷新" Height="28" Classes="Tertiary"
                                             Command="{Binding RefreshCommand}"/>
                                 </Grid>
 

@@ -16,16 +16,15 @@
                 Background="#11000000">
             <Grid RowDefinitions="Auto,*" RowSpacing="8">
                 <TextBox Grid.Row="0"
-                         Watermark="搜索&quot;最近&quot;或&quot;收藏&quot;"
-                         Text="{Binding SearchText, Mode=TwoWay}"
-                         Height="32"/>
-
+                    Watermark="搜索"
+                    Text="{Binding SearchText, Mode=TwoWay}"
+                    Height="32"/>
                 <u:NavMenu Grid.Row="1"
-                           ItemsSource="{Binding MenuRoots}"
-                           HeaderBinding="{Binding Header}"
-                           SubMenuBinding="{Binding Children}"
-                           DoubleTapped="NavMenuDoubleTapped"
-                           SelectedItem="{Binding SelectedMenuNode, Mode=TwoWay}"/>
+                    ItemsSource="{Binding MenuRoots}"
+                    HeaderBinding="{Binding Header}"
+                    SubMenuBinding="{Binding Children}"
+                    DoubleTapped="NavMenuDoubleTapped"
+                    SelectedItem="{Binding SelectedMenuNode, Mode=TwoWay}"/>
             </Grid>
         </Border>
 
@@ -41,18 +40,23 @@
                     Background="#11000000">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Button Content="打开"
+                            Classes="Tertiary"
                             IsEnabled="{Binding HasSelection}"
                             Command="{Binding OpenInWorkspaceCommand}"/>
-                    <Button Content="在资源管理器中显示"
+                    <Button Content="在资源管理器中打开"
+                            Classes="Tertiary"
                             IsEnabled="{Binding HasSelection}"
                             Command="{Binding RevealInExplorerCommand}"/>
                     <Button Content="移除"
+                            Classes="Tertiary"
                             IsEnabled="{Binding HasSelection}"
                             Command="{Binding RemoveEntryCommand}"/>
                     <Button Content="加入收藏"
+                            Classes="Tertiary"
                             IsVisible="{Binding CanAddToManaged}"
                             Command="{Binding AddToManagedCommand}"/>
                     <Button Content="打开文件夹"
+                            Classes="Tertiary"
                             Click="OpenFolderButton_Click"/>
                     <TextBlock Text="{Binding ErrorBanner}"
                                IsVisible="{Binding HasError}"

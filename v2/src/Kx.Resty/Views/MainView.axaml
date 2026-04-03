@@ -32,9 +32,11 @@
                 <StackPanel Grid.Row="1" IsVisible="{Binding IsWorkspaceMode}"
                             Orientation="Horizontal" Spacing="4">
                     <Button Content="集合"
+                            Classes="Tertiary"
                             Classes.accent="{Binding WorkspaceNavigation.IsCollectionsMode}"
                             Command="{Binding WorkspaceNavigation.ShowCollectionsCommand}"/>
                     <Button Content="历史"
+                            Classes="Tertiary"
                             Classes.accent="{Binding WorkspaceNavigation.IsHistoryMode}"
                             Command="{Binding WorkspaceNavigation.ShowHistoryCommand}"/>
                 </StackPanel>

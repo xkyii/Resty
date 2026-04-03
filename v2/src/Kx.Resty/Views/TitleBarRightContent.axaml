@@ -11,7 +11,7 @@
                 Margin="0,0,4,0">
 
         <!-- Mode toggle button -->
-        <Button Width="36" Height="28"
+        <Button Width="36" Height="28" Classes="Tertiary"
                 IsEnabled="{Binding IsModeSwitchEnabled}"
                 ToolTip.Tip="{Binding WorkspaceSwitchHint}"
                 Command="{Binding ToggleModeCommand}">
