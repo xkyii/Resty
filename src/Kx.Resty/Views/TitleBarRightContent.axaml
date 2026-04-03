@@ -26,6 +26,20 @@
                        FontWeight="SemiBold"/>
         </Border>
 
+        <!-- Open folder button -->
+        <Button Width="36" Height="28" Classes="Tertiary"
+                ToolTip.Tip="打开目录"
+                Padding="0"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                Click="OpenFolderButton_Click">
+            <TextBlock Text="&#xE8B7;"
+                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+        </Button>
+
     </StackPanel>
 
 </UserControl>
