@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Kx.Resty.Desktop/Kx.Resty.Desktop.csproj" />
-    <Project Path="src/Kx.Resty.Domain/Kx.Resty.Domain.csproj" />
-    <Project Path="src/Kx.Resty.Infrastructure/Kx.Resty.Infrastructure.csproj" />
-    <Project Path="src/Kx.Resty/Kx.Resty.csproj" />
-  </Folder>
-</Solution>
