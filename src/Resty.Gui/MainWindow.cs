@@ -455,7 +455,6 @@ public sealed class MainWindow : NativeCustomWindow
         var editor = new RequestEditorView();
         WireEditorEvents(editor);
         editor.SetFilePath(file.FilePath);
-        editor.Load(def);
 
         // 创建标签按钮
         var title = req.Name.Length > 20 ? req.Name[..20] + "…" : req.Name;
@@ -467,7 +466,8 @@ public sealed class MainWindow : NativeCustomWindow
         var tab = new EditorTab(key, file, req, editor, tabBtn);
         _tabs.Add(tab);
         _tabBar.Add(tabBtn);
-        ActivateTab(newIdx);
+        ActivateTab(newIdx);   // 先把编辑器放入可视树
+        editor.Load(def);      // 再加载数据（控件已在树中，Text/SelectedIndex 赋值生效）
         RefreshEditorEnvVars();
         _responsePanel.ShowEmpty();
     }
