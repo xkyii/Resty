@@ -1034,4 +1034,27 @@ Spinner 20px，动画旋转，文字 13px `#858585`。
 
 *设计完成日期：2026-04-28*
 *实施状态：可交付开发*
-*下一步：G0 AOT Spike — 验证 MewUI + NativeAOT 基础可行性*
+
+---
+
+## 十五、实施进度
+
+| 里程碑 | 状态 | 说明 |
+|--------|------|------|
+| G0 — AOT Spike | ✅ 完成 | MewUI 0.15.2 + NativeAOT 验证通过，`resty-gui.exe` 1.5 MB |
+| G1 — 主窗口框架 | ✅ 完成 | 无边框自定义标题栏、侧边栏文件树、SplitPanel 布局、菜单栏、欢迎界面 |
+| G2 — 请求执行 | ⬜ 待开发 | 文本编辑器、发送按钮、响应面板（状态码 + 响应体） |
+| G3 — 结构化模式 | ⬜ 待开发 | Params / Headers / Body / Assertions Tab，双模式同步 |
+| G4 — 完整功能 | ⬜ 待开发 | 环境变量、JSON 树、断言结果、历史记录 |
+
+### G1 已实现的文件
+
+| 文件 | 对应设计章节 |
+|------|------------|
+| `Infrastructure/NativeCustomWindow.cs` | §4.1 菜单栏/窗口控件（无边框自定义 chrome） |
+| `Services/WorkspaceService.cs` | §3.4 交互流程（工作区加载） |
+| `Views/SidebarView.cs` | §五 集合侧边栏（搜索框 + 文件树 + 方法徽章） |
+| `MainWindow.cs` | §三 欢迎页 + §四 主界面布局 + §九 菜单栏 + §八 状态栏 |
+| `App.cs` | 暗色主题（ThemeVariant.Dark）+ Win32 平台注册 |
+
+*最后更新：2026-04-28*
