@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Resty.Cli/Resty.Cli.csproj" />
     <Project Path="src/Resty.Core/Resty.Core.csproj" />
+    <Project Path="src/Resty.Gui/Resty.Gui.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Resty.Core.Tests/Resty.Core.Tests.csproj" />

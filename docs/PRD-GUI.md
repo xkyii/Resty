@@ -287,7 +287,7 @@ var urlPreview = new Label()
 
 | 里程碑 | 目标 | 通过标准 |
 |--------|------|---------|
-| **G0 — AOT Spike** | 验证 MewUI + NativeAOT 可行性 | MewUI Gallery 能 AOT 编译并运行，无崩溃 |
+| **G0 — AOT Spike** ✅ | 验证 MewUI + NativeAOT 可行性 | MewUI Gallery 能 AOT 编译并运行，无崩溃。**实测：resty-gui.exe 1.5 MB，窗口正常显示（2026-04-28）** |
 | **G1 — 框架搭建** | MainWindow 布局 + 侧边栏 + 标签页空壳 | 能打开工作区，侧边栏显示文件树 |
 | **G2 — 请求执行** | 文本模式编辑 + 发送 + 响应展示（Raw + Headers） | 能发送 GET/POST，看到响应 |
 | **G3 — 结构化模式** | Form Mode + 双模式同步 | 结构化↔文本往返转换无损 |
