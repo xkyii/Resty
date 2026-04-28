@@ -1,5 +1,7 @@
+using System.Threading;
 using Aprillz.MewUI;
 using Aprillz.MewUI.Controls;
+using Resty.Core.Execution;
 using Resty.Gui.Infrastructure;
 using Resty.Gui.Services;
 using Resty.Gui.Views;
@@ -8,7 +10,7 @@ namespace Resty.Gui;
 
 /// <summary>
 /// Resty 主窗口 — VS Code 式布局，无边框自定义标题栏。
-/// G1: 工作区选择 + 侧边栏文件树 + 主区空壳（标签栏 + 占位内容）
+/// G2: 请求编辑器（文本模式）+ 发送 + 响应面板
 /// </summary>
 public sealed class MainWindow : NativeCustomWindow
 {
@@ -27,9 +29,13 @@ public sealed class MainWindow : NativeCustomWindow
     private readonly SidebarView       _sidebar   = new();
     private readonly ObservableValue<string> _workspaceName = new("Resty");
 
-    // 主区（标签页内容占位）
-    private readonly TextBlock _contentPlaceholder;
-    private readonly Border    _mainArea;
+    // G2 组件
+    private readonly RequestEditorView  _editor        = new();
+    private readonly ResponsePanelView  _responsePanel = new();
+    private readonly HttpRequestExecutor _executor     = new(timeoutMs: 30_000);
+
+    // 主区容器（切换欢迎页 ↔ 编辑器）
+    private readonly Border _mainArea;
 
     public MainWindow()
     {
@@ -46,26 +52,38 @@ public sealed class MainWindow : NativeCustomWindow
         // ── 标题栏左：MenuBar ─────────────────────────────────────
         TitleBarLeft.Add(BuildMenuBar());
 
-        // ── 主体内容 ──────────────────────────────────────────────
+        // ── 侧边栏事件 ───────────────────────────────────────────
         _sidebar.RequestSelected += OnRequestSelected;
 
-        _contentPlaceholder = new TextBlock
+        // ── 编辑器发送事件 ────────────────────────────────────────
+        _editor.SendRequested = req =>
         {
-            Text = "← 从侧边栏选择一个请求，或通过 文件 → 打开工作区 开始",
-            FontSize  = 13,
-            Foreground = TextSec,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment   = VerticalAlignment.Center,
+            // 在点击时（UI 线程）捕获同步上下文，此时事件循环已运行
+            var sc = SynchronizationContext.Current;
+            _responsePanel.ShowLoading();
+            _ = System.Threading.Tasks.Task.Run(async () =>
+            {
+                try
+                {
+                    var result = await _executor.ExecuteAsync(req);
+                    sc?.Post(_ => _responsePanel.ShowResult(result), null);
+                }
+                catch (Exception ex)
+                {
+                    sc?.Post(_ => _responsePanel.ShowError(ex.Message), null);
+                }
+            });
         };
 
+        // ── 主区容器（初始显示欢迎页） ────────────────────────────
         _mainArea = new Border
         {
             Background = BgBase,
-            Child      = _contentPlaceholder,
+            Child      = BuildWelcomeView(),
         };
 
-        // 初始显示欢迎界面
-        Content = BuildWelcomeView();
+        // 初始布局
+        Content = _mainArea;
         Padding = new Thickness(0);
     }
 
@@ -120,58 +138,21 @@ public sealed class MainWindow : NativeCustomWindow
     {
         _sidebar.SetWorkspace(_workspace);
 
-        // 标签栏（G1 空壳）
-        var addTabBtn = new Button { Width = 32, Height = 36 };
-        addTabBtn.Content("+", false).FontSize(16).Background(Color.Transparent).Foreground(TextSec);
-
-        var noTabLabel = new TextBlock
-        {
-            Text      = "无打开的请求",
-            FontSize  = 12,
-            Foreground = TextSec,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin    = new Thickness(12, 0),
-        };
-
-        var tabBarPanel = new DockPanel();
-        tabBarPanel.Add(addTabBtn.DockRight());
-        tabBarPanel.Add(noTabLabel);
-
-        var tabBar = new Border
-        {
-            Height      = 36,
-            Background  = BgPanel,
-            BorderBrush = BorderCol,
-            Child       = tabBarPanel,
-        };
-
-        // 响应区占位
-        var responsePlaceholder = new Border
-        {
-            Background = BgBase,
-            Child = new TextBlock
-            {
-                Text      = "发送请求后响应将显示在此处",
-                FontSize  = 12,
-                Foreground = TextSec,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment   = VerticalAlignment.Center,
-            },
-        };
+        // 重置编辑器和响应面板状态
+        _responsePanel.ShowEmpty();
 
         // 请求编辑区 + 响应区（上下 SplitPanel）
         var editorAndResponse = new SplitPanel
         {
             Orientation      = Orientation.Vertical,
-            FirstLength      = 350,
+            FirstLength      = 360,
             SplitterThickness = 4,
             First            = _mainArea,
-            Second           = responsePlaceholder,
+            Second           = _responsePanel.RootElement,
         };
 
-        // 右侧主区（标签栏 + 内容）
+        // 右侧主区（直接内容，无标签栏）
         var rightArea = new DockPanel();
-        rightArea.Add(tabBar.DockTop());
         rightArea.Add(editorAndResponse);
 
         // 侧边栏 + 右侧（水平 SplitPanel）
@@ -281,13 +262,17 @@ public sealed class MainWindow : NativeCustomWindow
     {
         _workspace.Load(path);
         _workspaceName.Value = _workspace.WorkspaceName;
+        _mainArea.Child      = _editor.RootElement;  // 切换主区到编辑器
         Content = BuildWorkspaceLayout();
     }
 
     private void OnRequestSelected(HttpFileNode file, RequestNode req)
     {
-        // G1 占位：仅更新内容区提示文字
-        _contentPlaceholder.Text = $"{req.Method}  {req.Name}\n文件：{file.FileName}\n\n(G2 实现请求编辑器)";
-        _mainArea.Child          = _contentPlaceholder;
+        var def = _workspace.GetRequestDefinition(file.FilePath, req.Name);
+        if (def is null) return;
+
+        _editor.Load(def);
+        _mainArea.Child = _editor.RootElement;
+        _responsePanel.ShowEmpty();
     }
 }

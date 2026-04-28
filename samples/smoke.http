@@ -17,3 +17,7 @@ GET https://httpbin.org/status/201
 > {%
 assert status == 201
 %}
+
+
+### Get 163.com
+GET https://www.163.com
