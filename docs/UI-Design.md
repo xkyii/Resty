@@ -1044,7 +1044,7 @@ Spinner 20px，动画旋转，文字 13px `#858585`。
 | G0 — AOT Spike | ✅ 完成 | MewUI 0.15.2 + NativeAOT 验证通过，`resty-gui.exe` 1.5 MB |
 | G1 — 主窗口框架 | ✅ 完成 | 无边框自定义标题栏、侧边栏文件树、SplitPanel 布局、菜单栏、欢迎界面 |
 | G2 — 请求执行 | ✅ 完成 | 原始文本编辑器、▶ 发送按钮、响应面板（状态码 + 耗时 + 响应体） |
-| G3 — 结构化模式 | ⬜ 待开发 | Params / Headers / Body / Assertions Tab，双模式同步 |
+| G3 — 结构化模式 | ✅ 完成 | Params / Headers / Body / Assertions Tab，双模式同步 |
 | G4 — 完整功能 | ⬜ 待开发 | 环境变量、JSON 树、断言结果、历史记录 |
 
 ### G1 已实现的文件
@@ -1070,5 +1070,17 @@ Spinner 20px，动画旋转，文字 13px `#858585`。
 - HTTP 执行复用 `Resty.Core` 的 `HttpRequestExecutor`，不重复实现
 - `SynchronizationContext` 必须在按钮点击回调内（UI 线程上）捕获，而非在构造函数中——构造函数执行时 `Application.Run()` 尚未启动，此时 `Current` 为 `null`
 - 发送时从 `MultiLineTextBox` 的文本内容重新调用 `HttpFileParser.ParseContent()` 解析，支持用户在界面上直接修改请求
+
+### G3 已实现的文件
+
+| 文件 | 说明 |
+|------|------|
+| `Views/RequestEditorView.cs` | 完整改写：方法 ComboBox + URL 输入框 + 文本/结构化双模式切换；结构化模式含 Params / Headers / Body / Assertions 四个 Tab；双向同步（文本→结构化解析，结构化→文本序列化含 `> {% %}` 断言块） |
+
+**G3 关键实现细节**：
+- **Params Tab**：解析/重建 URL query string，表格式 Key-Value 行，与 URL 输入框双向同步
+- **Assertions Tab**：每行一条断言规则（`assert ...` 原始文本），结构化→文本时序列化为 `> {% ... %}` 块，文本→结构化时由 `AssertionParser.ParseBlock` 解析
+- **四 Tab 顺序**：Params → Headers → Body → Assertions，与 §6.2 设计规格一致
+- `HttpRequestDefinition.Assertions`（`List<AssertionRule>`）由 `AssertionParser.ParseBlock` 填充，保持与 CLI 工具相同的解析路径
 
 *最后更新：2026-04-28*
