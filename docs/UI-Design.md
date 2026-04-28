@@ -1043,7 +1043,7 @@ Spinner 20px，动画旋转，文字 13px `#858585`。
 |--------|------|------|
 | G0 — AOT Spike | ✅ 完成 | MewUI 0.15.2 + NativeAOT 验证通过，`resty-gui.exe` 1.5 MB |
 | G1 — 主窗口框架 | ✅ 完成 | 无边框自定义标题栏、侧边栏文件树、SplitPanel 布局、菜单栏、欢迎界面 |
-| G2 — 请求执行 | ⬜ 待开发 | 文本编辑器、发送按钮、响应面板（状态码 + 响应体） |
+| G2 — 请求执行 | ✅ 完成 | 原始文本编辑器、▶ 发送按钮、响应面板（状态码 + 耗时 + 响应体） |
 | G3 — 结构化模式 | ⬜ 待开发 | Params / Headers / Body / Assertions Tab，双模式同步 |
 | G4 — 完整功能 | ⬜ 待开发 | 环境变量、JSON 树、断言结果、历史记录 |
 
@@ -1056,5 +1056,19 @@ Spinner 20px，动画旋转，文字 13px `#858585`。
 | `Views/SidebarView.cs` | §五 集合侧边栏（搜索框 + 文件树 + 方法徽章） |
 | `MainWindow.cs` | §三 欢迎页 + §四 主界面布局 + §九 菜单栏 + §八 状态栏 |
 | `App.cs` | 暗色主题（ThemeVariant.Dark）+ Win32 平台注册 |
+
+### G2 已实现的文件
+
+| 文件 | 说明 |
+|------|------|
+| `Views/RequestEditorView.cs` | 方法徽章 + URL 工具栏 + `MultiLineTextBox` 原始 HTTP 文本编辑器；发送时解析文本并触发请求 |
+| `Views/ResponsePanelView.cs` | 四状态响应面板（空 / 加载中 / 成功 / 错误）；成功时展示状态码（带颜色）、耗时、响应体 |
+| `Services/WorkspaceService.cs` | 新增 `_fileDefs` 缓存 + `GetRequestDefinition()` 方法 |
+| `MainWindow.cs` | 接入 `HttpRequestExecutor`；`Task.Run` 异步发送 + `SynchronizationContext.Post` 回写 UI |
+
+**G2 关键实现细节**：
+- HTTP 执行复用 `Resty.Core` 的 `HttpRequestExecutor`，不重复实现
+- `SynchronizationContext` 必须在按钮点击回调内（UI 线程上）捕获，而非在构造函数中——构造函数执行时 `Application.Run()` 尚未启动，此时 `Current` 为 `null`
+- 发送时从 `MultiLineTextBox` 的文本内容重新调用 `HttpFileParser.ParseContent()` 解析，支持用户在界面上直接修改请求
 
 *最后更新：2026-04-28*
