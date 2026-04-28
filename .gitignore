@@ -18,6 +18,9 @@
 **/[Pp]ackages/*
 !**/[Pp]ackages/build/
 
+# Resty private env (may contain secrets)
+http-client.private.env.json
+
 # .NET build artifacts
 artifacts/
 

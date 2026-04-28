@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Resty.Cli</RootNamespace>
+    <AssemblyName>resty</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Normal dev build: framework-dependent, fast to compile -->
+    <!-- For single EXE: dotnet publish -c Release -r win-x64 /p:PublishProfile=win-x64-aot -->
+  </PropertyGroup>
+
+  <!-- NativeAOT: only when PublishAot is set (via publish profile or CLI flag) -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TrimmerRootDescriptor>trimmer-roots.xml</TrimmerRootDescriptor>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Resty.Core\Resty.Core.csproj" />
+  </ItemGroup>
+
+</Project>

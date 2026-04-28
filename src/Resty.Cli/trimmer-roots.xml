@@ -1,0 +1,10 @@
+<linker>
+  <!-- Preserve System.Text.Json infrastructure needed for JsonDocument / Utf8JsonWriter -->
+  <assembly fullname="System.Text.Json" preserve="nothing">
+    <type fullname="System.Text.Json.JsonDocument" preserve="all" />
+    <type fullname="System.Text.Json.JsonElement" preserve="all" />
+    <type fullname="System.Text.Json.Utf8JsonWriter" preserve="all" />
+    <type fullname="System.Text.Json.JsonWriterOptions" preserve="all" />
+    <type fullname="System.Text.Json.JsonSerializer" preserve="all" />
+  </assembly>
+</linker>

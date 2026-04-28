@@ -1,0 +1,19 @@
+# Resty smoke test
+
+### Get GitHub API
+GET https://api.github.com/zen
+User-Agent: Resty/1.0
+
+> {%
+assert status == 200
+assert responseTime < 5000
+%}
+
+###
+
+### Get httpbin status
+GET https://httpbin.org/status/201
+
+> {%
+assert status == 201
+%}
