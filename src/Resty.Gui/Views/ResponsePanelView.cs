@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Aprillz.MewUI;
 using Aprillz.MewUI.Controls;
 using Resty.Core.Models;
@@ -30,6 +31,8 @@ public sealed class ResponsePanelView
     // 状态占位控件
     private readonly UIElement _emptyState;
     private readonly UIElement _loadingState;
+    private readonly StackPanel _headersPanel;
+    private readonly StackPanel _assertionsPanel;
 
     // ── 公共接口 ─────────────────────────────────────────────────
     /// <summary>根元素，放入父布局。</summary>
@@ -97,9 +100,22 @@ public sealed class ResponsePanelView
         _bodyText.Wrap(true);
 
         // ── 成功状态面板 ──────────────────────────────────────────
+        _headersPanel    = new StackPanel { Orientation = Orientation.Vertical };
+        _assertionsPanel = new StackPanel { Orientation = Orientation.Vertical };
+
+        var headersScroll    = new ScrollViewer { VerticalScroll = ScrollMode.Auto, Content = _headersPanel };
+        var assertionsScroll = new ScrollViewer { VerticalScroll = ScrollMode.Auto, Content = _assertionsPanel };
+
+        var respTabControl = new TabControl();
+        respTabControl.TabItems(
+            new TabItem().Header("Body",       false).Content(new Border { Background = BgBase, Child = _bodyText }),
+            new TabItem().Header("Headers",    false).Content(headersScroll),
+            new TabItem().Header("Assertions", false).Content(assertionsScroll)
+        );
+
         var successRoot = new DockPanel();
         successRoot.Add(headerBorder.DockTop());
-        successRoot.Add(_bodyText);
+        successRoot.Add(respTabControl);
         _successPanel = new Border { Background = BgBase, Child = successRoot };
 
         // ── 根容器（初始显示空状态） ──────────────────────────────
@@ -113,21 +129,103 @@ public sealed class ResponsePanelView
     public void ShowLoading() => _root.Child = _loadingState;
 
     /// <summary>显示成功响应。</summary>
-    public void ShowResult(HttpExecutionResult result)
+    public void ShowResult(HttpExecutionResult result, IReadOnlyList<AssertionResult>? assertionResults = null)
     {
         // 更新状态码
-        var statusText = StatusText(result.StatusCode);
-        _statusBadge.Text       = statusText;
+        _statusBadge.Text       = StatusText(result.StatusCode);
         _statusBadge.Foreground = StatusColor(result.StatusCode);
 
         // 更新耗时 & 大小
         _elapsedLabel.Text = $"{result.ElapsedMs} ms";
         _sizeLabel.Text    = FormatSize(System.Text.Encoding.UTF8.GetByteCount(result.Body));
 
-        // 更新响应体
-        _bodyText.Text = string.IsNullOrEmpty(result.Body)
-            ? "(空响应体)"
-            : result.Body;
+        // 更新响应体（JSON 自动格式化）
+        var displayBody = result.Body;
+        if (!string.IsNullOrEmpty(displayBody))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(displayBody);
+                displayBody = JsonSerializer.Serialize(doc.RootElement,
+                    new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch { /* 非 JSON，原样显示 */ }
+        }
+        _bodyText.Text = string.IsNullOrEmpty(displayBody) ? "(空响应体)" : displayBody;
+
+        // 更新响应头面板
+        while (_headersPanel.Children.Count > 0) _headersPanel.RemoveAt(0);
+        AddHeaderRow(_headersPanel, ":status", StatusColor(result.StatusCode), StatusText(result.StatusCode));
+        AddHeaderRow(_headersPanel, ":time",   TextSec, $"{result.ElapsedMs} ms");
+        AddHeaderRow(_headersPanel, ":size",   TextSec, FormatSize(System.Text.Encoding.UTF8.GetByteCount(result.Body)));
+        if (result.Headers.Count > 0)
+            _headersPanel.Add(new Border { Height = 1, Background = BorderCol, Margin = new Thickness(8, 4) });
+        foreach (var (k, v) in result.Headers)
+            AddHeaderRow(_headersPanel, k, Color.FromRgb(0x9C, 0xDC, 0xFE), v);
+
+        // 更新断言面板
+        while (_assertionsPanel.Children.Count > 0) _assertionsPanel.RemoveAt(0);
+        if (assertionResults is not null && assertionResults.Count > 0)
+        {
+            var passCount  = assertionResults.Count(r => r.Passed);
+            var allPassed  = passCount == assertionResults.Count;
+            var summaryClr = allPassed ? Color.FromRgb(0x4E, 0xC9, 0xB0) : Color.FromRgb(0xF4, 0x47, 0x47);
+            _assertionsPanel.Add(new TextBlock
+            {
+                Text       = allPassed
+                    ? $"✓  {passCount} / {assertionResults.Count} 条断言通过"
+                    : $"✗  {assertionResults.Count - passCount} / {assertionResults.Count} 条断言失败",
+                FontSize   = 12,
+                Foreground  = summaryClr,
+                FontWeight  = FontWeight.SemiBold,
+                Margin     = new Thickness(8, 6, 8, 2),
+            });
+            _assertionsPanel.Add(new Border { Height = 1, Background = BorderCol, Margin = new Thickness(0, 2, 0, 4) });
+            foreach (var ar in assertionResults)
+            {
+                var icon      = ar.Passed ? "✓" : "✗";
+                var iconColor = ar.Passed ? Color.FromRgb(0x4E, 0xC9, 0xB0) : Color.FromRgb(0xF4, 0x47, 0x47);
+                var row = new DockPanel { Margin = new Thickness(0, 1) };
+                row.Add(new TextBlock
+                {
+                    Text              = icon,
+                    FontSize          = 12,
+                    Foreground        = iconColor,
+                    Width             = 20,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin            = new Thickness(8, 2, 0, 2),
+                }.DockLeft());
+                var actual = ar.ActualValue is not null ? $"  → {ar.ActualValue}" : string.Empty;
+                row.Add(new TextBlock
+                {
+                    Text              = actual,
+                    FontSize          = 11,
+                    Foreground        = TextSec,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin            = new Thickness(0, 2, 8, 2),
+                }.DockRight());
+                row.Add(new TextBlock
+                {
+                    Text              = ar.Rule?.RawText ?? string.Empty,
+                    FontSize          = 12,
+                    Foreground        = TextPri,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin            = new Thickness(4, 2),
+                });
+                _assertionsPanel.Add(row);
+            }
+        }
+        else
+        {
+            _assertionsPanel.Add(new TextBlock
+            {
+                Text                = "此请求无断言规则",
+                FontSize            = 12,
+                Foreground          = TextSec,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin              = new Thickness(0, 16),
+            });
+        }
 
         _root.Child = _successPanel;
     }
@@ -140,7 +238,28 @@ public sealed class ResponsePanelView
     }
 
     // ── 私有辅助 ─────────────────────────────────────────────────
-
+    private static void AddHeaderRow(StackPanel panel, string key, Color keyColor, string value)
+    {
+        var row = new DockPanel { Margin = new Thickness(0, 1) };
+        row.Add(new TextBlock
+        {
+            Text              = key,
+            FontSize          = 12,
+            Foreground        = keyColor,
+            Width             = 200,
+            Margin            = new Thickness(8, 2),
+            VerticalAlignment = VerticalAlignment.Center,
+        }.DockLeft());
+        row.Add(new TextBlock
+        {
+            Text              = value,
+            FontSize          = 12,
+            Foreground        = TextPri,
+            Margin            = new Thickness(0, 2, 8, 2),
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        panel.Add(row);
+    }
     private static UIElement BuildCenteredLabel(string text, Color color, double fontSize) =>
         new Border
         {

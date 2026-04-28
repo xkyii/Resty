@@ -45,7 +45,12 @@ public sealed class RequestEditorView
     private readonly MultiLineTextBox _bodyText;  // Body tab 中的文本框
     private readonly ComboBox    _contentTypeCombo;
     private readonly StackPanel  _assertionRows;  // 动态断言行
-
+    // Auth Tab
+    private int              _authMode = 0;       // 0=None 1=Basic 2=Bearer
+    private readonly Button  _authNoneBtn, _authBasicBtn, _authBearerBtn;
+    private readonly TextBox _authTokenBox, _authUsernameBox, _authPasswordBox;
+    private readonly Border  _authContent;
+    private readonly UIElement _authNoneContent, _authBasicContent, _authBearerContent;
     // ── 根布局 ───────────────────────────────────────────────────
     private readonly DockPanel _root;
 
@@ -221,11 +226,78 @@ public sealed class RequestEditorView
             Content        = assertContent,
         };
 
+        // Auth Tab
+        _authTokenBox    = new TextBox { FontSize = 12, Foreground = TextPri, Margin = new Thickness(8, 4, 8, 4) };
+        _authTokenBox.Placeholder("{{auth_token}}");
+        _authUsernameBox = new TextBox { FontSize = 12, Foreground = TextPri, Margin = new Thickness(8, 4, 8, 4) };
+        _authUsernameBox.Placeholder("用户名");
+        _authPasswordBox = new TextBox { FontSize = 12, Foreground = TextPri, Margin = new Thickness(8, 4, 8, 4) };
+        _authPasswordBox.Placeholder("密码");
+
+        _authNoneContent = new Border
+        {
+            Background = Color.Transparent,
+            Child = new TextBlock
+            {
+                Text                = "无认证",
+                FontSize            = 12,
+                Foreground          = TextSec,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin              = new Thickness(0, 16),
+            },
+        };
+
+        var basicForm = new StackPanel { Orientation = Orientation.Vertical, Spacing = 4, Margin = new Thickness(0, 8) };
+        basicForm.Add(new TextBlock { Text = "用户名", FontSize = 11, Foreground = TextSec, Margin = new Thickness(8, 0) });
+        basicForm.Add(_authUsernameBox);
+        basicForm.Add(new TextBlock { Text = "密码", FontSize = 11, Foreground = TextSec, Margin = new Thickness(8, 0) });
+        basicForm.Add(_authPasswordBox);
+        _authBasicContent = basicForm;
+
+        var bearerForm = new StackPanel { Orientation = Orientation.Vertical, Spacing = 4, Margin = new Thickness(0, 8) };
+        bearerForm.Add(new TextBlock { Text = "Token", FontSize = 11, Foreground = TextSec, Margin = new Thickness(8, 0) });
+        bearerForm.Add(_authTokenBox);
+        bearerForm.Add(new TextBlock
+        {
+            Text       = "ⓘ 将自动设置 Authorization: Bearer ... Header",
+            FontSize   = 11,
+            Foreground = TextSec,
+            Margin     = new Thickness(8, 4),
+        });
+        _authBearerContent = bearerForm;
+
+        _authContent = new Border { Background = BgBase, Child = _authNoneContent };
+
+        _authNoneBtn = new Button { Height = 24, Width = 52 };
+        _authNoneBtn.Content("None",   false).FontSize(11).Background(BgSurface).Foreground(TextPri)
+            .OnClick(() => SetAuthMode(0));
+        _authBasicBtn = new Button { Height = 24, Width = 52 };
+        _authBasicBtn.Content("Basic",  false).FontSize(11).Background(Color.Transparent).Foreground(TextSec)
+            .OnClick(() => SetAuthMode(1));
+        _authBearerBtn = new Button { Height = 24, Width = 68 };
+        _authBearerBtn.Content("Bearer", false).FontSize(11).Background(Color.Transparent).Foreground(TextSec)
+            .OnClick(() => SetAuthMode(2));
+
+        var authTypeRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing     = 4,
+            Margin      = new Thickness(8, 8),
+        };
+        authTypeRow.Add(_authNoneBtn);
+        authTypeRow.Add(_authBasicBtn);
+        authTypeRow.Add(_authBearerBtn);
+
+        var authPanel = new DockPanel();
+        authPanel.Add(authTypeRow.DockTop());
+        authPanel.Add(_authContent);
+
         var tabControl = new TabControl();
         tabControl.TabItems(
-            new TabItem().Header("Params", false).Content(paramsScroll),
-            new TabItem().Header("Headers", false).Content(headersScroll),
-            new TabItem().Header("Body", false).Content(new Border { Background = BgBase, Child = bodyContent }),
+            new TabItem().Header("Params",     false).Content(paramsScroll),
+            new TabItem().Header("Headers",    false).Content(headersScroll),
+            new TabItem().Header("Auth",       false).Content(new Border { Background = BgBase, Child = authPanel }),
+            new TabItem().Header("Body",       false).Content(new Border { Background = BgBase, Child = bodyContent }),
             new TabItem().Header("Assertions", false).Content(assertScroll)
         );
 
@@ -335,6 +407,36 @@ public sealed class RequestEditorView
 
     private void PopulateStructuredForm(HttpRequestDefinition req)
     {
+        // Auth 检测（必须在 headers 填入前执行）
+        if (req.Headers.TryGetValue("Authorization", out var authVal))
+        {
+            if (authVal.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                SetAuthMode(2);
+                _authTokenBox.Text = authVal[7..].Trim();
+            }
+            else if (authVal.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+            {
+                SetAuthMode(1);
+                try
+                {
+                    var decoded  = Encoding.UTF8.GetString(Convert.FromBase64String(authVal[6..].Trim()));
+                    var colonIdx = decoded.IndexOf(':');
+                    _authUsernameBox.Text = colonIdx >= 0 ? decoded[..colonIdx] : decoded;
+                    _authPasswordBox.Text = colonIdx >= 0 ? decoded[(colonIdx + 1)..] : string.Empty;
+                }
+                catch { SetAuthMode(0); }
+            }
+            else
+            {
+                SetAuthMode(0);
+            }
+        }
+        else
+        {
+            SetAuthMode(0);
+        }
+
         // 清空并填入 params（从 URL 解析 query string）
         while (_paramRows.Children.Count > 0)
             _paramRows.RemoveAt(0);
@@ -346,9 +448,13 @@ public sealed class RequestEditorView
         while (_headerRows.Children.Count > 0)
             _headerRows.RemoveAt(0);
 
-        // 填入 headers
+        // 填入 headers（Authorization 由 Auth Tab 管理，若有则跳过）
         foreach (var (k, v) in req.Headers)
+        {
+            if (_authMode != 0 && string.Equals(k, "Authorization", StringComparison.OrdinalIgnoreCase))
+                continue;
             _headerRows.Add(BuildHeaderRow(k, v));
+        }
 
         // 填入 body
         _bodyText.Text = req.Body ?? string.Empty;
@@ -440,6 +546,20 @@ public sealed class RequestEditorView
 
     private void AddEmptyAssertionRow() => _assertionRows.Add(BuildAssertionRow(""));
 
+    private void SetAuthMode(int mode)
+    {
+        _authMode = mode;
+        _authContent.Child = mode switch
+        {
+            1 => _authBasicContent,
+            2 => _authBearerContent,
+            _ => _authNoneContent,
+        };
+        _authNoneBtn .Background(mode == 0 ? BgSurface : Color.Transparent).Foreground(mode == 0 ? TextPri : TextSec);
+        _authBasicBtn.Background(mode == 1 ? BgSurface : Color.Transparent).Foreground(mode == 1 ? TextPri : TextSec);
+        _authBearerBtn.Background(mode == 2 ? BgSurface : Color.Transparent).Foreground(mode == 2 ? TextPri : TextSec);
+    }
+
     /// <summary>将 URL 拆分为 base URL 和 query 键值对。</summary>
     private static (string baseUrl, List<(string k, string v)> pairs) SplitUrlAndParams(string url)
     {
@@ -524,6 +644,22 @@ public sealed class RequestEditorView
             }
         }
         var assertions = AssertionParser.ParseBlock(assertLines);
+
+        // Auth header 注入
+        switch (_authMode)
+        {
+            case 1: // Basic
+                var user  = _authUsernameBox.Text ?? string.Empty;
+                var pass  = _authPasswordBox.Text ?? string.Empty;
+                var creds = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{user}:{pass}"));
+                headers["Authorization"] = $"Basic {creds}";
+                break;
+            case 2: // Bearer
+                var token = _authTokenBox.Text ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(token))
+                    headers["Authorization"] = $"Bearer {token}";
+                break;
+        }
 
         return new HttpRequestDefinition
         {

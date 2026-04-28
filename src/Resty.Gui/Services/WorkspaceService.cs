@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Resty.Core.Models;
 using Resty.Core.Parsing;
 
@@ -51,6 +52,7 @@ public sealed class WorkspaceService
         }
 
         Files = nodes;
+        ScanEnvironments();
     }
 
     /// <summary>
@@ -62,5 +64,23 @@ public sealed class WorkspaceService
         if (!_fileDefs.TryGetValue(filePath, out var def)) return null;
         return def.Requests.FirstOrDefault(r =>
             (string.IsNullOrWhiteSpace(r.Name) ? "[未命名]" : r.Name) == requestName);
+    }
+
+    public IReadOnlyList<string> AvailableEnvironments { get; private set; } = [];
+
+    private void ScanEnvironments()
+    {
+        if (string.IsNullOrEmpty(WorkspacePath)) { AvailableEnvironments = []; return; }
+        var envFile = Path.Combine(WorkspacePath, "http-client.env.json");
+        if (!File.Exists(envFile)) { AvailableEnvironments = []; return; }
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(envFile));
+            var names = new List<string>();
+            foreach (var prop in doc.RootElement.EnumerateObject())
+                names.Add(prop.Name);
+            AvailableEnvironments = names;
+        }
+        catch { AvailableEnvironments = []; }
     }
 }

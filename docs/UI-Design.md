@@ -1045,7 +1045,7 @@ Spinner 20px，动画旋转，文字 13px `#858585`。
 | G1 — 主窗口框架 | ✅ 完成 | 无边框自定义标题栏、侧边栏文件树、SplitPanel 布局、菜单栏、欢迎界面 |
 | G2 — 请求执行 | ✅ 完成 | 原始文本编辑器、▶ 发送按钮、响应面板（状态码 + 耗时 + 响应体） |
 | G3 — 结构化模式 | ✅ 完成 | Params / Headers / Body / Assertions Tab，双模式同步 |
-| G4 — 完整功能 | ⬜ 待开发 | 环境变量、JSON 树、断言结果、历史记录 |
+| G4 — 完整功能 | ✅ 已完成 | Auth Tab（None/Basic/Bearer）、响应 Headers Tab、断言结果 Tab、JSON pretty-print、环境变量解析 |
 
 ### G1 已实现的文件
 

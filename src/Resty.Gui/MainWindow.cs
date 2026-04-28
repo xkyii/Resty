@@ -1,6 +1,8 @@
 using System.Threading;
 using Aprillz.MewUI;
 using Aprillz.MewUI.Controls;
+using Resty.Core.Assertions;
+using Resty.Core.Environment;
 using Resty.Core.Execution;
 using Resty.Gui.Infrastructure;
 using Resty.Gui.Services;
@@ -36,6 +38,8 @@ public sealed class MainWindow : NativeCustomWindow
 
     // 主区容器（切换欢迎页 ↔ 编辑器）
     private readonly Border _mainArea;
+    private string _currentEnv = string.Empty;
+    private Button? _envBtn;
 
     public MainWindow()
     {
@@ -58,15 +62,28 @@ public sealed class MainWindow : NativeCustomWindow
         // ── 编辑器发送事件 ────────────────────────────────────────
         _editor.SendRequested = req =>
         {
-            // 在点击时（UI 线程）捕获同步上下文，此时事件循环已运行
-            var sc = SynchronizationContext.Current;
+            var sc            = SynchronizationContext.Current;
+            var envName       = _currentEnv;
+            var workspacePath = _workspace.WorkspacePath;
             _responsePanel.ShowLoading();
             _ = System.Threading.Tasks.Task.Run(async () =>
             {
                 try
                 {
-                    var result = await _executor.ExecuteAsync(req);
-                    sc?.Post(_ => _responsePanel.ShowResult(result), null);
+                    // 环境变量解析
+                    var resolvedReq = req;
+                    if (!string.IsNullOrEmpty(envName) && !string.IsNullOrEmpty(workspacePath))
+                    {
+                        var fakePath = Path.Combine(workspacePath, "dummy.http");
+                        var resolver = EnvironmentResolver.Load(fakePath, envName);
+                        resolvedReq = resolver.ApplyTo(req);
+                    }
+                    var result = await _executor.ExecuteAsync(resolvedReq);
+                    // 断言评估
+                    var assertions = req.Assertions.Count > 0
+                        ? AssertionEngine.Evaluate(req.Assertions, result)
+                        : null;
+                    sc?.Post(_ => _responsePanel.ShowResult(result, assertions), null);
                 }
                 catch (Exception ex)
                 {
@@ -196,22 +213,27 @@ public sealed class MainWindow : NativeCustomWindow
             Margin    = new Thickness(8, 0),
         };
 
-        var envLabel = new TextBlock
-        {
-            Text      = "dev ▾",
-            FontSize  = 12,
-            Foreground = TextSec,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin    = new Thickness(0, 0, 8, 0),
-        };
+        _envBtn = new Button { Height = 22, Padding = new Thickness(8, 0) };
+        _envBtn.Content(string.IsNullOrEmpty(_currentEnv) ? "无环境" : $"{_currentEnv} ▾", false)
+               .FontSize(12).Background(Color.Transparent).Foreground(TextSec)
+               .OnClick(CycleEnv);
 
         var bar = new DockPanel { Height = 22 };
         bar.Add(settingsBtn.DockLeft());
-        bar.Add(envLabel.DockRight());
+        bar.Add(_envBtn.DockRight());
         bar.Add(readyLabel);
         return new Border { Height = 22, Background = Color.FromRgb(0x25, 0x25, 0x26), Child = bar };
     }
-
+    private void CycleEnv()
+    {
+        var envs = _workspace.AvailableEnvironments;
+        if (envs.Count == 0) return;
+        var idx = 0;
+        for (var i = 0; i < envs.Count; i++)
+            if (envs[i] == _currentEnv) { idx = i; break; }
+        _currentEnv = envs[(idx + 1) % envs.Count];
+        _envBtn?.Content(_currentEnv + " ▾", false);
+    }
     // ── 菜单栏 ───────────────────────────────────────────────────
     private UIElement BuildMenuBar()
     {
@@ -262,7 +284,10 @@ public sealed class MainWindow : NativeCustomWindow
     {
         _workspace.Load(path);
         _workspaceName.Value = _workspace.WorkspaceName;
-        _mainArea.Child      = _editor.RootElement;  // 切换主区到编辑器
+        _currentEnv = _workspace.AvailableEnvironments.Count > 0
+            ? _workspace.AvailableEnvironments[0]
+            : string.Empty;
+        _mainArea.Child = _editor.RootElement;
         Content = BuildWorkspaceLayout();
     }
 
