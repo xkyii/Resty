@@ -11,7 +11,7 @@ public sealed record RequestNode(string Name, string Method);
 public sealed record HttpFileNode(string FileName, string FilePath, IReadOnlyList<RequestNode> Requests);
 
 /// <summary>扫描工作区目录，构建集合文件树。</summary>
-public sealed class WorkspaceService
+public sealed class WorkspaceService : IDisposable
 {
     public string WorkspaceName { get; private set; } = string.Empty;
     public string WorkspacePath { get; private set; } = string.Empty;
@@ -19,6 +19,12 @@ public sealed class WorkspaceService
 
     // 缓存已解析的文件定义，用于 GetRequestDefinition
     private readonly Dictionary<string, HttpFileDefinition> _fileDefs = new();
+
+    // 文件变化通知
+    public event Action? FilesChanged;
+    private FileSystemWatcher? _watcher;
+
+    public void Dispose() => _watcher?.Dispose();
 
     public void Load(string folderPath)
     {
@@ -53,6 +59,22 @@ public sealed class WorkspaceService
 
         Files = nodes;
         ScanEnvironments();
+
+        // 启动文件监听
+        _watcher?.Dispose();
+        _watcher = new FileSystemWatcher(folderPath, "*.http")
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
+            EnableRaisingEvents = true,
+        };
+        var debounceTimer = new System.Timers.Timer(600) { AutoReset = false };
+        debounceTimer.Elapsed += (_, _) => FilesChanged?.Invoke();
+        void OnChanged(object _, FileSystemEventArgs __) { debounceTimer.Stop(); debounceTimer.Start(); }
+        _watcher.Changed += OnChanged;
+        _watcher.Created += OnChanged;
+        _watcher.Deleted += OnChanged;
+        _watcher.Renamed += (s, e) => OnChanged(s, e);
     }
 
     /// <summary>
@@ -67,6 +89,79 @@ public sealed class WorkspaceService
     }
 
     public IReadOnlyList<string> AvailableEnvironments { get; private set; } = [];
+
+    /// <summary>
+    /// 将 <paramref name="def"/> 写回 <paramref name="filePath"/> 中对应的请求块。
+    /// 若请求名称为空或 [未命名]，则替换文件中第一个请求块。
+    /// </summary>
+    public bool SaveRequest(string filePath, HttpRequestDefinition def)
+    {
+        if (!File.Exists(filePath)) return false;
+        try
+        {
+            var lines = File.ReadAllLines(filePath).ToList();
+            // 找到请求块起始行（### 行）
+            int startIdx = -1;
+            int endIdx   = lines.Count; // exclusive
+            var targetName = string.IsNullOrWhiteSpace(def.Name) ? null : def.Name.Trim();
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var line = lines[i].TrimStart();
+                if (!line.StartsWith("###")) continue;
+                if (startIdx < 0)
+                {
+                    // 若没有目标名称，取第一个 ###
+                    if (targetName is null)
+                    {
+                        startIdx = i;
+                        continue;
+                    }
+                    // 否则找名称匹配的 ###
+                    var header = lines[i].TrimStart('#').Trim();
+                    if (string.Equals(header, targetName, StringComparison.OrdinalIgnoreCase))
+                        startIdx = i;
+                }
+                else
+                {
+                    // 找到下一个 ### 作为结束
+                    endIdx = i;
+                    break;
+                }
+            }
+
+            if (startIdx < 0) return false;
+
+            // 生成新的请求块内容
+            var newBlock = new List<string>();
+            var origLine = lines[startIdx]; // 保留原 ### 行
+            newBlock.Add(origLine);
+            // 方法 + URL
+            newBlock.Add($"{def.Method.ToUpperInvariant()} {def.Url}");
+            // Headers
+            foreach (var kv in def.Headers)
+                newBlock.Add($"{kv.Key}: {kv.Value}");
+            // Body
+            if (!string.IsNullOrWhiteSpace(def.Body))
+            {
+                newBlock.Add(string.Empty);
+                newBlock.Add(def.Body);
+            }
+            newBlock.Add(string.Empty); // trailing blank
+
+            // 替换原始行
+            lines.RemoveRange(startIdx, endIdx - startIdx);
+            lines.InsertRange(startIdx, newBlock);
+
+            File.WriteAllLines(filePath, lines);
+
+            // 刷新缓存
+            var content = string.Join(Environment.NewLine, lines);
+            _fileDefs[filePath] = HttpFileParser.ParseContent(content);
+            return true;
+        }
+        catch { return false; }
+    }
 
     private void ScanEnvironments()
     {

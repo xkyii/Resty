@@ -20,4 +20,5 @@ assert status == 201
 
 
 ### Get 163.com
-GET https://www.163.com
+GET https://www.163.com?a=1
+Content-Type: application/json

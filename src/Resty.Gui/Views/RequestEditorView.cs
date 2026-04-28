@@ -38,6 +38,13 @@ public sealed class RequestEditorView
     private readonly Border            _contentArea;
     private readonly MultiLineTextBox  _textEditor;
     private readonly UIElement         _structuredPanel;
+    // F5 语法提示栏
+    private readonly TextBlock _syntaxHintLabel;
+    private readonly Border    _textEditorWithHint; // DockPanel with hint + editor
+    // F6 URL 变量预览
+    private readonly TextBlock _urlPreviewLabel;
+    private readonly Border    _urlPreviewRow;
+    private Dictionary<string, string> _envVars = new();
 
     // ── 结构化模式内控件 ─────────────────────────────────────────
     private readonly StackPanel  _paramRows;      // 动态 query param 行
@@ -61,9 +68,98 @@ public sealed class RequestEditorView
     // ── 公共接口 ─────────────────────────────────────────────────
     public UIElement RootElement => _root;
     public Action<HttpRequestDefinition>? SendRequested;
+    public Action? CancelRequested;
+    public Action<string, HttpRequestDefinition>? SaveRequested; // (filePath, def)
+    public string? CurrentFilePath { get; private set; }
+    public bool IsDirty { get; private set; }
 
+    private readonly TextBlock _dirtyLabel;
+    /// <summary>切换发送/取消按钮状态。</summary>
+    public void SetSendingState(bool sending)
+    {
+        if (sending)
+            _sendBtn.Content("■ 取消", false).Background(Color.FromRgb(0x6A, 0x1A, 0x1A)).OnClick(OnCancelClicked);
+        else
+            _sendBtn.Content("▶ 发送", false).Background(Accent).OnClick(OnSendClicked);
+    }
+
+    /// <summary>设置当前文件路径（由 MainWindow 在加载请求时调用）。</summary>
+    public void SetFilePath(string path)
+    {
+        CurrentFilePath = path;
+        SetDirty(false);
+    }
+
+    /// <summary>F6: 更新当前环境变量，用于 URL 预览。</summary>
+    public void SetEnvVars(Dictionary<string, string> vars)
+    {
+        _envVars = vars;
+        UpdateUrlPreview(_urlBox.Text ?? string.Empty);
+    }
+
+    private void SetDirty(bool dirty)
+    {
+        IsDirty = dirty;
+        _dirtyLabel.Text = dirty ? "●" : string.Empty;
+    }
+
+    /// <summary>F5: 解析文本内容并更新语法提示栏。</summary>
+    private void UpdateSyntaxHint(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) { _syntaxHintLabel.Text = string.Empty; return; }
+        try
+        {
+            var fd = HttpFileParser.ParseContent(text);
+            if (fd.Requests.Count == 0) { _syntaxHintLabel.Text = "⚠ 无有效请求"; _syntaxHintLabel.Foreground(Color.FromRgb(0xE0, 0x6C, 0x75)); return; }
+            var r = fd.Requests[0];
+            var method = r.Method.ToUpperInvariant();
+            var methodColor = method switch
+            {
+                "GET"    => Color.FromRgb(0x61, 0xAF, 0xEF),
+                "POST"   => Color.FromRgb(0x98, 0xC3, 0x79),
+                "PUT"    => Color.FromRgb(0xE5, 0xC0, 0x7B),
+                "DELETE" => Color.FromRgb(0xE0, 0x6C, 0x75),
+                "PATCH"  => Color.FromRgb(0xD1, 0x9A, 0x66),
+                _        => Color.FromRgb(0xAB, 0xB2, 0xBF),
+            };
+            var extra = fd.Requests.Count > 1 ? $"  (+{fd.Requests.Count - 1} 个请求)" : string.Empty;
+            _syntaxHintLabel.Text = $"{method}  {r.Url}{extra}";
+            _syntaxHintLabel.Foreground(methodColor);
+        }
+        catch
+        {
+            _syntaxHintLabel.Text = "⚠ 解析错误";
+            _syntaxHintLabel.Foreground(Color.FromRgb(0xE0, 0x6C, 0x75));
+        }
+    }
+
+    /// <summary>F6: URL 变量预览更新。</summary>
+    private void UpdateUrlPreview(string url)
+    {
+        if (!url.Contains("{{")) { _urlPreviewRow.IsVisible = false; return; }
+        // 简单替换 {{varName}} 占位符
+        var resolved = System.Text.RegularExpressions.Regex.Replace(url, @"\{\{(\w+)\}\}", m =>
+        {
+            var name = m.Groups[1].Value;
+            return _envVars.TryGetValue(name, out var val) ? val : m.Value;
+        });
+        bool hasUnresolved = resolved.Contains("{{");
+        _urlPreviewLabel.Text = "→ " + resolved;
+        _urlPreviewLabel.Foreground(hasUnresolved
+            ? Color.FromRgb(0xE0, 0x6C, 0x75)  // 红：有未解析的变量
+            : Color.FromRgb(0x4E, 0xC9, 0xB0)); // 绿：完全解析
+        _urlPreviewRow.IsVisible = true;
+    }
     public RequestEditorView()
     {
+        _dirtyLabel = new TextBlock
+        {
+            Text      = string.Empty,
+            FontSize  = 16,
+            Foreground = Color.FromRgb(0xCC, 0xCC, 0xCC),
+            Width     = 14,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
         // ── 方法 ComboBox ────────────────────────────────────────
         _methodCombo = new ComboBox { Width = 100, Height = 28 };
         _methodCombo.Items(Methods)
@@ -107,6 +203,7 @@ public sealed class RequestEditorView
             VerticalAlignment = VerticalAlignment.Center,
             Margin            = new Thickness(0, 0, 8, 0),
         };
+        modeRow.Add(_dirtyLabel);
         modeRow.Add(_modeTextBtn);
         modeRow.Add(_modeStructBtn);
 
@@ -117,6 +214,16 @@ public sealed class RequestEditorView
         urlRow.Add(new Border { Width = 8 }.DockRight());
         urlRow.Add(_sendBtn.DockRight());
         urlRow.Add(_urlBox);
+
+        // ── URL 变量预览行（F6）──────────────────────────────────
+        _urlPreviewLabel = new TextBlock { FontSize = 11 };
+        _urlPreviewRow = new Border
+        {
+            Background = BgBase,
+            Padding    = new Thickness(12, 2, 12, 2),
+            Child      = _urlPreviewLabel,
+            IsVisible  = false,
+        };
 
         var toolbarInner = new StackPanel
         {
@@ -143,6 +250,24 @@ public sealed class RequestEditorView
             Padding    = new Thickness(12, 8, 12, 8),
         };
         _textEditor.Wrap(false);
+
+        // F5 语法提示栏（文本模式下显示解析摘要）
+        _syntaxHintLabel = new TextBlock
+        {
+            FontSize  = 12,
+            Foreground = TextSec,
+        };
+        var syntaxHintBorder = new Border
+        {
+            Background  = BgPanel,
+            BorderBrush = BorderCol,
+            Padding     = new Thickness(12, 3, 12, 3),
+            Child       = _syntaxHintLabel,
+        };
+        var textWithHintPanel = new DockPanel();
+        textWithHintPanel.Add(syntaxHintBorder.DockTop());
+        textWithHintPanel.Add(_textEditor);
+        _textEditorWithHint = new Border { Child = textWithHintPanel };
 
         // ── 结构化面板 ────────────────────────────────────────────
         // Params Tab
@@ -323,7 +448,15 @@ public sealed class RequestEditorView
         // ── 根布局 ────────────────────────────────────────────────
         _root = new DockPanel();
         _root.Add(toolbarBorder.DockTop());
+        _root.Add(_urlPreviewRow.DockTop());
         _root.Add(_contentArea);
+
+        // ── Dirty 追踪 + F5/F6 语法提示 ──────────────────────────
+        _urlBox.OnTextChanged(text => { SetDirty(true); UpdateUrlPreview(text); });
+        _textEditor.OnTextChanged(text => { SetDirty(true); UpdateSyntaxHint(text); });
+        _bodyText.OnTextChanged(_ => SetDirty(true));
+        _methodCombo.OnSelectionChanged(_ => SetDirty(true));
+        _contentTypeCombo.OnSelectionChanged(_ => SetDirty(true));
     }
 
     // ── 公共方法 ─────────────────────────────────────────────────
@@ -344,12 +477,38 @@ public sealed class RequestEditorView
         // 更新结构化表单
         PopulateStructuredForm(req);
 
+        // 清除 dirty 状态
+        SetDirty(false);
+
         // 切换到空状态之外（首次加载）
         if (!_hasLoaded)
         {
             _hasLoaded = true;
-            _contentArea.Child = _isStructuredMode ? _structuredPanel : _textEditor;
+            _contentArea.Child = _isStructuredMode ? _structuredPanel : _textEditorWithHint;
         }
+    }
+
+    /// <summary>触发保存（由 MainWindow 的 Ctrl+S 调用）。</summary>
+    public void TriggerSave()
+    {
+        if (string.IsNullOrEmpty(CurrentFilePath)) return;
+        HttpRequestDefinition req;
+        if (_isStructuredMode)
+            req = BuildDefinitionFromStructured();
+        else
+        {
+            var raw = _textEditor.Text;
+            if (string.IsNullOrWhiteSpace(raw)) return;
+            try
+            {
+                var fd = HttpFileParser.ParseContent(raw);
+                if (fd.Requests.Count == 0) return;
+                req = fd.Requests[0];
+            }
+            catch { return; }
+        }
+        SaveRequested?.Invoke(CurrentFilePath, req);
+        SetDirty(false);
     }
 
     // ── 模式切换 ─────────────────────────────────────────────────
@@ -361,7 +520,7 @@ public sealed class RequestEditorView
         _isStructuredMode = false;
         _modeTextBtn.Background(BgSurface).Foreground(TextPri);
         _modeStructBtn.Background(Color.Transparent).Foreground(TextSec);
-        if (_hasLoaded) _contentArea.Child = _textEditor;
+        if (_hasLoaded) _contentArea.Child = _textEditorWithHint;
     }
 
     private void SwitchToStructuredMode()
@@ -504,27 +663,35 @@ public sealed class RequestEditorView
         row.Add(valBox);
 
         delBtn.Click += () => _headerRows.Remove(row);
+        keyBox.OnTextChanged(_ => SetDirty(true));
+        valBox.OnTextChanged(_ => SetDirty(true));
 
         return row;
     }
 
     private void AddEmptyHeaderRow() => _headerRows.Add(BuildHeaderRow("", ""));
 
-    private UIElement BuildParamRow(string key, string value)
+    private UIElement BuildParamRow(string key, string value, bool enabled = true)
     {
         var keyBox = new TextBox { Text = key, FontSize = 12, Foreground = TextPri, Width = 180 };
         keyBox.Placeholder("参数名");
         var valBox = new TextBox { Text = value, FontSize = 12, Foreground = TextPri };
-        valBox.Placeholder("值");
+        valBox.Placeholder("値");
+        var chk = new CheckBox { Width = 16, Height = 16, Margin = new Thickness(4, 0) };
+        chk.OnCheckedChanged(v => { keyBox.Foreground(v ? TextPri : TextSec); valBox.Foreground(v ? TextPri : TextSec); });
+        if (enabled) chk.IsChecked(true);
         var delBtn = new Button { Width = 24, Height = 24 };
         delBtn.Content("✕", false).FontSize(11).Background(Color.Transparent).Foreground(TextSec);
         var row = new DockPanel { Margin = new Thickness(0, 1, 0, 1) };
+        row.Add(chk.DockLeft());
         row.Add(delBtn.DockRight());
         row.Add(new Border { Width = 4 }.DockRight());
         row.Add(keyBox.DockLeft());
         row.Add(new Border { Width = 4 }.DockLeft());
         row.Add(valBox);
         delBtn.Click += () => _paramRows.Remove(row);
+        keyBox.OnTextChanged(_ => SetDirty(true));
+        valBox.OnTextChanged(_ => SetDirty(true));
         return row;
     }
 
@@ -591,12 +758,15 @@ public sealed class RequestEditorView
         foreach (var child in _paramRows.Children)
         {
             if (child is not DockPanel row) continue;
+            // 检查勾选框状态
+            bool chkChecked = true;
             string? k = null, v = null;
             foreach (var el in row.Children)
             {
+                if (el is CheckBox cb) { chkChecked = cb.IsChecked == true; continue; }
                 if (el is TextBox tb) { if (k is null) k = tb.Text; else v = tb.Text; }
             }
-            if (!string.IsNullOrWhiteSpace(k))
+            if (chkChecked && !string.IsNullOrWhiteSpace(k))
                 paramPairs.Add((k, v ?? string.Empty));
         }
         var url = paramPairs.Count > 0
@@ -619,16 +789,18 @@ public sealed class RequestEditorView
         foreach (var child in _headerRows.Children)
         {
             if (child is not DockPanel row) continue;
+            bool chkChecked = true;
             string? k = null, v = null;
             foreach (var el in row.Children)
             {
+                if (el is CheckBox cb) { chkChecked = cb.IsChecked == true; continue; }
                 if (el is TextBox tb)
                 {
                     if (k is null) k = tb.Text;
                     else v = tb.Text;
                 }
             }
-            if (!string.IsNullOrWhiteSpace(k))
+            if (chkChecked && !string.IsNullOrWhiteSpace(k))
                 headers[k] = v ?? string.Empty;
         }
 
@@ -694,6 +866,8 @@ public sealed class RequestEditorView
         }
         SendRequested?.Invoke(req);
     }
+
+    private void OnCancelClicked() => CancelRequested?.Invoke();
 
     // ── 辅助 ─────────────────────────────────────────────────────
 

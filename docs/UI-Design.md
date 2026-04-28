@@ -1084,3 +1084,30 @@ Spinner 20px，动画旋转，文字 13px `#858585`。
 - `HttpRequestDefinition.Assertions`（`List<AssertionRule>`）由 `AssertionParser.ParseBlock` 填充，保持与 CLI 工具相同的解析路径
 
 *最后更新：2026-04-28*
+
+---
+
+## 十六、G4 收尾 + 后续功能实施计划
+
+### 分级
+
+#### G4 收尾（5 项）
+
+| # | 功能 | 文件 | 状态 |
+|---|------|------|------|
+| G4-1 | **取消按钮** — 发送中 `▶ 发送` 变为 `■ 取消`，`CancellationToken` 中止请求 | `RequestEditorView`, `MainWindow` | ⬜ |
+| G4-2 | **状态栏响应摘要** — 完成后显示状态码（颜色）+ 耗时 + 大小 | `MainWindow` | ⬜ |
+| G4-3 | **Body Tab 子切换** — `[原始 \| JSON 树]` 按钮，非 JSON 时 JSON 树置灰 | `ResponsePanelView` | ⬜ |
+| G4-4 | **JSON 树视图** — 可折叠展开，键名/类型/值分色 | `ResponsePanelView` | ⬜ |
+| G4-5 | **环境下拉菜单** — 点击弹出 Menu 选择，替代循环切换 | `MainWindow` | ⬜ |
+
+#### 后续功能（6 项）
+
+| # | 功能 | 文件 | 状态 |
+|---|------|------|------|
+| F1 | **Header/Params 行勾选框** — 勾选控制该行启用/禁用 | `RequestEditorView` | ⬜ |
+| F2 | **写回 .http 文件** — Ctrl+S 保存，dirty `●` 标记 | `RequestEditorView`, `MainWindow` | ⬜ |
+| F3 | **多标签请求编辑区** — Tab 栏同时打开多个请求 | `MainWindow`, 新 `RequestTabBarView` | ⬜ |
+| F4 | **侧边栏右键菜单 + 文件监听** — 打开/刷新，FileSystemWatcher | `SidebarView`, `WorkspaceService` | ⬜ |
+| F5 | **文本模式语法高亮** — HTTP 方法、Header、`{{var}}`、断言块着色 | MewUI 限制，降级为关键词加粗 | ⬜ |
+| F6 | **`{{var}}` 工具提示** — 悬停预览解析值，未解析变量警告色 | `RequestEditorView` | ⬜ |

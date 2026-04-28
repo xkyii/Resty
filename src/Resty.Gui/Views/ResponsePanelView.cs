@@ -34,6 +34,14 @@ public sealed class ResponsePanelView
     private readonly StackPanel _headersPanel;
     private readonly StackPanel _assertionsPanel;
 
+    // Body 子切换
+    private bool _bodyShowTree = false;
+    private string _lastBodyJson = string.Empty;
+    private readonly Button _bodyRawBtn;
+    private readonly Button _bodyTreeBtn;
+    private readonly Border _bodyContentArea;  // 切换 raw 与 tree
+    private readonly Border _bodyTreeScroll;   // 树视图容器
+
     // ── 公共接口 ─────────────────────────────────────────────────
     /// <summary>根元素，放入父布局。</summary>
     public UIElement RootElement => _root;
@@ -98,7 +106,31 @@ public sealed class ResponsePanelView
         };
         _bodyText.IsReadOnly(true);
         _bodyText.Wrap(true);
+        // Body 子切换按钮
+        _bodyRawBtn = new Button { Height = 22, Width = 52 };
+        _bodyRawBtn.Content("原始", false).FontSize(11)
+            .Background(Color.FromRgb(0x37, 0x37, 0x38)).Foreground(TextPri)
+            .OnClick(() => SetBodyView(false));
+        _bodyTreeBtn = new Button { Height = 22, Width = 60 };
+        _bodyTreeBtn.Content("JSON 树", false).FontSize(11)
+            .Background(Color.Transparent).Foreground(TextSec)
+            .OnClick(() => SetBodyView(true));
 
+        var bodySubToolbar = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing     = 4,
+            Margin      = new Thickness(8, 4),
+        };
+        bodySubToolbar.Add(_bodyRawBtn);
+        bodySubToolbar.Add(_bodyTreeBtn);
+
+        _bodyContentArea = new Border { Background = BgBase, Child = _bodyText };
+        _bodyTreeScroll  = new Border { Background = BgBase };
+
+        var bodyTabContent = new DockPanel();
+        bodyTabContent.Add(bodySubToolbar.DockTop());
+        bodyTabContent.Add(_bodyContentArea);
         // ── 成功状态面板 ──────────────────────────────────────────
         _headersPanel    = new StackPanel { Orientation = Orientation.Vertical };
         _assertionsPanel = new StackPanel { Orientation = Orientation.Vertical };
@@ -108,7 +140,7 @@ public sealed class ResponsePanelView
 
         var respTabControl = new TabControl();
         respTabControl.TabItems(
-            new TabItem().Header("Body",       false).Content(new Border { Background = BgBase, Child = _bodyText }),
+            new TabItem().Header("Body",       false).Content(new Border { Background = BgBase, Child = bodyTabContent }),
             new TabItem().Header("Headers",    false).Content(headersScroll),
             new TabItem().Header("Assertions", false).Content(assertionsScroll)
         );
@@ -141,6 +173,7 @@ public sealed class ResponsePanelView
 
         // 更新响应体（JSON 自动格式化）
         var displayBody = result.Body;
+        bool isJson = false;
         if (!string.IsNullOrEmpty(displayBody))
         {
             try
@@ -148,10 +181,30 @@ public sealed class ResponsePanelView
                 using var doc = JsonDocument.Parse(displayBody);
                 displayBody = JsonSerializer.Serialize(doc.RootElement,
                     new JsonSerializerOptions { WriteIndented = true });
+                isJson = true;
             }
             catch { /* 非 JSON，原样显示 */ }
         }
+        _lastBodyJson = isJson ? displayBody! : string.Empty;
         _bodyText.Text = string.IsNullOrEmpty(displayBody) ? "(空响应体)" : displayBody;
+
+        // 更新 JSON 树按钮状态（非 JSON 时禁用）
+        if (isJson)
+        {
+            _bodyTreeBtn.Foreground(TextSec).Background(Color.Transparent);
+        }
+        else
+        {
+            // 强制切回原始视图
+            _bodyShowTree = false;
+            _bodyContentArea.Child = _bodyText;
+            _bodyRawBtn.Background(Color.FromRgb(0x37, 0x37, 0x38)).Foreground(TextPri);
+            _bodyTreeBtn.Foreground(Color.FromRgb(0x55, 0x55, 0x55)).Background(Color.Transparent);
+        }
+
+        // 若当前在树视图且有新 JSON，刷新树
+        if (_bodyShowTree && isJson)
+            RefreshJsonTree();
 
         // 更新响应头面板
         while (_headersPanel.Children.Count > 0) _headersPanel.RemoveAt(0);
@@ -235,6 +288,176 @@ public sealed class ResponsePanelView
     {
         var label = BuildCenteredLabel($"✗ 请求失败\n{error}", Color.FromRgb(0xF4, 0x47, 0x47), 13);
         _root.Child = label;
+    }
+
+    // ── Body 子切换 ──────────────────────────────────────────────
+
+    private void SetBodyView(bool showTree)
+    {
+        if (showTree && string.IsNullOrEmpty(_lastBodyJson)) return; // 非 JSON 时禁止
+        _bodyShowTree = showTree;
+        if (showTree)
+        {
+            RefreshJsonTree();
+            _bodyContentArea.Child = _bodyTreeScroll;
+            _bodyTreeBtn.Background(Color.FromRgb(0x37, 0x37, 0x38)).Foreground(TextPri);
+            _bodyRawBtn.Background(Color.Transparent).Foreground(TextSec);
+        }
+        else
+        {
+            _bodyContentArea.Child = _bodyText;
+            _bodyRawBtn.Background(Color.FromRgb(0x37, 0x37, 0x38)).Foreground(TextPri);
+            _bodyTreeBtn.Background(Color.Transparent).Foreground(TextSec);
+        }
+    }
+
+    private void RefreshJsonTree()
+    {
+        try
+        {
+            using var doc  = JsonDocument.Parse(_lastBodyJson);
+            var treePanel  = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(4) };
+            RenderJsonElement(treePanel, doc.RootElement, null, 0);
+            var scroll = new ScrollViewer { VerticalScroll = ScrollMode.Auto, Content = treePanel };
+            _bodyTreeScroll.Child = scroll;
+        }
+        catch
+        {
+            _bodyTreeScroll.Child = BuildCenteredLabel("JSON 解析失败", TextSec, 12);
+        }
+    }
+
+    private void RenderJsonElement(StackPanel parent, JsonElement elem, string? key, int depth)
+    {
+        const double IndentWidth = 16.0;
+        switch (elem.ValueKind)
+        {
+            case JsonValueKind.Object:
+            {
+                var childPanel = new StackPanel { Orientation = Orientation.Vertical };
+                var isExpanded = true;
+                foreach (var prop in elem.EnumerateObject())
+                    RenderJsonElement(childPanel, prop.Value, prop.Name, depth + 1);
+                var childBorder = new Border { Child = childPanel };
+
+                var headerRow = new DockPanel { Margin = new Thickness(depth * IndentWidth, 0, 0, 0) };
+                var toggleBtn = new Button { Width = 16, Height = 16 };
+                toggleBtn.Content("▼", false).FontSize(9).Background(Color.Transparent).Foreground(TextSec);
+                toggleBtn.Click += () =>
+                {
+                    isExpanded = !isExpanded;
+                    childBorder.Child = isExpanded ? (UIElement)childPanel : new Border();
+                    toggleBtn.Content(isExpanded ? "▼" : "▶", false);
+                };
+                headerRow.Add(toggleBtn.DockLeft());
+                headerRow.Add(new TextBlock
+                {
+                    Text              = key is not null ? $"{key}:  {{  " : "{  ",
+                    FontSize          = 12,
+                    Foreground        = key is not null ? Color.FromRgb(0x9C, 0xDC, 0xFE) : TextSec,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin            = new Thickness(2, 1),
+                });
+                parent.Add(headerRow);
+                parent.Add(childBorder);
+                parent.Add(new TextBlock
+                {
+                    Text       = "}",
+                    FontSize   = 12,
+                    Foreground = TextSec,
+                    Margin     = new Thickness(depth * IndentWidth + 18, 1),
+                });
+                break;
+            }
+            case JsonValueKind.Array:
+            {
+                var childPanel = new StackPanel { Orientation = Orientation.Vertical };
+                var isExpanded = true;
+                var idx = 0;
+                foreach (var item in elem.EnumerateArray())
+                    RenderJsonElement(childPanel, item, $"[{idx++}]", depth + 1);
+                var childBorder = new Border { Child = childPanel };
+
+                var headerRow = new DockPanel { Margin = new Thickness(depth * IndentWidth, 0, 0, 0) };
+                var toggleBtn = new Button { Width = 16, Height = 16 };
+                toggleBtn.Content("▼", false).FontSize(9).Background(Color.Transparent).Foreground(TextSec);
+                toggleBtn.Click += () =>
+                {
+                    isExpanded = !isExpanded;
+                    childBorder.Child = isExpanded ? (UIElement)childPanel : new Border();
+                    toggleBtn.Content(isExpanded ? "▼" : "▶", false);
+                };
+                headerRow.Add(toggleBtn.DockLeft());
+                headerRow.Add(new TextBlock
+                {
+                    Text              = key is not null ? $"{key}:  [  ({idx} 项)" : $"[  ({idx} 项)",
+                    FontSize          = 12,
+                    Foreground        = key is not null ? Color.FromRgb(0x9C, 0xDC, 0xFE) : TextSec,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin            = new Thickness(2, 1),
+                });
+                parent.Add(headerRow);
+                parent.Add(childBorder);
+                parent.Add(new TextBlock
+                {
+                    Text       = "]",
+                    FontSize   = 12,
+                    Foreground = TextSec,
+                    Margin     = new Thickness(depth * IndentWidth + 18, 1),
+                });
+                break;
+            }
+            default:
+            {
+                var (valText, valColor) = elem.ValueKind switch
+                {
+                    JsonValueKind.String  => ($"\"{elem.GetString()}\"", Color.FromRgb(0xCE, 0x91, 0x78)),
+                    JsonValueKind.Number  => (elem.GetRawText(),         Color.FromRgb(0xB5, 0xCE, 0xA8)),
+                    JsonValueKind.True    => ("true",                    Color.FromRgb(0x56, 0x9C, 0xD6)),
+                    JsonValueKind.False   => ("false",                   Color.FromRgb(0x56, 0x9C, 0xD6)),
+                    JsonValueKind.Null    => ("null",                    TextSec),
+                    _                    => (elem.GetRawText(),          TextPri),
+                };
+                var typeHint = elem.ValueKind switch
+                {
+                    JsonValueKind.String => "string",
+                    JsonValueKind.Number => "number",
+                    JsonValueKind.True or JsonValueKind.False => "bool",
+                    JsonValueKind.Null   => "null",
+                    _                   => string.Empty,
+                };
+                var leafRow = new DockPanel { Margin = new Thickness(depth * IndentWidth + 18, 0, 0, 0) };
+                leafRow.Add(new TextBlock
+                {
+                    Text              = typeHint,
+                    FontSize          = 11,
+                    Foreground        = TextSec,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Width             = 48,
+                    Margin            = new Thickness(0, 1, 4, 1),
+                }.DockRight());
+                if (key is not null)
+                    leafRow.Add(new TextBlock
+                    {
+                        Text              = key + ": ",
+                        FontSize          = 12,
+                        Foreground        = Color.FromRgb(0x9C, 0xDC, 0xFE),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Width             = 140,
+                        Margin            = new Thickness(2, 1),
+                    }.DockLeft());
+                leafRow.Add(new TextBlock
+                {
+                    Text              = valText,
+                    FontSize          = 12,
+                    Foreground        = valColor,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin            = new Thickness(2, 1),
+                });
+                parent.Add(leafRow);
+                break;
+            }
+        }
     }
 
     // ── 私有辅助 ─────────────────────────────────────────────────

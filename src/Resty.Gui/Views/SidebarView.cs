@@ -132,17 +132,29 @@ public sealed class SidebarView
             Margin = new Thickness(4, 0, 0, 0),
         };
 
-        var fileRow = new StackPanel
+        var fileRowContent = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Height   = 28,
-            Spacing  = 0,
-            Padding  = new Thickness(8, 0),
-            Cursor   = CursorType.Hand,
+            Spacing = 0,
+            Padding = new Thickness(8, 0),
         };
-        fileRow.Add(chevron);
-        fileRow.Add(fileLabel);
-        fileRow.MouseDown += _ => expanded.Value = !expanded.Value;
+        fileRowContent.Add(chevron);
+        fileRowContent.Add(fileLabel);
+
+        var fileRow = new Button { Height = 28 };
+        fileRow.Content(fileRowContent as Element)
+               .Background(Color.Transparent)
+               .Foreground(Color.FromRgb(0xCC, 0xCC, 0xCC))
+               .Padding(0, 0);
+        fileRow.Click += () => expanded.Value = !expanded.Value;
+
+        // 文件节点右键菜单
+        fileRow.ContextMenu(new ContextMenu()
+            .Item("在资源管理器中显示", () =>
+            {
+                try { System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{file.FilePath}\""); } catch { }
+            })
+            .Item("复制路径", () => CopyToClipboard(file.FilePath)));
 
         // ── 子请求列表 ───────────────────────────────────────────
         var childPanel = new StackPanel
@@ -195,18 +207,46 @@ public sealed class SidebarView
             TextTrimming  = TextTrimming.CharacterEllipsis,
         };
 
-        var row = new StackPanel
+        var rowContent = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Height  = 26,
             Spacing = 0,
             Padding = new Thickness(24, 0, 8, 0),
-            Cursor  = CursorType.Hand,
         };
-        row.Add(badge);
-        row.Add(nameLabel);
+        rowContent.Add(badge);
+        rowContent.Add(nameLabel);
 
-        row.MouseDown += _ => RequestSelected?.Invoke(file, req);
+        var row = new Button { Height = 26 };
+        row.Content(rowContent as Element)
+           .Background(Color.Transparent)
+           .Foreground(Color.FromRgb(0xCC, 0xCC, 0xCC))
+           .Padding(0, 0);
+        row.Click += () => RequestSelected?.Invoke(file, req);
+
+        // 请求节点右键菜单
+        row.ContextMenu(new ContextMenu()
+            .Item("打开", () => RequestSelected?.Invoke(file, req))
+            .Item("复制请求名称", () => CopyToClipboard(req.Name)));
         return row;
+    }
+
+    // ── 辅助方法 ──────────────────────────────────────────────────
+    private static void CopyToClipboard(string text)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("cmd", "/c clip")
+            {
+                RedirectStandardInput = true,
+                UseShellExecute = false,
+                CreateNoWindow  = true,
+            };
+            using var proc = System.Diagnostics.Process.Start(psi);
+            if (proc is null) return;
+            proc.StandardInput.Write(text);
+            proc.StandardInput.Close();
+            proc.WaitForExit(2000);
+        }
+        catch { }
     }
 }

@@ -16,6 +16,9 @@ public sealed class EnvironmentResolver
         _variables = variables;
     }
 
+    /// <summary>The resolved environment variables (read-only view).</summary>
+    public IReadOnlyDictionary<string, string> Variables => _variables;
+
     /// <summary>
     /// Loads variables for <paramref name="envName"/> from the directory of <paramref name="httpFilePath"/>.
     /// Private env variables overlay public ones.
