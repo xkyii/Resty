@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resty GUI — UI 原型预览</title>
+<style>
+/* ===== Design Tokens ===== */
+:root {
+  --bg-app:       #1E1E1E;
+  --bg-sidebar:   #252526;
+  --bg-panel:     #2D2D30;
+  --bg-surface:   #3C3C3C;
+  --bg-active:    #094771;
+  --bg-hover:     #2A2D2E;
+
+  --text-primary:   #CCCCCC;
+  --text-secondary: #858585;
+  --text-disabled:  #505050;
+  --text-link:      #4FC1FF;
+
+  --accent-blue:      #007ACC;
+  --accent-blue-light:#4FC1FF;
+  --accent-blue-dim:  #094771;
+
+  --success: #4EC9B0;
+  --warning: #CE9178;
+  --error:   #F44747;
+  --info:    #9CDCFE;
+
+  --border-default: #3E3E42;
+  --border-focus:   #007ACC;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.5);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.6);
+
+  --transition-fast:   120ms ease;
+  --transition-normal: 200ms ease;
+
+  font-family: "Segoe UI", "Inter", system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+button { font-family: inherit; cursor: pointer; border: none; outline: none; }
+input  { font-family: inherit; outline: none; border: none; }
+
+/* ===== Nav Tabs (top of preview page) ===== */
+body { background: #111; display: flex; flex-direction: column; min-height: 100vh; }
+
+.preview-nav {
+  background: #111;
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px 0;
+  border-bottom: 1px solid #333;
+  position: sticky; top: 0; z-index: 100;
+}
+.preview-nav button {
+  background: #222;
+  color: #888;
+  border: 1px solid #333;
+  border-bottom: none;
+  padding: 6px 16px;
+  border-radius: 4px 4px 0 0;
+  font-size: 12px;
+  transition: all 120ms;
+}
+.preview-nav button.active,
+.preview-nav button:hover { background: #1E1E1E; color: #ccc; }
+.preview-nav button.active { border-color: #3E3E42; color: #fff; }
+
+.screen { display: none; flex: 1; }
+.screen.active { display: flex; }
+
+/* ===== Screen 1: Welcome ===== */
+#screen-welcome {
+  background: var(--bg-app);
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 45px);
+}
+.welcome-card {
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  width: 480px;
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+}
+.welcome-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.welcome-icon {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, #007ACC 0%, #4FC1FF 100%);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+.welcome-brand-text h1 { font-size: 28px; font-weight: 600; color: var(--text-primary); }
+.welcome-brand-text p  { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.btn-primary {
+  width: 100%; height: 40px;
+  background: var(--accent-blue);
+  color: #fff; font-size: 14px; font-weight: 500;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all var(--transition-fast);
+  margin-bottom: 24px;
+}
+.btn-primary:hover { background: #0086CF; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.section-label {
+  font-size: 11px; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 8px;
+}
+.workspace-list { border: 1px solid var(--border-default); border-radius: 4px; overflow: hidden; }
+.workspace-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; height: 48px;
+  border-bottom: 1px solid var(--border-default);
+  cursor: pointer; transition: background var(--transition-fast);
+  position: relative;
+}
+.workspace-item:last-child { border-bottom: none; }
+.workspace-item:hover { background: var(--bg-hover); }
+.workspace-item:hover .ws-remove { opacity: 1; }
+.ws-icon { font-size: 16px; flex-shrink: 0; }
+.ws-info { flex: 1; overflow: hidden; }
+.ws-name { font-size: 14px; color: var(--text-primary); }
+.ws-path { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-time { font-size: 11px; color: var(--text-secondary); flex-shrink: 0; }
+.ws-remove {
+  opacity: 0; width: 20px; height: 20px;
+  background: transparent; color: var(--text-secondary); font-size: 12px;
+  border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition-fast);
+}
+.ws-remove:hover { background: rgba(255,255,255,.1); color: var(--text-primary); }
+
+/* ===== Screen 2: Main App ===== */
+#screen-main {
+  flex-direction: column;
+  background: var(--bg-app);
+  min-height: calc(100vh - 45px);
+}
+/* Menubar */
+.menubar {
+  background: var(--bg-panel);
+  height: 30px;
+  display: flex; align-items: center;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+  position: relative;
+}
+.menubar-item {
+  padding: 0 10px; height: 100%;
+  display: flex; align-items: center;
+  font-size: 13px; color: var(--text-primary);
+  cursor: pointer; border-radius: 4px;
+  transition: background var(--transition-fast);
+}
+.menubar-item:hover { background: var(--bg-surface); }
+.menubar-workspace {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  pointer-events: none; white-space: nowrap;
+}
+.window-controls { margin-left: auto; display: flex; gap: 4px; padding-right: 4px; }
+.win-btn {
+  width: 46px; height: 30px;
+  background: transparent; color: var(--text-secondary);
+  font-size: 12px; transition: background var(--transition-fast);
+}
+.win-btn:hover { background: var(--bg-surface); color: var(--text-primary); }
+.win-btn.close:hover { background: #E81123; color: #fff; }
+
+/* App body */
+.app-body {
+  display: flex; flex: 1; overflow: hidden;
+  height: calc(100vh - 45px - 30px - 22px);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 260px; flex-shrink: 0;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-default);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-toolbar {
+  height: 36px;
+  display: flex; align-items: center;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border-default);
+  gap: 4px; flex-shrink: 0;
+}
+.sidebar-title {
+  flex: 1; font-size: 13px; font-weight: 600;
+  color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.icon-btn {
+  width: 24px; height: 24px;
+  background: transparent; color: var(--text-secondary);
+  border-radius: 4px; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition-fast);
+}
+.icon-btn:hover { background: rgba(255,255,255,.1); color: var(--text-primary); }
+
+.sidebar-search {
+  padding: 6px 8px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border-default);
+}
+.search-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 4px; height: 24px;
+  display: flex; align-items: center; gap: 6px; padding: 0 8px;
+}
+.search-box input {
+  background: transparent; color: var(--text-primary);
+  font-size: 12px; flex: 1;
+}
+.search-box input::placeholder { color: var(--text-disabled); }
+.search-icon { color: var(--text-secondary); font-size: 12px; }
+
+.sidebar-tree { flex: 1; overflow-y: auto; padding: 4px 0; }
+.sidebar-tree::-webkit-scrollbar { width: 6px; }
+.sidebar-tree::-webkit-scrollbar-track { background: transparent; }
+.sidebar-tree::-webkit-scrollbar-thumb { background: var(--bg-surface); border-radius: 3px; }
+
+.tree-node {
+  display: flex; align-items: center; gap: 4px;
+  height: 22px; padding: 0 8px; cursor: pointer;
+  transition: background var(--transition-fast);
+  user-select: none;
+}
+.tree-node:hover { background: var(--bg-hover); }
+.tree-node.active { background: var(--bg-active); }
+.tree-node.active .tree-label { color: #fff; }
+.tree-chevron { width: 12px; font-size: 9px; color: var(--text-secondary); transition: transform 150ms; flex-shrink: 0; }
+.tree-chevron.open { transform: rotate(90deg); }
+.tree-icon { font-size: 13px; flex-shrink: 0; }
+.tree-label { font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tree-label.active-tab { color: var(--accent-blue-light); }
+
+/* HTTP method badge */
+.method-badge {
+  font-size: 10px; font-weight: 600; border-radius: 2px;
+  padding: 1px 5px; flex-shrink: 0; min-width: 42px; text-align: center;
+}
+.method-GET     { background: #1A3B5D; color: #61AFEF; }
+.method-POST    { background: #1E3A28; color: #98C379; }
+.method-PUT     { background: #3A2E1A; color: #E5C07B; }
+.method-PATCH   { background: #332B1A; color: #D19A66; }
+.method-DELETE  { background: #3A1E1E; color: #E06C75; }
+
+/* Main area */
+.main-area {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.tab-bar {
+  height: 36px; background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-default);
+  display: flex; align-items: flex-end;
+  padding: 0 4px; gap: 1px; flex-shrink: 0; overflow: hidden;
+}
+.tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 12px; height: 32px;
+  background: var(--bg-panel); color: var(--text-secondary);
+  font-size: 13px; border-radius: 4px 4px 0 0;
+  cursor: pointer; transition: all var(--transition-fast);
+  border: 1px solid transparent; border-bottom: none;
+  flex-shrink: 0; max-width: 180px; overflow: hidden;
+}
+.tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+.tab.active {
+  background: var(--bg-app); color: var(--text-primary);
+  border-color: var(--border-default);
+  border-bottom-color: var(--bg-app);
+  position: relative;
+}
+.tab.active::after {
+  content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+  height: 2px; background: var(--accent-blue);
+}
+.tab-dot { font-size: 12px; color: #E5C07B; }
+.tab-close {
+  width: 18px; height: 18px; flex-shrink: 0;
+  background: transparent; color: var(--text-secondary);
+  border-radius: 3px; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition-fast); opacity: 0;
+}
+.tab:hover .tab-close { opacity: 1; }
+.tab-close:hover { background: rgba(255,255,255,.15); color: var(--text-primary); }
+.tab-new {
+  width: 28px; height: 28px; margin-left: auto; flex-shrink: 0;
+  background: transparent; color: var(--text-secondary);
+  border-radius: 4px; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition-fast);
+}
+.tab-new:hover { background: rgba(255,255,255,.1); color: var(--text-primary); }
+
+/* Content panels */
+.content-area { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.request-panel { flex: 0 0 50%; overflow-y: auto; border-bottom: 4px solid var(--border-default); position: relative; }
+.request-panel::-webkit-scrollbar { width: 6px; }
+.request-panel::-webkit-scrollbar-thumb { background: var(--bg-surface); border-radius: 3px; }
+.response-panel { flex: 1; overflow-y: auto; }
+.response-panel::-webkit-scrollbar { width: 6px; }
+.response-panel::-webkit-scrollbar-thumb { background: var(--bg-surface); border-radius: 3px; }
+
+/* Splitter */
+.splitter {
+  height: 4px; background: var(--bg-sidebar); flex-shrink: 0;
+  cursor: ns-resize; transition: background var(--transition-fast);
+}
+.splitter:hover { background: var(--accent-blue); }
+
+/* Request top bar */
+.request-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-app); flex-shrink: 0;
+}
+.method-select {
+  height: 28px; padding: 0 8px;
+  background: #1E3A28; border: 1px solid var(--border-default);
+  color: #98C379; font-size: 12px; font-weight: 600;
+  border-radius: 4px; cursor: pointer;
+  appearance: none; padding-right: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23858585'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 6px center;
+  min-width: 76px;
+}
+.url-input {
+  flex: 1; height: 28px; padding: 0 8px;
+  background: var(--bg-surface); border: 1px solid var(--border-default);
+  color: var(--text-primary); font-size: 13px; font-family: "Consolas","Courier New",monospace;
+  border-radius: 4px; transition: border-color var(--transition-fast);
+}
+.url-input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(0,122,204,.2); }
+.btn-send {
+  height: 28px; padding: 0 14px;
+  background: var(--accent-blue); color: #fff;
+  font-size: 13px; font-weight: 500; border-radius: 4px;
+  display: flex; align-items: center; gap: 6px;
+  transition: all var(--transition-fast); flex-shrink: 0;
+}
+.btn-send:hover { background: #0086CF; }
+.mode-switch {
+  display: flex; border: 1px solid var(--border-default); border-radius: 4px; overflow: hidden;
+  flex-shrink: 0;
+}
+.mode-btn {
+  padding: 0 10px; height: 24px; font-size: 11px;
+  background: transparent; color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+.mode-btn.active { background: var(--accent-blue); color: #fff; }
+.mode-btn:not(.active):hover { background: var(--bg-hover); color: var(--text-primary); }
+
+/* Sub tabs */
+.sub-tabs {
+  display: flex; border-bottom: 1px solid var(--border-default);
+  padding: 0 12px; background: var(--bg-app); flex-shrink: 0;
+}
+.sub-tab {
+  padding: 0 12px; height: 32px;
+  font-size: 12px; color: var(--text-secondary);
+  background: transparent; border-bottom: 1px solid transparent;
+  cursor: pointer; display: flex; align-items: center; gap: 4px;
+  transition: all var(--transition-fast); margin-bottom: -1px;
+}
+.sub-tab:hover { color: var(--text-primary); }
+.sub-tab.active { color: var(--text-primary); border-bottom-color: var(--accent-blue); }
+.sub-tab .badge {
+  font-size: 11px; color: var(--text-secondary); background: var(--bg-surface);
+  border-radius: 8px; padding: 0 5px;
+}
+
+/* KV Table */
+.kv-table { padding: 8px 0; }
+.kv-row {
+  display: flex; align-items: center; gap: 0;
+  height: 28px; padding: 0 8px;
+  border-bottom: 1px solid transparent;
+  transition: background var(--transition-fast);
+}
+.kv-row:hover { background: var(--bg-hover); }
+.kv-row:hover .kv-del { opacity: 1; }
+.kv-check { width: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.kv-check input[type=checkbox] { accent-color: var(--accent-blue); cursor: pointer; }
+.kv-key, .kv-val {
+  flex: 1; height: 100%; padding: 0 6px;
+  background: transparent; color: var(--text-primary);
+  font-size: 12px; font-family: "Consolas","Courier New",monospace;
+  border-right: 1px solid var(--border-default);
+}
+.kv-key::placeholder, .kv-val::placeholder { color: var(--text-disabled); }
+.kv-val { border-right: none; }
+.kv-del {
+  width: 24px; height: 24px; opacity: 0; flex-shrink: 0;
+  background: transparent; color: var(--text-secondary); font-size: 12px;
+  border-radius: 3px; display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition-fast);
+}
+.kv-del:hover { background: rgba(244,71,71,.2); color: var(--error); }
+.kv-add {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 12px; color: var(--accent-blue-light);
+  font-size: 12px; cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.kv-add:hover { color: #fff; }
+
+/* Body editor */
+.body-editor {
+  padding: 0 12px 12px;
+}
+.body-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0;
+}
+.body-toolbar label { font-size: 11px; color: var(--text-secondary); }
+.select-sm {
+  height: 22px; padding: 0 6px;
+  background: var(--bg-surface); border: 1px solid var(--border-default);
+  color: var(--text-primary); font-size: 11px; border-radius: 3px;
+  appearance: none; padding-right: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23858585'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 5px center;
+  cursor: pointer;
+}
+.code-editor {
+  background: var(--bg-app); border: 1px solid var(--border-default);
+  border-radius: 4px; padding: 10px 12px;
+  font-family: "Consolas","Courier New",monospace;
+  font-size: 13px; line-height: 20px; color: var(--text-primary);
+  min-height: 120px; white-space: pre; overflow-x: auto;
+}
+.code-editor .s { color: #CE9178; } /* string value */
+.code-editor .k { color: #9CDCFE; } /* key */
+.code-editor .n { color: #B5CEA8; } /* number */
+.code-editor .b { color: #569CD6; } /* bool/null */
+.code-editor .m { color: #98C379; } /* http method */
+.code-editor .u { color: #CCCCCC; } /* url */
+.code-editor .h { color: #9CDCFE; } /* header name */
+.code-editor .hv { color: #CE9178; } /* header value */
+.code-editor .v { color: #4EC9B0; } /* {{variable}} */
+.code-editor .sep { color: #4FC1FF; } /* ### separator */
+.code-editor .kw { color: #C678DD; } /* assert keyword */
+.code-editor .ln { color: #858585; user-select: none; margin-right: 16px; display: inline-block; min-width: 20px; text-align: right; }
+
+/* Text mode wrapper */
+.text-mode { padding: 12px 0; }
+
+/* Response */
+.response-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 12px; height: 36px;
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+}
+.status-badge {
+  font-size: 11px; font-weight: 600; border-radius: 2px;
+  padding: 2px 8px; min-width: 52px; text-align: center;
+}
+.status-2xx { background: rgba(78,201,176,.15); color: var(--success); }
+.status-4xx { background: rgba(206,145,120,.15); color: var(--warning); }
+.status-5xx { background: rgba(244,71,71,.15); color: var(--error); }
+.resp-meta { font-size: 12px; color: var(--text-secondary); flex: 1; }
+
+/* Assertions */
+.assert-summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px; font-weight: 600;
+  border-bottom: 1px solid var(--border-default);
+}
+.assert-pass { color: var(--success); }
+.assert-fail { color: var(--error); }
+.assert-row {
+  display: flex; align-items: center;
+  padding: 6px 12px; height: 28px;
+  font-size: 12px; font-family: "Consolas","Courier New",monospace;
+  border-bottom: 1px solid transparent;
+}
+.assert-row.fail { background: rgba(244,71,71,.05); }
+.assert-icon { width: 20px; flex-shrink: 0; }
+.assert-rule { flex: 1; color: var(--text-primary); }
+.assert-actual { font-size: 11px; color: var(--text-secondary); }
+.assert-actual.fail { color: #E06C75; }
+
+/* Headers table */
+.headers-table { padding: 4px 0; }
+.header-row {
+  display: flex; padding: 4px 12px;
+  border-bottom: 1px solid rgba(62,62,66,.5);
+  transition: background var(--transition-fast);
+}
+.header-row:hover { background: var(--bg-hover); cursor: pointer; }
+.header-row.pseudo { border-bottom: 1px solid var(--border-default); }
+.header-row.divider { border-bottom: 1px solid var(--border-default); }
+.hdr-key { width: 200px; font-size: 12px; font-family: "Consolas","Courier New",monospace; color: #9CDCFE; flex-shrink: 0; }
+.hdr-val { font-size: 12px; font-family: "Consolas","Courier New",monospace; color: var(--text-primary); }
+
+/* JSON tree */
+.json-tree { padding: 8px 12px; font-family: "Consolas","Courier New",monospace; font-size: 13px; }
+.json-node { line-height: 22px; }
+.json-node .indent { padding-left: 16px; display: block; }
+.json-key { color: #9CDCFE; }
+.json-str { color: #CE9178; }
+.json-num { color: #B5CEA8; }
+.json-bool { color: #569CD6; }
+.json-meta { font-size: 11px; color: var(--text-secondary); margin-left: 8px; }
+.json-chevron { font-size: 9px; cursor: pointer; color: var(--text-secondary); margin-right: 4px; }
+
+/* Statusbar */
+.statusbar {
+  height: 22px; background: var(--bg-sidebar);
+  border-top: 1px solid var(--border-default);
+  display: flex; align-items: center;
+  padding: 0 8px; gap: 0; flex-shrink: 0;
+}
+.statusbar-item {
+  padding: 0 8px; height: 100%;
+  display: flex; align-items: center;
+  font-size: 11px; color: var(--text-secondary);
+  cursor: pointer; transition: background var(--transition-fast);
+  white-space: nowrap;
+}
+.statusbar-item:hover { background: rgba(255,255,255,.1); color: var(--text-primary); }
+.statusbar-sep { width: 1px; height: 12px; background: var(--border-default); margin: 0 2px; }
+.statusbar-right { margin-left: auto; display: flex; align-items: center; }
+.env-selector {
+  padding: 0 8px; height: 100%;
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-primary);
+  cursor: pointer; transition: background var(--transition-fast);
+}
+.env-selector:hover { background: rgba(255,255,255,.15); }
+.env-dropdown {
+  position: absolute; bottom: 26px; right: 8px;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-default);
+  border-radius: 4px; box-shadow: var(--shadow-md);
+  min-width: 160px; z-index: 50; overflow: hidden;
+  display: none;
+}
+.env-dropdown.show { display: block; }
+.env-option {
+  padding: 0 12px; height: 28px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-primary);
+  cursor: pointer; transition: background var(--transition-fast);
+}
+.env-option:hover { background: var(--bg-hover); }
+.env-option .check { color: var(--success); font-size: 12px; width: 14px; }
+.env-divider { height: 1px; background: var(--border-default); margin: 2px 0; }
+.env-action { color: var(--accent-blue-light); font-size: 12px; }
+
+/* Toast */
+.toast-container { position: fixed; bottom: 32px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--bg-sidebar); border: 1px solid var(--border-default);
+  border-radius: 6px; padding: 0 14px; height: 40px; min-width: 200px;
+  display: flex; align-items: center; gap: 8px;
+  box-shadow: var(--shadow-md); font-size: 13px; color: var(--text-primary);
+  animation: toast-in .2s ease;
+}
+@keyframes toast-in { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+
+/* Auth panel */
+.auth-panel { padding: 12px; }
+.radio-group { display: flex; gap: 16px; margin-bottom: 12px; }
+.radio-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary); cursor: pointer; }
+.radio-label input[type=radio] { accent-color: var(--accent-blue); }
+.form-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.form-label { font-size: 11px; color: var(--text-secondary); }
+.form-input {
+  height: 28px; padding: 0 8px;
+  background: var(--bg-surface); border: 1px solid var(--border-default);
+  color: var(--text-primary); font-size: 13px; border-radius: 4px;
+  transition: border-color var(--transition-fast);
+}
+.form-input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(0,122,204,.2); }
+.info-tip { font-size: 11px; color: var(--text-secondary); margin-top: 4px; padding: 6px 8px; background: rgba(156,220,254,.05); border-radius: 3px; border-left: 2px solid var(--info); }
+
+/* Empty state */
+.empty-state {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; color: var(--text-disabled); padding: 32px;
+}
+.empty-state .empty-icon { font-size: 32px; }
+.empty-state p { font-size: 13px; }
+
+/* Loading */
+.spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(0,122,204,.3);
+  border-top-color: var(--accent-blue);
+  animation: spin .8s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Response raw */
+.resp-raw { padding: 12px; }
+
+/* Scrollable area utility */
+.scroll-y { overflow-y: auto; flex: 1; }
+.scroll-y::-webkit-scrollbar { width: 6px; }
+.scroll-y::-webkit-scrollbar-thumb { background: var(--bg-surface); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ===== Top nav ===== -->
+<nav class="preview-nav">
+  <button class="active" onclick="showScreen('welcome')">① 欢迎页</button>
+  <button onclick="showScreen('main')">② 主界面</button>
+</nav>
+
+<!-- ==================== SCREEN 1: WELCOME ==================== -->
+<div id="screen-welcome" class="screen active">
+  <div class="welcome-card">
+    <div class="welcome-brand">
+      <div class="welcome-icon">🌐</div>
+      <div class="welcome-brand-text">
+        <h1>Resty</h1>
+        <p>HTTP API Client</p>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="showScreen('main')">
+      <span>📁</span> 打开工作区文件夹
+    </button>
+
+    <div class="section-label">最近工作区</div>
+    <div class="workspace-list">
+      <div class="workspace-item">
+        <div class="ws-icon">📁</div>
+        <div class="ws-info">
+          <div class="ws-name">my-api</div>
+          <div class="ws-path">D:\Code\my-api</div>
+        </div>
+        <div class="ws-time">刚刚</div>
+        <button class="ws-remove">✕</button>
+      </div>
+      <div class="workspace-item">
+        <div class="ws-icon">📁</div>
+        <div class="ws-info">
+          <div class="ws-name">pet-store</div>
+          <div class="ws-path">D:\Code\pet-store-api</div>
+        </div>
+        <div class="ws-time">昨天</div>
+        <button class="ws-remove">✕</button>
+      </div>
+      <div class="workspace-item">
+        <div class="ws-icon">📁</div>
+        <div class="ws-info">
+          <div class="ws-name">auth-service</div>
+          <div class="ws-path">D:\Projects\auth-service</div>
+        </div>
+        <div class="ws-time">3天前</div>
+        <button class="ws-remove">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 2: MAIN ==================== -->
+<div id="screen-main" class="screen" style="flex-direction:column;">
+
+  <!-- Menubar -->
+  <div class="menubar">
+    <div class="menubar-item">文件</div>
+    <div class="menubar-item">视图</div>
+    <div class="menubar-item">运行</div>
+    <div class="menubar-item">帮助</div>
+    <div class="menubar-workspace">my-api</div>
+    <div class="window-controls">
+      <button class="win-btn">─</button>
+      <button class="win-btn">□</button>
+      <button class="win-btn close">✕</button>
+    </div>
+  </div>
+
+  <!-- App body -->
+  <div class="app-body">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-toolbar">
+        <span class="sidebar-title">my-api</span>
+        <button class="icon-btn" title="刷新">⟳</button>
+        <button class="icon-btn" title="新建">⊕</button>
+        <button class="icon-btn" title="更多">⋯</button>
+      </div>
+      <div class="sidebar-search">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="搜索请求...">
+        </div>
+      </div>
+      <div class="sidebar-tree" id="sidebar-tree">
+        <!-- users/ folder -->
+        <div class="tree-node" onclick="toggleTree('dir-users')">
+          <span class="tree-chevron open" id="chev-dir-users">▶</span>
+          <span class="tree-icon">📁</span>
+          <span class="tree-label">users/</span>
+        </div>
+        <div id="dir-users">
+          <div class="tree-node" onclick="toggleTree('file-users')" style="padding-left:20px">
+            <span class="tree-chevron open" id="chev-file-users">▶</span>
+            <span class="tree-icon">📄</span>
+            <span class="tree-label">users.http</span>
+          </div>
+          <div id="file-users">
+            <div class="tree-node active" style="padding-left:32px" onclick="switchTab(0)">
+              <span class="method-badge method-GET">GET</span>
+              <span class="tree-label active-tab">Get All Users</span>
+            </div>
+            <div class="tree-node" style="padding-left:32px" onclick="switchTab(1)">
+              <span class="method-badge method-POST">POST</span>
+              <span class="tree-label">Create User</span>
+            </div>
+            <div class="tree-node" style="padding-left:32px">
+              <span class="method-badge method-DELETE">DELETE</span>
+              <span class="tree-label">Delete User</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- orders/ folder (collapsed) -->
+        <div class="tree-node" onclick="toggleTree('dir-orders')">
+          <span class="tree-chevron" id="chev-dir-orders">▶</span>
+          <span class="tree-icon">📁</span>
+          <span class="tree-label">orders/</span>
+        </div>
+        <div id="dir-orders" style="display:none">
+          <div class="tree-node" style="padding-left:20px">
+            <span class="tree-chevron">▶</span>
+            <span class="tree-icon">📄</span>
+            <span class="tree-label">orders.http</span>
+          </div>
+        </div>
+
+        <!-- smoke.http root file -->
+        <div class="tree-node" onclick="toggleTree('file-smoke')">
+          <span class="tree-chevron" id="chev-file-smoke">▶</span>
+          <span class="tree-icon">📄</span>
+          <span class="tree-label">smoke.http</span>
+        </div>
+        <div id="file-smoke" style="display:none">
+          <div class="tree-node" style="padding-left:20px">
+            <span class="method-badge method-GET">GET</span>
+            <span class="tree-label">Get GitHub Zen</span>
+          </div>
+          <div class="tree-node" style="padding-left:20px">
+            <span class="method-badge method-GET">GET</span>
+            <span class="tree-label">Get httpbin 201</span>
+          </div>
+        </div>
+      </div>
+    </div><!-- /sidebar -->
+
+    <!-- Main area -->
+    <div class="main-area">
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <div class="tab active" id="tab-0">
+          <span class="method-badge method-GET" style="font-size:9px;padding:0 4px;">GET</span>
+          <span>Get All Users</span>
+          <button class="tab-close">✕</button>
+        </div>
+        <div class="tab" id="tab-1" onclick="switchTab(1)">
+          <span class="tab-dot">●</span>
+          <span class="method-badge method-POST" style="font-size:9px;padding:0 4px;">POST</span>
+          <span>Create User</span>
+          <button class="tab-close">✕</button>
+        </div>
+        <button class="tab-new">+</button>
+      </div>
+
+      <!-- Content area (request + response) -->
+      <div class="content-area">
+
+        <!-- REQUEST PANEL — Tab 0: GET (show by default) -->
+        <div class="request-panel" id="req-panel-0">
+          <!-- Request bar -->
+          <div class="request-bar">
+            <select class="method-select" onchange="updateMethod(this)">
+              <option value="GET" selected>GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="PATCH">PATCH</option>
+              <option value="DELETE">DELETE</option>
+            </select>
+            <input class="url-input" type="text" value="https://{{host}}/api/users" id="url-0">
+            <div class="mode-switch">
+              <button class="mode-btn active" onclick="setMode(0,'form',this)">结构化</button>
+              <button class="mode-btn" onclick="setMode(0,'text',this)">文本</button>
+            </div>
+            <button class="btn-send" onclick="sendRequest(0)">▶ 发送</button>
+          </div>
+
+          <!-- Form mode -->
+          <div id="form-0">
+            <div class="sub-tabs">
+              <button class="sub-tab" onclick="setSubTab(0,'params',this)">Params</button>
+              <button class="sub-tab active" onclick="setSubTab(0,'headers',this)">Headers <span class="badge">2</span></button>
+              <button class="sub-tab" onclick="setSubTab(0,'auth',this)">Auth</button>
+              <button class="sub-tab" onclick="setSubTab(0,'body',this)">Body</button>
+              <button class="sub-tab" onclick="setSubTab(0,'assert',this)">Assertions <span class="badge">2</span></button>
+            </div>
+
+            <!-- Params tab -->
+            <div class="kv-table" id="sub-0-params" style="display:none">
+              <div class="kv-row">
+                <div class="kv-check"><input type="checkbox" checked></div>
+                <input class="kv-key" value="page" placeholder="键">
+                <input class="kv-val" value="1" placeholder="值">
+                <button class="kv-del">✕</button>
+              </div>
+              <div class="kv-row">
+                <div class="kv-check"><input type="checkbox"></div>
+                <input class="kv-key" value="limit" placeholder="键">
+                <input class="kv-val" value="20" placeholder="值">
+                <button class="kv-del">✕</button>
+              </div>
+              <div class="kv-add">+ 添加参数</div>
+            </div>
+
+            <!-- Headers tab (default) -->
+            <div class="kv-table" id="sub-0-headers">
+              <div class="kv-row">
+                <div class="kv-check"><input type="checkbox" checked></div>
+                <input class="kv-key" value="Accept" placeholder="Header 名">
+                <input class="kv-val" value="application/json" placeholder="值">
+                <button class="kv-del">✕</button>
+              </div>
+              <div class="kv-row">
+                <div class="kv-check"><input type="checkbox" checked></div>
+                <input class="kv-key" value="Authorization" placeholder="Header 名">
+                <input class="kv-val" value="Bearer {{token}}" placeholder="值">
+                <button class="kv-del">✕</button>
+              </div>
+              <div class="kv-add">+ 添加 Header</div>
+            </div>
+
+            <!-- Auth tab -->
+            <div class="auth-panel" id="sub-0-auth" style="display:none">
+              <div class="radio-group">
+                <label class="radio-label"><input type="radio" name="auth-0" value="none"> None</label>
+                <label class="radio-label"><input type="radio" name="auth-0" value="basic"> Basic</label>
+                <label class="radio-label"><input type="radio" name="auth-0" value="bearer" checked> Bearer Token</label>
+              </div>
+              <div class="form-row">
+                <div class="form-label">Token</div>
+                <input class="form-input" type="text" value="{{auth_token}}" placeholder="输入 Token">
+              </div>
+              <div class="info-tip">ⓘ 将自动设置 Authorization: Bearer ... Header</div>
+            </div>
+
+            <!-- Body tab -->
+            <div class="body-editor" id="sub-0-body" style="display:none">
+              <div class="body-toolbar">
+                <label>Content-Type</label>
+                <select class="select-sm">
+                  <option>application/json</option>
+                  <option>text/plain</option>
+                  <option>application/x-www-form-urlencoded</option>
+                </select>
+              </div>
+              <div class="code-editor"><span class="n">// GET 请求通常无 Body</span></div>
+            </div>
+
+            <!-- Assertions tab -->
+            <div id="sub-0-assert" style="display:none;padding:8px 0">
+              <div class="assert-row">
+                <span class="assert-icon" style="color:var(--text-secondary)">◯</span>
+                <span class="assert-rule">assert status == 200</span>
+                <button class="kv-del" style="opacity:1">✕</button>
+              </div>
+              <div class="assert-row">
+                <span class="assert-icon" style="color:var(--text-secondary)">◯</span>
+                <span class="assert-rule">assert responseTime &lt; 500</span>
+                <button class="kv-del" style="opacity:1">✕</button>
+              </div>
+              <div class="kv-add">+ 添加断言</div>
+            </div>
+          </div>
+
+          <!-- Text mode -->
+          <div class="text-mode" id="text-0" style="display:none">
+            <div class="code-editor" style="margin:0 12px; min-height:160px">
+<span class="ln">1</span><span class="sep">### Get All Users</span>
+<span class="ln">2</span><span class="m">GET</span> <span class="u">https://</span><span class="v">{{host}}</span><span class="u">/api/users</span>
+<span class="ln">3</span><span class="h">Accept</span><span class="hv">: application/json</span>
+<span class="ln">4</span><span class="h">Authorization</span><span class="hv">: Bearer </span><span class="v">{{token}}</span>
+<span class="ln">5</span>
+<span class="ln">6</span><span class="s">> {%</span>
+<span class="ln">7</span><span class="kw">assert</span> status == 200
+<span class="ln">8</span><span class="kw">assert</span> responseTime &lt; 500
+<span class="ln">9</span><span class="s">%}</span>
+            </div>
+            <div style="text-align:right;padding:4px 12px;font-size:11px;color:var(--text-secondary)">
+              行 9, 列 1 · UTF-8 · <span style="color:var(--accent-blue-light)">Ctrl+S 保存</span>
+            </div>
+          </div>
+        </div><!-- /req-panel-0 -->
+
+        <!-- REQUEST PANEL — Tab 1: POST (hidden) -->
+        <div class="request-panel" id="req-panel-1" style="display:none">
+          <div class="request-bar">
+            <select class="method-select" style="background:#1E3A28;color:#98C379">
+              <option>GET</option>
+              <option selected>POST</option>
+              <option>PUT</option>
+            </select>
+            <input class="url-input" type="text" value="https://{{host}}/api/users">
+            <div class="mode-switch">
+              <button class="mode-btn active">结构化</button>
+              <button class="mode-btn">文本</button>
+            </div>
+            <button class="btn-send">▶ 发送</button>
+          </div>
+          <div class="sub-tabs">
+            <button class="sub-tab">Params</button>
+            <button class="sub-tab">Headers</button>
+            <button class="sub-tab">Auth</button>
+            <button class="sub-tab active">Body <span class="badge">✓</span></button>
+            <button class="sub-tab">Assertions</button>
+          </div>
+          <div class="body-editor">
+            <div class="body-toolbar">
+              <label>Content-Type</label>
+              <select class="select-sm"><option>application/json</option></select>
+            </div>
+            <div class="code-editor">{
+  <span class="k">"name"</span>: <span class="s">"John Doe"</span>,
+  <span class="k">"email"</span>: <span class="s">"john@example.com"</span>,
+  <span class="k">"role"</span>: <span class="s">"user"</span>
+}</div>
+          </div>
+        </div>
+
+        <!-- Splitter -->
+        <div class="splitter"></div>
+
+        <!-- RESPONSE PANEL -->
+        <div class="response-panel" id="resp-panel-0">
+          <!-- Loading state (shown first, then replaced) -->
+          <div id="resp-loading-0" style="display:none;flex:1;align-items:center;justify-content:center;padding:32px;gap:8px;color:var(--text-secondary);font-size:13px;flex-direction:column;">
+            <div class="spinner"></div>
+            <span>请求发送中…</span>
+          </div>
+
+          <!-- Empty state -->
+          <div class="empty-state" id="resp-empty-0">
+            <div class="empty-icon">↑</div>
+            <p>点击「发送」查看响应</p>
+          </div>
+
+          <!-- Result (hidden until send) -->
+          <div id="resp-result-0" style="display:none;flex-direction:column;height:100%">
+            <div class="response-head">
+              <span class="status-badge status-2xx">200 OK</span>
+              <span class="resp-meta">43ms · 1.8 KB</span>
+              <div class="sub-tabs" style="border-bottom:none;padding:0">
+                <button class="sub-tab active" onclick="setRespTab(0,'body',this)">Body</button>
+                <button class="sub-tab" onclick="setRespTab(0,'headers',this)">Headers</button>
+                <button class="sub-tab" onclick="setRespTab(0,'assert',this)">Assertions <span class="badge" style="color:var(--success)">✓</span></button>
+              </div>
+            </div>
+
+            <!-- Body sub-tabs -->
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border-default);" id="resp-body-toolbar-0">
+              <div class="mode-switch">
+                <button class="mode-btn active" onclick="setBodyView(0,'raw',this)">原始</button>
+                <button class="mode-btn" onclick="setBodyView(0,'tree',this)">JSON 树</button>
+              </div>
+              <button onclick="copyResp()" style="margin-left:auto;background:transparent;color:var(--text-secondary);font-size:11px;border:1px solid var(--border-default);border-radius:3px;padding:2px 8px;transition:all 120ms;" onmouseover="this.style.color='#ccc'" onmouseout="this.style.color='#858585'">复制</button>
+            </div>
+
+            <!-- Raw body -->
+            <div class="resp-raw scroll-y" id="resp-body-raw-0">
+              <div class="code-editor" style="border:none;border-radius:0;min-height:unset">[
+  {
+    <span class="k">"id"</span>: <span class="n">1</span>,
+    <span class="k">"name"</span>: <span class="s">"Alice Johnson"</span>,
+    <span class="k">"email"</span>: <span class="s">"alice@example.com"</span>,
+    <span class="k">"role"</span>: <span class="s">"admin"</span>,
+    <span class="k">"active"</span>: <span class="b">true</span>
+  },
+  {
+    <span class="k">"id"</span>: <span class="n">2</span>,
+    <span class="k">"name"</span>: <span class="s">"Bob Smith"</span>,
+    <span class="k">"email"</span>: <span class="s">"bob@example.com"</span>,
+    <span class="k">"role"</span>: <span class="s">"user"</span>,
+    <span class="k">"active"</span>: <span class="b">true</span>
+  }
+]</div>
+            </div>
+
+            <!-- JSON tree body -->
+            <div class="json-tree scroll-y" id="resp-body-tree-0" style="display:none">
+              <div class="json-node">
+                <span class="json-chevron">▼</span><span style="color:var(--text-secondary)">[] Array</span><span class="json-meta">2 items</span>
+                <div class="indent">
+                  <div class="json-node">
+                    <span class="json-chevron">▼</span><span style="color:var(--text-secondary)">[0]</span><span class="json-meta">object · 5 keys</span>
+                    <div class="indent">
+                      <div class="json-node"><span class="json-key">id</span>: <span class="json-num">1</span><span class="json-meta">number</span></div>
+                      <div class="json-node"><span class="json-key">name</span>: <span class="json-str">"Alice Johnson"</span><span class="json-meta">string</span></div>
+                      <div class="json-node"><span class="json-key">email</span>: <span class="json-str">"alice@example.com"</span><span class="json-meta">string</span></div>
+                      <div class="json-node"><span class="json-key">role</span>: <span class="json-str">"admin"</span><span class="json-meta">string</span></div>
+                      <div class="json-node"><span class="json-key">active</span>: <span class="json-bool">true</span><span class="json-meta">boolean</span></div>
+                    </div>
+                  </div>
+                  <div class="json-node">
+                    <span class="json-chevron">▶</span><span style="color:var(--text-secondary)">[1]</span><span class="json-meta">object · 5 keys (折叠)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Headers -->
+            <div class="headers-table scroll-y" id="resp-tab-headers-0" style="display:none">
+              <div class="header-row pseudo">
+                <span class="hdr-key">:status</span><span class="hdr-val" style="color:var(--success)">200 OK</span>
+              </div>
+              <div class="header-row pseudo">
+                <span class="hdr-key">:time</span><span class="hdr-val">43 ms</span>
+              </div>
+              <div class="header-row pseudo divider">
+                <span class="hdr-key">:size</span><span class="hdr-val">1.8 KB</span>
+              </div>
+              <div class="header-row">
+                <span class="hdr-key">content-type</span><span class="hdr-val">application/json; charset=utf-8</span>
+              </div>
+              <div class="header-row">
+                <span class="hdr-key">x-request-id</span><span class="hdr-val">a3f4b2c1-dead-beef-cafe-112233445566</span>
+              </div>
+              <div class="header-row">
+                <span class="hdr-key">server</span><span class="hdr-val">nginx/1.24.0</span>
+              </div>
+              <div class="header-row">
+                <span class="hdr-key">cache-control</span><span class="hdr-val">no-cache</span>
+              </div>
+            </div>
+
+            <!-- Assertions -->
+            <div id="resp-tab-assert-0" style="display:none;flex-direction:column">
+              <div class="assert-summary assert-pass">✓ 2 / 2 条断言通过</div>
+              <div class="assert-row">
+                <span class="assert-icon" style="color:var(--success)">✓</span>
+                <span class="assert-rule">assert status == 200</span>
+                <span class="assert-actual">实际: 200</span>
+              </div>
+              <div class="assert-row">
+                <span class="assert-icon" style="color:var(--success)">✓</span>
+                <span class="assert-rule">assert responseTime &lt; 500</span>
+                <span class="assert-actual">实际: 43ms</span>
+              </div>
+            </div>
+
+          </div><!-- /resp-result -->
+        </div><!-- /resp-panel-0 -->
+
+      </div><!-- /content-area -->
+    </div><!-- /main-area -->
+
+  </div><!-- /app-body -->
+
+  <!-- Statusbar -->
+  <div class="statusbar">
+    <div class="statusbar-item" onclick="openSettings()">⚙ 设置</div>
+    <div class="statusbar-sep"></div>
+    <div class="statusbar-item" style="color:var(--success)">◎ 就绪</div>
+    <div class="statusbar-right">
+      <div class="statusbar-item" style="color:var(--success)">200 OK · 43ms</div>
+      <div class="statusbar-sep"></div>
+      <div class="env-selector" onclick="toggleEnvMenu()">
+        dev <span style="font-size:9px">▼</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Env dropdown -->
+  <div class="env-dropdown" id="env-menu">
+    <div class="env-option"><span class="check">✓</span> dev</div>
+    <div class="env-option"><span class="check"></span> staging</div>
+    <div class="env-option"><span class="check"></span> prod</div>
+    <div class="env-divider"></div>
+    <div class="env-option env-action">+ 编辑环境文件</div>
+  </div>
+
+</div><!-- /screen-main -->
+
+<!-- Settings Modal -->
+<div id="settings-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;" onclick="if(event.target===this)closeSettings()">
+  <div style="background:#252526;border:1px solid #3E3E42;border-radius:6px;width:480px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.6)">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #3E3E42;">
+      <span style="font-size:14px;font-weight:600;color:#CCCCCC;">⚙ 设置</span>
+      <button onclick="closeSettings()" style="background:transparent;color:#858585;font-size:16px;line-height:1;cursor:pointer;" onmouseover="this.style.color='#CCCCCC'" onmouseout="this.style.color='#858585'">✕</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+      <!-- Theme -->
+      <div>
+        <div style="font-size:11px;color:#858585;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">外观</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:13px;color:#CCCCCC;">主题</span>
+          <select style="background:#3C3C3C;border:1px solid #3E3E42;color:#CCCCCC;font-size:12px;padding:4px 8px;border-radius:3px;">
+            <option>深色（默认）</option>
+            <option>浅色</option>
+            <option>高对比度</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+          <span style="font-size:13px;color:#CCCCCC;">字体大小</span>
+          <select style="background:#3C3C3C;border:1px solid #3E3E42;color:#CCCCCC;font-size:12px;padding:4px 8px;border-radius:3px;">
+            <option>12px</option>
+            <option selected>13px</option>
+            <option>14px</option>
+            <option>16px</option>
+          </select>
+        </div>
+      </div>
+      <!-- Request -->
+      <div>
+        <div style="font-size:11px;color:#858585;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">请求</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:13px;color:#CCCCCC;">超时（秒）</span>
+          <input type="number" value="30" min="1" max="300" style="background:#3C3C3C;border:1px solid #3E3E42;color:#CCCCCC;font-size:12px;padding:4px 8px;border-radius:3px;width:72px;">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+          <span style="font-size:13px;color:#CCCCCC;">跟随重定向</span>
+          <input type="checkbox" checked style="width:14px;height:14px;accent-color:#007ACC;">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+          <span style="font-size:13px;color:#CCCCCC;">验证 SSL 证书</span>
+          <input type="checkbox" checked style="width:14px;height:14px;accent-color:#007ACC;">
+        </div>
+      </div>
+      <!-- Proxy -->
+      <div>
+        <div style="font-size:11px;color:#858585;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">代理</div>
+        <input type="text" placeholder="http://127.0.0.1:7890" style="width:100%;box-sizing:border-box;background:#3C3C3C;border:1px solid #3E3E42;color:#CCCCCC;font-size:12px;padding:6px 8px;border-radius:3px;outline:none;">
+      </div>
+    </div>
+    <!-- Footer -->
+    <div style="padding:12px 16px;border-top:1px solid #3E3E42;display:flex;justify-content:flex-end;gap:8px;">
+      <button onclick="closeSettings()" style="background:#3C3C3C;border:1px solid #3E3E42;color:#CCCCCC;font-size:12px;padding:5px 16px;border-radius:3px;cursor:pointer;" onmouseover="this.style.background='#4A4A4A'" onmouseout="this.style.background='#3C3C3C'">取消</button>
+      <button onclick="closeSettings();showToast('✓','设置已保存','success')" style="background:#007ACC;border:none;color:#fff;font-size:12px;padding:5px 16px;border-radius:3px;cursor:pointer;" onmouseover="this.style.background='#1A8FD1'" onmouseout="this.style.background='#007ACC'">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// Screen switching
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.preview-nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  const idx = name === 'welcome' ? 0 : 1;
+  document.querySelectorAll('.preview-nav button')[idx].classList.add('active');
+}
+
+// Tree toggle
+function toggleTree(id) {
+  const el = document.getElementById(id);
+  const chev = document.getElementById('chev-' + id);
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (chev) chev.classList.toggle('open', !open);
+}
+
+// Tab switching
+function switchTab(idx) {
+  [0,1].forEach(i => {
+    const tab = document.getElementById('tab-' + i);
+    const req = document.getElementById('req-panel-' + i);
+    if (tab) tab.classList.toggle('active', i === idx);
+    if (req) req.style.display = i === idx ? '' : 'none';
+  });
+  // Update sidebar active
+  document.querySelectorAll('#sidebar-tree .tree-node').forEach(n => n.classList.remove('active'));
+  const nodes = document.querySelectorAll('#file-users .tree-node');
+  if (nodes[idx]) nodes[idx].classList.add('active');
+
+  // Update response state
+  if (idx === 1) {
+    // POST tab — no response yet
+    document.getElementById('resp-empty-0').style.display = 'flex';
+    document.getElementById('resp-result-0').style.display = 'none';
+  } else {
+    document.getElementById('resp-empty-0').style.display = 'none';
+    document.getElementById('resp-result-0').style.display = 'flex';
+  }
+}
+
+// Mode switch (form / text)
+function setMode(tabIdx, mode, btn) {
+  const form = document.getElementById('form-' + tabIdx);
+  const text = document.getElementById('text-' + tabIdx);
+  const btns = btn.parentElement.querySelectorAll('.mode-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (form) form.style.display = mode === 'form' ? '' : 'none';
+  if (text) text.style.display = mode === 'text' ? '' : 'none';
+}
+
+// Sub-tab switching (request)
+function setSubTab(tabIdx, name, btn) {
+  const names = ['params','headers','auth','body','assert'];
+  names.forEach(n => {
+    const el = document.getElementById('sub-' + tabIdx + '-' + n);
+    if (el) el.style.display = n === name ? '' : 'none';
+  });
+  btn.parentElement.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Response tab switching
+function setRespTab(tabIdx, name, btn) {
+  const toolbar = document.getElementById('resp-body-toolbar-' + tabIdx);
+  const rawEl   = document.getElementById('resp-body-raw-' + tabIdx);
+  const treeEl  = document.getElementById('resp-body-tree-' + tabIdx);
+  const hdrsEl  = document.getElementById('resp-tab-headers-' + tabIdx);
+  const assertEl= document.getElementById('resp-tab-assert-' + tabIdx);
+
+  [toolbar, rawEl].forEach(e => e && (e.style.display = name === 'body' ? '' : 'none'));
+  if (treeEl) treeEl.style.display = 'none'; // reset, bodyView handles it
+  if (hdrsEl) hdrsEl.style.display = name === 'headers' ? '' : 'none';
+  if (assertEl) assertEl.style.display = name === 'assert' ? 'flex' : 'none';
+
+  if (name === 'body') {
+    if (rawEl) rawEl.style.display = '';
+  }
+
+  btn.parentElement.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Body view switch
+function setBodyView(tabIdx, view, btn) {
+  const raw  = document.getElementById('resp-body-raw-' + tabIdx);
+  const tree = document.getElementById('resp-body-tree-' + tabIdx);
+  if (raw)  raw.style.display  = view === 'raw'  ? '' : 'none';
+  if (tree) tree.style.display = view === 'tree' ? '' : 'none';
+  btn.parentElement.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Send request simulation
+function sendRequest(tabIdx) {
+  const btn = event.currentTarget;
+  const emptyEl   = document.getElementById('resp-empty-' + tabIdx);
+  const loadingEl = document.getElementById('resp-loading-' + tabIdx);
+  const resultEl  = document.getElementById('resp-result-' + tabIdx);
+
+  // Show loading
+  if (emptyEl)   emptyEl.style.display   = 'none';
+  if (resultEl)  resultEl.style.display  = 'none';
+  if (loadingEl) { loadingEl.style.display = 'flex'; }
+
+  // Change button to cancel
+  btn.innerHTML = '■ 取消';
+  btn.style.background = '#505050';
+
+  setTimeout(() => {
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (resultEl)  { resultEl.style.display = 'flex'; }
+    btn.innerHTML = '▶ 发送';
+    btn.style.background = '';
+    showToast('✓', '请求成功 · 200 OK · 43ms', 'success');
+
+    // Update status bar
+    document.querySelector('.statusbar-item[style*="success"]').textContent = '200 OK · 43ms';
+  }, 1200);
+}
+
+// Method select change
+function updateMethod(sel) {
+  const colors = {
+    GET:    {bg:'#1A3B5D', color:'#61AFEF'},
+    POST:   {bg:'#1E3A28', color:'#98C379'},
+    PUT:    {bg:'#3A2E1A', color:'#E5C07B'},
+    PATCH:  {bg:'#332B1A', color:'#D19A66'},
+    DELETE: {bg:'#3A1E1E', color:'#E06C75'},
+  };
+  const c = colors[sel.value] || {bg:'#3C3C3C', color:'#CCCCCC'};
+  sel.style.background = c.bg;
+  sel.style.color = c.color;
+}
+
+// Env menu
+function toggleEnvMenu() {
+  document.getElementById('env-menu').classList.toggle('show');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.env-selector') && !e.target.closest('.env-dropdown')) {
+    document.getElementById('env-menu').classList.remove('show');
+  }
+});
+
+// Settings panel
+function openSettings() {
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSettings();
+});
+
+// Copy response
+function copyResp() {
+  showToast('✓', '已复制到剪贴板', 'success');
+}
+
+// Toast
+function showToast(icon, msg, type) {
+  const colors = { success: '#4EC9B0', error: '#F44747', info: '#4FC1FF', warning: '#CE9178' };
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<span style="color:${colors[type]||'#ccc'}">${icon}</span> ${msg}`;
+  const container = document.getElementById('toasts');
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.transition = 'opacity .3s';
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 2200);
+}
+</script>
+</body>
+</html>
