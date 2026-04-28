@@ -78,8 +78,9 @@ public sealed class MainWindow : NativeCustomWindow
 
         _mainArea = new Border { Child = tabContainer };
 
-        // 初始布局
-        Content = _mainArea;
+        // 初始布局：不把 _mainArea 直接作为 Content，
+        // 避免首次 LoadWorkspace 时 SplitPanel 接管 _mainArea 产生父节点冲突。
+        Content = BuildWelcomeView();
         Padding = new Thickness(0);
     }
 
