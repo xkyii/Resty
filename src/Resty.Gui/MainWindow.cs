@@ -27,9 +27,10 @@ public sealed class MainWindow : NativeCustomWindow
     private static readonly Color BorderCol  = Color.FromRgb(0x3E, 0x3E, 0x42);
 
     // ── 状态 ─────────────────────────────────────────────────────
-    private readonly WorkspaceService  _workspace = new();
-    private readonly SidebarView        _sidebar   = new();
-    private readonly WorkspacePanelView _workspacePanel = new();
+    private readonly WorkspaceService   _workspace      = new();
+    private readonly SidebarView         _sidebar        = new();
+    private readonly WorkspacePanelView  _workspacePanel = new();
+    private readonly EnvManagerView      _envManagerView = new();
     private readonly ObservableValue<string> _workspaceName = new("Resty");
 
     // G2 组件
@@ -46,7 +47,9 @@ public sealed class MainWindow : NativeCustomWindow
     private readonly List<EditorTab> _tabs = [];
     private int _activeTabIdx = -1;
     private string _currentEnv = string.Empty;
-    private Border     _sidebarPanelBorder = new();  // P6: 活动栏切换的侧边栏内容区
+    private Border     _sidebarPanelBorder  = new();  // Activity Bar 切换侧边栏内容区
+    private Border     _rightContentBorder  = new();  // 右侧主区（切换编辑器 ↔ 环境管理）
+    private UIElement  _editorAndResponse   = null!;  // 请求编辑器 + 响应面板组合
     private CancellationTokenSource? _currentCts;
     private TextBlock? _statusLabel;
 
@@ -268,26 +271,28 @@ public sealed class MainWindow : NativeCustomWindow
     private UIElement BuildWorkspaceLayout()
     {
         _sidebar.SetWorkspace(_workspace);
+        _envManagerView.SetWorkspace(_workspace);
 
-        // 请求编辑区 + 响应区（上下 SplitPanel），响应区用 _responseArea（随 tab 切换）
-        var editorAndResponse = new SplitPanel
+        // 请求编辑区 + 响应区（上下 SplitPanel）
+        _editorAndResponse = new SplitPanel
         {
-            Orientation      = Orientation.Vertical,
-            FirstLength      = 360,
+            Orientation       = Orientation.Vertical,
+            FirstLength       = 360,
             SplitterThickness = 4,
-            First            = _mainArea,
-            Second           = _responseArea,
+            First             = _mainArea,
+            Second            = _responseArea,
         };
 
         // P9: 工作区面板更新当前路径
         _workspacePanel.SetCurrentPath(_workspace.WorkspacePath);
         _workspacePanel.Refresh();
 
-        // 右侧主区（直接内容，无标签栏）
+        // 右侧主区（Border 方便切换内容）
+        _rightContentBorder = new Border { Child = _editorAndResponse };
         var rightArea = new DockPanel();
-        rightArea.Add(editorAndResponse);
+        rightArea.Add(_rightContentBorder);
 
-        // P6: 侧边栏内容区（Activity Bar 切换）
+        // 侧边栏内容区（Activity Bar 切换）
         _sidebarPanelBorder = new Border
         {
             Background = BgSidebar,
@@ -315,14 +320,13 @@ public sealed class MainWindow : NativeCustomWindow
         return root;
     }
 
-    // ── P6: Activity Bar ───────────────────────────────────────
+    // ── Activity Bar ────────────────────────────────────────────
     private UIElement BuildActivityBar()
     {
         var bgBar = Color.FromRgb(0x33, 0x33, 0x33);
 
-        // 指示线引用
         Border collectionLine = null!, historyLine = null!, workspaceLine = null!;
-        Button collectionBtn = null!, historyBtn = null!, workspaceBtn = null!;
+        Button collectionBtn  = null!, historyBtn  = null!, workspaceBtn  = null!;
 
         collectionLine = new Border { Width = 2, Background = Accent };
         historyLine    = new Border { Width = 2, Background = Color.Transparent };
@@ -333,6 +337,7 @@ public sealed class MainWindow : NativeCustomWindow
             collectionLine.Background = idx == 0 ? Accent : Color.Transparent;
             historyLine.Background    = idx == 1 ? Accent : Color.Transparent;
             workspaceLine.Background  = idx == 2 ? Accent : Color.Transparent;
+
             collectionBtn.Foreground(idx == 0 ? Color.White : TextSec);
             historyBtn.Foreground(idx == 1 ? Color.White : TextSec);
             workspaceBtn.Foreground(idx == 2 ? Color.White : TextSec);
@@ -458,11 +463,17 @@ public sealed class MainWindow : NativeCustomWindow
         catch { }
     }
 
-    // P8: 环境面板选中事件
+    // 环境模式切换（来自 SidebarView.EnvModeChanged）
+    private void OnEnvModeChanged(bool isEnvMode)
+    {
+        _rightContentBorder.Child = isEnvMode ? _envManagerView.RootElement : _editorAndResponse;
+    }
+
+    // 环境选中（来自 SidebarView.EnvActivated）
     private void OnEnvSelected(string envName)
     {
         _currentEnv = envName;
-        _sidebar.SetCurrentEnv(envName);
+        _envManagerView.SelectEnv(envName);
         RefreshEditorEnvVars();
     }
     // ── 菜单栏 ───────────────────────────────────────────────────
@@ -519,9 +530,11 @@ public sealed class MainWindow : NativeCustomWindow
         // P9: 记录最近工作区
         RecentWorkspacesService.Add(path);
 
-        // 订阅 SidebarView.EnvSelected 事件
-        _sidebar.EnvSelected -= OnEnvSelected;
-        _sidebar.EnvSelected += OnEnvSelected;
+        // 订阅 SidebarView 事件
+        _sidebar.EnvModeChanged -= OnEnvModeChanged;
+        _sidebar.EnvModeChanged += OnEnvModeChanged;
+        _sidebar.EnvActivated   -= OnEnvSelected;
+        _sidebar.EnvActivated   += OnEnvSelected;
 
         // 订阅 WorkspacePanelView.WorkspaceSelected 事件
         _workspacePanel.WorkspaceSelected -= LoadWorkspace;
@@ -531,8 +544,12 @@ public sealed class MainWindow : NativeCustomWindow
         while (_tabs.Count > 0) CloseTab(0);
         Content = BuildWorkspaceLayout();
 
-        // 初始化环境显示
-        _sidebar.SetCurrentEnv(_currentEnv);
+        // 初始化环境
+        if (!string.IsNullOrEmpty(_currentEnv))
+        {
+            _sidebar.SetActiveEnv(_currentEnv);
+            _envManagerView.SelectEnv(_currentEnv);
+        }
     }
 
     private void OnWorkspaceFilesChanged()
