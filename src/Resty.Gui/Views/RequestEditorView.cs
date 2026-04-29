@@ -184,35 +184,28 @@ public sealed class RequestEditorView
             .OnClick(OnSendClicked);
 
         // ── 模式切换按钮 ──────────────────────────────────────────
-        _modeTextBtn = new Button { Height = 24, Width = 60 };
+        _modeTextBtn = new Button { Height = 26, Width = 52 };
         _modeTextBtn.Content("文本", false).FontSize(12)
             .Background(BgSurface).Foreground(TextPri)
             .OnClick(SwitchToTextMode);
 
-        _modeStructBtn = new Button { Height = 24, Width = 64 };
+        _modeStructBtn = new Button { Height = 26, Width = 60 };
         _modeStructBtn.Content("结构化", false).FontSize(12)
             .Background(Color.Transparent).Foreground(TextSec)
             .OnClick(SwitchToStructuredMode);
 
-        // ── 工具栏 ────────────────────────────────────────────────
-        var modeRow = new StackPanel
-        {
-            Orientation       = Orientation.Horizontal,
-            Spacing           = 4,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin            = new Thickness(0, 0, 8, 0),
-        };
-        modeRow.Add(_dirtyLabel);
-        modeRow.Add(_modeTextBtn);
-        modeRow.Add(_modeStructBtn);
-
-        var urlRow = new DockPanel();
+        // ── 工具栏（单行：方法 + URL + 模式切换 + 发送）────────────
+        var urlRow = new DockPanel { Height = 44 };
         urlRow.Add(new Border { Width = 8 }.DockLeft());
         urlRow.Add(_methodCombo.DockLeft());
         urlRow.Add(new Border { Width = 8 }.DockLeft());
+        urlRow.Add(_dirtyLabel.DockLeft());
         urlRow.Add(new Border { Width = 8 }.DockRight());
         urlRow.Add(_sendBtn.DockRight());
+        urlRow.Add(new Border { Width = 4 }.DockRight());
+        urlRow.Add(_modeStructBtn.DockRight());
+        urlRow.Add(_modeTextBtn.DockRight());
+        urlRow.Add(new Border { Width = 4 }.DockRight());
         urlRow.Add(_urlBox);
 
         // ── URL 变量预览行（F6）──────────────────────────────────
@@ -228,14 +221,13 @@ public sealed class RequestEditorView
         var toolbarInner = new StackPanel
         {
             Orientation = Orientation.Vertical,
-            Spacing     = 4,
+            Spacing     = 0,
         };
         toolbarInner.Add(urlRow);
-        toolbarInner.Add(modeRow);
 
         var toolbarBorder = new Border
         {
-            Height      = 56,
+            Height      = 44,
             Background  = BgPanel,
             BorderBrush = BorderCol,
             Child       = toolbarInner,
