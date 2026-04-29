@@ -357,10 +357,10 @@ public sealed class MainWindow : NativeCustomWindow
         void SetActive(int idx)
         {
             // 不在被选中项显示左侧蓝色指示条（按设计需求）
-            collectionLine.Background = Color.Transparent;
-            historyLine.Background    = Color.Transparent;
-            workspaceLine.Background  = Color.Transparent;
-            settingsLine.Background   = Color.Transparent;
+            collectionLine.Background = idx == 0 ? Accent : Color.Transparent;
+            historyLine.Background    = idx == 1 ? Accent : Color.Transparent;
+            workspaceLine.Background  = idx == 2 ? Accent : Color.Transparent;
+            settingsLine.Background   = idx == 3 ? Accent : Color.Transparent;
 
             collectionBtn.Foreground(idx == 0 ? Color.White : TextSec);
             historyBtn.Foreground(idx == 1 ? Color.White : TextSec);
@@ -409,8 +409,8 @@ public sealed class MainWindow : NativeCustomWindow
             VerticalAlignment = VerticalAlignment.Center,
         };
         var row = new DockPanel();
-        row.Add(indicator.DockLeft());
         row.Add(lbl);
+        row.Add(indicator.DockRight());
 
         var btn = new Button { Width = 40, Height = 40, Padding = new Thickness(0) };
         btn.Content(row as Element).Background(Color.Transparent).Foreground(Color.FromRgb(0x85, 0x85, 0x85));
