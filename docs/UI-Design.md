@@ -1125,10 +1125,10 @@ Spinner 20px，动画旋转，文字 13px `#858585`。
 | P3 | **标签栏 dirty `●` 标记** — Tab 标题旁显示 | `MainWindow` | ✅ |
 | P4 | **Ctrl+W 关闭当前 Tab** | `MainWindow` | ✅ |
 | P5 | **响应面板绑定到 Tab** — 每个 Tab 独立 `ResponsePanelView` | `MainWindow` | ✅ |
-| P6 | **Activity Bar**（左侧图标竖栏） — 上部切换"集合/历史/工作区"面板，下部"设置"入口 | `MainWindow`, 新 `ActivityBarView` | ⬜ |
-| P7 | **侧边栏顶部重构** — 工作区名称 + "工作区"/"环境"切换按钮；去掉状态栏环境 ComboBox | `MainWindow`, `SidebarView` | ⬜ |
-| P8 | **环境管理面板** — "环境"视图内列出环境及变量，可切换 | 新 `EnvironmentPanelView` | ⬜ |
-| P9 | **工作区管理面板** — 收藏的工作区 + 最近打开，点击切换 | 新 `WorkspacePanelView` | ⬜ |
+| P6 | **Activity Bar**（左侧图标竖栏） — 上部切换"集合/历史/工作区"面板，下部"设置"入口 | `MainWindow`, 新 `ActivityBarView` | ✅ |
+| P7 | **侧边栏顶部重构** — 工作区名称 + "工作区"/"环境"切换按钮；去掉状态栏环境 ComboBox | `MainWindow`, `SidebarView` | ✅ |
+| P8 | **环境管理面板** — "环境"视图内列出环境及变量，可切换 | 新 `EnvironmentPanelView` | ✅ |
+| P9 | **工作区管理面板** — 收藏的工作区 + 最近打开，点击切换 | 新 `WorkspacePanelView` | ✅ |
 | P10 | **新建请求 "+" 按钮** — 标签栏右侧，选文件+输入名称 | `MainWindow` | ⬜ |
 | P11 | **请求历史面板** — 按日期分组，持久化到 `.resty/history.json` | 新 `HistoryPanelView` | ⬜ |
 | P12 | **设置页** — 超时、代理、JSON 自动格式化等 | 新 `SettingsView` | ⬜ |

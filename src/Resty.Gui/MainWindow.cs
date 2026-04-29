@@ -28,7 +28,8 @@ public sealed class MainWindow : NativeCustomWindow
 
     // ── 状态 ─────────────────────────────────────────────────────
     private readonly WorkspaceService  _workspace = new();
-    private readonly SidebarView       _sidebar   = new();
+    private readonly SidebarView        _sidebar   = new();
+    private readonly WorkspacePanelView _workspacePanel = new();
     private readonly ObservableValue<string> _workspaceName = new("Resty");
 
     // G2 组件
@@ -45,8 +46,7 @@ public sealed class MainWindow : NativeCustomWindow
     private readonly List<EditorTab> _tabs = [];
     private int _activeTabIdx = -1;
     private string _currentEnv = string.Empty;
-    private Button? _envBtn;
-    private ComboBox? _envCombo;
+    private Border     _sidebarPanelBorder = new();  // P6: 活动栏切换的侧边栏内容区
     private CancellationTokenSource? _currentCts;
     private TextBlock? _statusLabel;
 
@@ -279,12 +279,16 @@ public sealed class MainWindow : NativeCustomWindow
             Second           = _responseArea,
         };
 
+        // P9: 工作区面板更新当前路径
+        _workspacePanel.SetCurrentPath(_workspace.WorkspacePath);
+        _workspacePanel.Refresh();
+
         // 右侧主区（直接内容，无标签栏）
         var rightArea = new DockPanel();
         rightArea.Add(editorAndResponse);
 
-        // 侧边栏 + 右侧（水平 SplitPanel）
-        var sidebarBorder = new Border
+        // P6: 侧边栏内容区（Activity Bar 切换）
+        _sidebarPanelBorder = new Border
         {
             Background = BgSidebar,
             Child      = _sidebar.RootElement,
@@ -295,7 +299,9 @@ public sealed class MainWindow : NativeCustomWindow
             Orientation       = Orientation.Horizontal,
             FirstLength       = 260,
             SplitterThickness = 4,
-            First             = sidebarBorder,
+            First             = new DockPanel().Children(
+                                    BuildActivityBar().DockLeft(),
+                                    _sidebarPanelBorder),
             Second            = rightArea,
         };
 
@@ -309,12 +315,98 @@ public sealed class MainWindow : NativeCustomWindow
         return root;
     }
 
+    // ── P6: Activity Bar ───────────────────────────────────────
+    private UIElement BuildActivityBar()
+    {
+        var bgBar = Color.FromRgb(0x33, 0x33, 0x33);
+
+        // 指示线引用
+        Border collectionLine = null!, historyLine = null!, workspaceLine = null!;
+        Button collectionBtn = null!, historyBtn = null!, workspaceBtn = null!;
+
+        collectionLine = new Border { Width = 2, Background = Accent };
+        historyLine    = new Border { Width = 2, Background = Color.Transparent };
+        workspaceLine  = new Border { Width = 2, Background = Color.Transparent };
+
+        void SetActive(int idx)
+        {
+            collectionLine.Background = idx == 0 ? Accent : Color.Transparent;
+            historyLine.Background    = idx == 1 ? Accent : Color.Transparent;
+            workspaceLine.Background  = idx == 2 ? Accent : Color.Transparent;
+            collectionBtn.Foreground(idx == 0 ? Color.White : TextSec);
+            historyBtn.Foreground(idx == 1 ? Color.White : TextSec);
+            workspaceBtn.Foreground(idx == 2 ? Color.White : TextSec);
+
+            _sidebarPanelBorder.Child = idx switch
+            {
+                0 => _sidebar.RootElement,
+                1 => BuildHistoryPlaceholder(),
+                2 => _workspacePanel.RootElement,
+                _ => _sidebar.RootElement,
+            };
+        }
+
+        collectionBtn = MakeActivityBtn("☰", collectionLine, () => SetActive(0));
+        historyBtn    = MakeActivityBtn("⧗", historyLine,    () => SetActive(1));
+        workspaceBtn  = MakeActivityBtn("⊞", workspaceLine,  () => SetActive(2));
+
+        var settingsLine = new Border { Width = 2, Background = Color.Transparent };
+        var settingsBtn  = MakeActivityBtn("⚙", settingsLine, () => { });
+
+        var topPanel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 0 };
+        topPanel.Add(collectionBtn);
+        topPanel.Add(historyBtn);
+        topPanel.Add(workspaceBtn);
+
+        var barDock = new DockPanel();
+        barDock.Add(settingsBtn.DockBottom());
+        barDock.Add(topPanel);
+
+        return new Border
+        {
+            Width      = 40,
+            Background = bgBar,
+            Child      = barDock,
+        };
+    }
+
+    private static Button MakeActivityBtn(string icon, Border indicator, Action onClick)
+    {
+        var lbl = new TextBlock
+        {
+            Text              = icon,
+            FontSize          = 16,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var row = new DockPanel();
+        row.Add(indicator.DockLeft());
+        row.Add(lbl);
+
+        var btn = new Button { Width = 40, Height = 40, Padding = new Thickness(0) };
+        btn.Content(row as Element).Background(Color.Transparent).Foreground(Color.FromRgb(0x85, 0x85, 0x85));
+        btn.Click      += onClick;
+        btn.MouseEnter += () => btn.Background(Color.FromRgb(0x45, 0x45, 0x45));
+        btn.MouseLeave += () => btn.Background(Color.Transparent);
+        return btn;
+    }
+
+    private UIElement BuildHistoryPlaceholder() => new Border
+    {
+        Background = BgSidebar,
+        Child = new TextBlock
+        {
+            Text                = "请求历史\n(待实现)",
+            FontSize            = 13,
+            Foreground          = TextSec,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment   = VerticalAlignment.Center,
+        },
+    };
+
     // ── 状态栏 ───────────────────────────────────────────────────
     private UIElement BuildStatusBar()
     {
-        var settingsBtn = new Button { Height = 22, Padding = new Thickness(8, 0) };
-        settingsBtn.Content("⚙ 设置", false).FontSize(12).Background(Color.Transparent).Foreground(TextSec);
-
         _statusLabel = new TextBlock
         {
             Text      = "◎ 就绪",
@@ -324,21 +416,7 @@ public sealed class MainWindow : NativeCustomWindow
             Margin    = new Thickness(8, 0),
         };
 
-        _envBtn = new Button { Height = 22, Padding = new Thickness(8, 0) };
-        _envBtn.Content(string.IsNullOrEmpty(_currentEnv) ? "无环境" : $"{_currentEnv} ▾", false)
-               .FontSize(12).Background(Color.Transparent).Foreground(TextSec);
-
-        _envCombo = new ComboBox { Height = 20, MinWidth = 80 };
-        _envCombo.FontSize(11);
-        RebuildEnvCombo();
-        _envCombo.OnSelectionChanged(o =>
-        {
-            if (o is string s) { _currentEnv = s; RefreshEditorEnvVars(); }
-        });
-
         var bar = new DockPanel { Height = 22 };
-        bar.Add(settingsBtn.DockLeft());
-        bar.Add(_envCombo!.DockRight());
         bar.Add(_statusLabel);
         return new Border { Height = 22, Background = Color.FromRgb(0x25, 0x25, 0x26), Child = bar };
     }
@@ -369,23 +447,6 @@ public sealed class MainWindow : NativeCustomWindow
         };
     }
 
-    private void RebuildEnvCombo()
-    {
-        if (_envCombo is null) return;
-        var envs = _workspace.AvailableEnvironments;
-        if (envs.Count == 0)
-        {
-            _envCombo.Items(["无环境"]).SelectedIndex(0);
-            _currentEnv = string.Empty;
-        }
-        else
-        {
-            _envCombo.Items(envs.ToArray()).SelectedIndex(0);
-            _currentEnv = envs[0];
-        }
-        RefreshEditorEnvVars();
-    }
-
     private void RefreshEditorEnvVars()
     {
         if (_editor is null || string.IsNullOrEmpty(_editor.CurrentFilePath) || string.IsNullOrEmpty(_currentEnv)) return;
@@ -397,15 +458,12 @@ public sealed class MainWindow : NativeCustomWindow
         catch { }
     }
 
-    private void CycleEnv()
+    // P8: 环境面板选中事件
+    private void OnEnvSelected(string envName)
     {
-        var envs = _workspace.AvailableEnvironments;
-        if (envs.Count == 0) return;
-        var idx = 0;
-        for (var i = 0; i < envs.Count; i++)
-            if (envs[i] == _currentEnv) { idx = i; break; }
-        _currentEnv = envs[(idx + 1) % envs.Count];
-        _envBtn?.Content(_currentEnv + " ▾", false);
+        _currentEnv = envName;
+        _sidebar.SetCurrentEnv(envName);
+        RefreshEditorEnvVars();
     }
     // ── 菜单栏 ───────────────────────────────────────────────────
     private UIElement BuildMenuBar()
@@ -457,10 +515,24 @@ public sealed class MainWindow : NativeCustomWindow
         _currentEnv = _workspace.AvailableEnvironments.Count > 0
             ? _workspace.AvailableEnvironments[0]
             : string.Empty;
-        RebuildEnvCombo();
+
+        // P9: 记录最近工作区
+        RecentWorkspacesService.Add(path);
+
+        // 订阅 SidebarView.EnvSelected 事件
+        _sidebar.EnvSelected -= OnEnvSelected;
+        _sidebar.EnvSelected += OnEnvSelected;
+
+        // 订阅 WorkspacePanelView.WorkspaceSelected 事件
+        _workspacePanel.WorkspaceSelected -= LoadWorkspace;
+        _workspacePanel.WorkspaceSelected += LoadWorkspace;
+
         // 关闭已开启的标签
         while (_tabs.Count > 0) CloseTab(0);
         Content = BuildWorkspaceLayout();
+
+        // 初始化环境显示
+        _sidebar.SetCurrentEnv(_currentEnv);
     }
 
     private void OnWorkspaceFilesChanged()
