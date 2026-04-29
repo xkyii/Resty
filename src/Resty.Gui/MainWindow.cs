@@ -356,7 +356,7 @@ public sealed class MainWindow : NativeCustomWindow
 
         void SetActive(int idx)
         {
-            // 不在被选中项显示左侧蓝色指示条（按设计需求）
+            // 仅保留左侧竖线作为选中态，不额外显示蓝色边框。
             collectionLine.Background = idx == 0 ? Accent : Color.Transparent;
             historyLine.Background    = idx == 1 ? Accent : Color.Transparent;
             workspaceLine.Background  = idx == 2 ? Accent : Color.Transparent;
@@ -409,10 +409,16 @@ public sealed class MainWindow : NativeCustomWindow
             VerticalAlignment = VerticalAlignment.Center,
         };
         var row = new DockPanel();
+        row.Add(indicator.DockLeft());
         row.Add(lbl);
-        row.Add(indicator.DockRight());
 
-        var btn = new Button { Width = 40, Height = 40, Padding = new Thickness(0) };
+        var btn = new Button
+        {
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+            BorderThickness = 0,
+        };
         btn.Content(row as Element).Background(Color.Transparent).Foreground(Color.FromRgb(0x85, 0x85, 0x85));
         // 隐藏默认边框以尽量避免系统焦点样式干扰
         try { btn.BorderBrush = Color.Transparent; } catch { }
