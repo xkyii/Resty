@@ -24,23 +24,19 @@ public sealed class RequestEditorView
 
     private static readonly string[] Methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 
-    // ── 模式 ─────────────────────────────────────────────────────
-    private bool _isStructuredMode = false;
-
     // ── 工具栏控件 ───────────────────────────────────────────────
     private readonly ComboBox _methodCombo;
     private readonly TextBox  _urlBox;
     private readonly Button   _sendBtn;
-    private readonly Button   _modeTextBtn;
-    private readonly Button   _modeStructBtn;
 
     // ── 内容区 ───────────────────────────────────────────────────
     private readonly Border            _contentArea;
     private readonly MultiLineTextBox  _textEditor;
-    private readonly UIElement         _structuredPanel;
+    private readonly TabControl        _tabControl;
     // F5 语法提示栏
     private readonly TextBlock _syntaxHintLabel;
     private readonly Border    _textEditorWithHint; // DockPanel with hint + editor
+    private bool _isRawTabActive = false; // 当前是否显示原文 Tab
     // F6 URL 变量预览
     private readonly TextBlock _urlPreviewLabel;
     private readonly Border    _urlPreviewRow;
@@ -183,18 +179,7 @@ public sealed class RequestEditorView
             .Foreground(Color.White)
             .OnClick(OnSendClicked);
 
-        // ── 模式切换按钮 ──────────────────────────────────────────
-        _modeTextBtn = new Button { Height = 26, Width = 52 };
-        _modeTextBtn.Content("文本", false).FontSize(12)
-            .Background(BgSurface).Foreground(TextPri)
-            .OnClick(SwitchToTextMode);
-
-        _modeStructBtn = new Button { Height = 26, Width = 60 };
-        _modeStructBtn.Content("结构化", false).FontSize(12)
-            .Background(Color.Transparent).Foreground(TextSec)
-            .OnClick(SwitchToStructuredMode);
-
-        // ── 工具栏（单行：方法 + URL + 模式切换 + 发送）────────────
+        // ── 工具栏（单行：方法 + URL + 发送）────────────
         var urlRow = new DockPanel { Height = 44 };
         urlRow.Add(new Border { Width = 8 }.DockLeft());
         urlRow.Add(_methodCombo.DockLeft());
@@ -202,10 +187,6 @@ public sealed class RequestEditorView
         urlRow.Add(_dirtyLabel.DockLeft());
         urlRow.Add(new Border { Width = 8 }.DockRight());
         urlRow.Add(_sendBtn.DockRight());
-        urlRow.Add(new Border { Width = 4 }.DockRight());
-        urlRow.Add(_modeStructBtn.DockRight());
-        urlRow.Add(_modeTextBtn.DockRight());
-        urlRow.Add(new Border { Width = 4 }.DockRight());
         urlRow.Add(_urlBox);
 
         // ── URL 变量预览行（F6）──────────────────────────────────
@@ -410,15 +391,24 @@ public sealed class RequestEditorView
         authPanel.Add(_authContent);
 
         var tabControl = new TabControl();
+        var rawTabItem = new TabItem().Header("原文", false).Content(_textEditorWithHint);
         tabControl.TabItems(
             new TabItem().Header("Params",     false).Content(paramsScroll),
             new TabItem().Header("Headers",    false).Content(headersScroll),
             new TabItem().Header("Auth",       false).Content(new Border { Background = BgBase, Child = authPanel }),
             new TabItem().Header("Body",       false).Content(new Border { Background = BgBase, Child = bodyContent }),
-            new TabItem().Header("Assertions", false).Content(assertScroll)
+            new TabItem().Header("Assertions", false).Content(assertScroll),
+            rawTabItem
         );
-
-        _structuredPanel = tabControl;
+        // 切换到"原文"Tab 时同步结构化→文本；切走时同步文本→结构化
+        tabControl.OnSelectionChanged(o =>
+        {
+            bool nowRaw = ReferenceEquals(o, rawTabItem);
+            if (nowRaw && !_isRawTabActive) SyncStructuredToText();
+            else if (!nowRaw && _isRawTabActive) SyncTextToStructured();
+            _isRawTabActive = nowRaw;
+        });
+        _tabControl = tabControl;
 
         // ── 空状态覆盖层 ──────────────────────────────────────────
         _emptyOverlay = new Border
@@ -476,7 +466,7 @@ public sealed class RequestEditorView
         if (!_hasLoaded)
         {
             _hasLoaded = true;
-            _contentArea.Child = _isStructuredMode ? _structuredPanel : _textEditorWithHint;
+            _contentArea.Child = _tabControl;
         }
     }
 
@@ -485,9 +475,8 @@ public sealed class RequestEditorView
     {
         if (string.IsNullOrEmpty(CurrentFilePath)) return;
         HttpRequestDefinition req;
-        if (_isStructuredMode)
-            req = BuildDefinitionFromStructured();
-        else
+        // 若当前在"原文"Tab，从文本解析；否则从结构化表单构建
+        if (_isRawTabActive)
         {
             var raw = _textEditor.Text;
             if (string.IsNullOrWhiteSpace(raw)) return;
@@ -499,30 +488,12 @@ public sealed class RequestEditorView
             }
             catch { return; }
         }
+        else
+        {
+            req = BuildDefinitionFromStructured();
+        }
         SaveRequested?.Invoke(CurrentFilePath, req);
         SetDirty(false);
-    }
-
-    // ── 模式切换 ─────────────────────────────────────────────────
-
-    private void SwitchToTextMode()
-    {
-        if (!_isStructuredMode) return;
-        SyncStructuredToText();
-        _isStructuredMode = false;
-        _modeTextBtn.Background(BgSurface).Foreground(TextPri);
-        _modeStructBtn.Background(Color.Transparent).Foreground(TextSec);
-        if (_hasLoaded) _contentArea.Child = _textEditorWithHint;
-    }
-
-    private void SwitchToStructuredMode()
-    {
-        if (_isStructuredMode) return;
-        SyncTextToStructured();
-        _isStructuredMode = true;
-        _modeStructBtn.Background(BgSurface).Foreground(TextPri);
-        _modeTextBtn.Background(Color.Transparent).Foreground(TextSec);
-        if (_hasLoaded) _contentArea.Child = _structuredPanel;
     }
 
     // ── 同步逻辑 ─────────────────────────────────────────────────
@@ -840,11 +811,7 @@ public sealed class RequestEditorView
     private void OnSendClicked()
     {
         HttpRequestDefinition req;
-        if (_isStructuredMode)
-        {
-            req = BuildDefinitionFromStructured();
-        }
-        else
+        if (_isRawTabActive)
         {
             var raw = _textEditor.Text;
             if (string.IsNullOrWhiteSpace(raw)) return;
@@ -855,6 +822,10 @@ public sealed class RequestEditorView
                 req = fileDef.Requests[0];
             }
             catch { return; }
+        }
+        else
+        {
+            req = BuildDefinitionFromStructured();
         }
         SendRequested?.Invoke(req);
     }
