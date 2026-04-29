@@ -87,7 +87,7 @@ public sealed class MainWindow : NativeCustomWindow
     // ── 编辑器事件绑定 ─────────────────────────────────────
     private void WireEditorEvents(RequestEditorView editor)
     {
-        editor.CancelRequested = () => _currentCts?.Cancel();
+        editor.CancelRequested = () => { try { _currentCts?.Cancel(); } catch (ObjectDisposedException) { _currentCts = null; } };
         editor.SaveRequested = (filePath, def) => _workspace.SaveRequest(filePath, def);
         editor.SendRequested = req =>
         {
@@ -134,6 +134,8 @@ public sealed class MainWindow : NativeCustomWindow
                 finally
                 {
                     cts.Dispose();
+                    // 避免下次 Cancel() 作用在已销毁的 CTS 上（ObjectDisposedException）
+                    if (ReferenceEquals(_currentCts, cts)) _currentCts = null;
                 }
             });
         };
@@ -471,12 +473,25 @@ public sealed class MainWindow : NativeCustomWindow
         WireEditorEvents(editor);
         editor.SetFilePath(file.FilePath);
 
-        // 创建标签按钮
+        // 创建标签按钮（含关闭 ✕）
         var title = req.Name.Length > 20 ? req.Name[..20] + "…" : req.Name;
         var newIdx = _tabs.Count;
-        var tabBtn = new Button { Height = 34, Padding = new Thickness(12, 0) };
-        tabBtn.Content(title, false).FontSize(12).Background(Color.Transparent).Foreground(TextSec);
+
+        var titleBlock = new TextBlock { Text = title, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+        var closeBtn = new Button { Width = 18, Height = 18, Padding = new Thickness(0), IsVisible = false };
+        closeBtn.Content("✕", false).FontSize(9).Background(Color.Transparent).Foreground(TextSec);
+        closeBtn.Click += () => CloseTab(_tabs.FindIndex(t => t.Key == key));
+
+        var tabContent = new DockPanel { Margin = new Thickness(12, 0, 6, 0) };
+        tabContent.Add(closeBtn.DockRight());
+        tabContent.Add(new Border { Width = 6 }.DockRight());
+        tabContent.Add(titleBlock);
+
+        var tabBtn = new Button { Height = 34, Padding = new Thickness(0) };
+        tabBtn.Content(tabContent as Element).Background(Color.Transparent).Foreground(TextSec);
         tabBtn.Click += () => ActivateTab(_tabs.FindIndex(t => t.Key == key));
+        tabBtn.MouseEnter += () => closeBtn.IsVisible = true;
+        tabBtn.MouseLeave += () => closeBtn.IsVisible = false;
 
         var tab = new EditorTab(key, file, req, editor, tabBtn);
         _tabs.Add(tab);
