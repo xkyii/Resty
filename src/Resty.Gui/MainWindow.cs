@@ -70,7 +70,7 @@ public sealed class MainWindow : NativeCustomWindow
 
         // ── 主区容器（层次：_mainArea > DockPanel > _tabBar + _editorArea）──
         _tabBar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
-        _editorArea = new Border { Background = BgBase, Child = BuildWelcomeView() };
+        _editorArea = new Border { Background = BgBase, Child = BuildNoRequestView() };
 
         var tabContainer = new DockPanel();
         tabContainer.Add(new Border { Height = 35, Background = BgPanel, Child = _tabBar }.DockTop());
@@ -165,7 +165,7 @@ public sealed class MainWindow : NativeCustomWindow
         {
             _activeTabIdx = -1;
             _editor = null;
-            _editorArea.Child = BuildWelcomeView();
+            _editorArea.Child = BuildNoRequestView();
         }
         else
         {
@@ -219,6 +219,20 @@ public sealed class MainWindow : NativeCustomWindow
             Child = sp,
         };
     }
+
+    /// <summary>工作区已打开但尚未选择请求时，编辑区显示的占位视图。</summary>
+    private UIElement BuildNoRequestView() => new Border
+    {
+        Background = BgBase,
+        Child = new TextBlock
+        {
+            Text      = "← 从左侧边栏选择一个请求",
+            FontSize  = 14,
+            Foreground = TextSec,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment   = VerticalAlignment.Center,
+        },
+    };
 
     // ── 主布局（工作区加载后）────────────────────────────────────
     private UIElement BuildWorkspaceLayout()
