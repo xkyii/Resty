@@ -391,7 +391,7 @@ public sealed class RequestEditorView
         authPanel.Add(_authContent);
 
         var tabControl = new TabControl();
-        var rawTabItem = new TabItem().Header("原文", false).Content(_textEditorWithHint);
+        var rawTabItem = new TabItem().Header("Raw", false).Content(_textEditorWithHint);
         tabControl.TabItems(
             new TabItem().Header("Params",     false).Content(paramsScroll),
             new TabItem().Header("Headers",    false).Content(headersScroll),

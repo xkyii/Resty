@@ -147,6 +147,15 @@ public sealed class WorkspaceService : IDisposable
                 newBlock.Add(string.Empty);
                 newBlock.Add(def.Body);
             }
+            // Assertions
+            if (def.Assertions.Count > 0)
+            {
+                newBlock.Add(string.Empty);
+                newBlock.Add("> {%");
+                foreach (var a in def.Assertions)
+                    newBlock.Add(a.RawText);
+                newBlock.Add("%}");
+            }
             newBlock.Add(string.Empty); // trailing blank
 
             // 替换原始行
