@@ -356,10 +356,11 @@ public sealed class MainWindow : NativeCustomWindow
 
         void SetActive(int idx)
         {
-            collectionLine.Background = idx == 0 ? Accent : Color.Transparent;
-            historyLine.Background    = idx == 1 ? Accent : Color.Transparent;
-            workspaceLine.Background  = idx == 2 ? Accent : Color.Transparent;
-            settingsLine.Background   = idx == 3 ? Accent : Color.Transparent;
+            // 不在被选中项显示左侧蓝色指示条（按设计需求）
+            collectionLine.Background = Color.Transparent;
+            historyLine.Background    = Color.Transparent;
+            workspaceLine.Background  = Color.Transparent;
+            settingsLine.Background   = Color.Transparent;
 
             collectionBtn.Foreground(idx == 0 ? Color.White : TextSec);
             historyBtn.Foreground(idx == 1 ? Color.White : TextSec);
@@ -413,6 +414,8 @@ public sealed class MainWindow : NativeCustomWindow
 
         var btn = new Button { Width = 40, Height = 40, Padding = new Thickness(0) };
         btn.Content(row as Element).Background(Color.Transparent).Foreground(Color.FromRgb(0x85, 0x85, 0x85));
+        // 隐藏默认边框以尽量避免系统焦点样式干扰
+        try { btn.BorderBrush = Color.Transparent; } catch { }
         btn.Click      += onClick;
         btn.MouseEnter += () => btn.Background(Color.FromRgb(0x45, 0x45, 0x45));
         btn.MouseLeave += () => btn.Background(Color.Transparent);
