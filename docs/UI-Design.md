@@ -1083,31 +1083,86 @@ Spinner 20px，动画旋转，文字 13px `#858585`。
 - **四 Tab 顺序**：Params → Headers → Body → Assertions，与 §6.2 设计规格一致
 - `HttpRequestDefinition.Assertions`（`List<AssertionRule>`）由 `AssertionParser.ParseBlock` 填充，保持与 CLI 工具相同的解析路径
 
-*最后更新：2026-04-28*
+*最后更新：2026-04-29*
 
 ---
 
-## 十六、G4 收尾 + 后续功能实施计划
+## 十六、G4 收尾 + 后续功能实施计划（已完成）
 
-### 分级
+### G4 收尾（5 项）— ✅ 全部完成
 
-#### G4 收尾（5 项）
+| # | 功能 | 状态 |
+|---|------|------|
+| G4-1 | **取消按钮** — 发送中变 `■ 取消`，`CancellationToken` 中止请求 | ✅ |
+| G4-2 | **状态栏响应摘要** — 状态码（颜色）+ 耗时 + 大小 | ✅ |
+| G4-3 | **Body Tab 子切换** — 原始 / JSON 格式化 | ✅ |
+| G4-4 | **JSON pretty-print** | ✅ |
+| G4-5 | **环境下拉 ComboBox** | ✅ |
 
-| # | 功能 | 文件 | 状态 |
-|---|------|------|------|
-| G4-1 | **取消按钮** — 发送中 `▶ 发送` 变为 `■ 取消`，`CancellationToken` 中止请求 | `RequestEditorView`, `MainWindow` | ⬜ |
-| G4-2 | **状态栏响应摘要** — 完成后显示状态码（颜色）+ 耗时 + 大小 | `MainWindow` | ⬜ |
-| G4-3 | **Body Tab 子切换** — `[原始 \| JSON 树]` 按钮，非 JSON 时 JSON 树置灰 | `ResponsePanelView` | ⬜ |
-| G4-4 | **JSON 树视图** — 可折叠展开，键名/类型/值分色 | `ResponsePanelView` | ⬜ |
-| G4-5 | **环境下拉菜单** — 点击弹出 Menu 选择，替代循环切换 | `MainWindow` | ⬜ |
+### 后续功能（6 项）— ✅ 全部完成
 
-#### 后续功能（6 项）
+| # | 功能 | 状态 |
+|---|------|------|
+| F1 | **Header/Params 行勾选框** | ✅ |
+| F2 | **写回 .http 文件 + dirty `●` 标记** | ✅ |
+| F3 | **多标签请求编辑区 + ✕ 关闭（hover 显示）** | ✅ |
+| F4 | **侧边栏 FileSystemWatcher** | ✅ |
+| F5 | **语法提示栏（降级实现）** | ✅ |
+| F6 | **`{{var}}` URL 预览** | ✅ |
 
-| # | 功能 | 文件 | 状态 |
-|---|------|------|------|
-| F1 | **Header/Params 行勾选框** — 勾选控制该行启用/禁用 | `RequestEditorView` | ⬜ |
-| F2 | **写回 .http 文件** — Ctrl+S 保存，dirty `●` 标记 | `RequestEditorView`, `MainWindow` | ⬜ |
-| F3 | **多标签请求编辑区** — Tab 栏同时打开多个请求 | `MainWindow`, 新 `RequestTabBarView` | ⬜ |
-| F4 | **侧边栏右键菜单 + 文件监听** — 打开/刷新，FileSystemWatcher | `SidebarView`, `WorkspaceService` | ⬜ |
-| F5 | **文本模式语法高亮** — HTTP 方法、Header、`{{var}}`、断言块着色 | MewUI 限制，降级为关键词加粗 | ⬜ |
-| F6 | **`{{var}}` 工具提示** — 悬停预览解析值，未解析变量警告色 | `RequestEditorView` | ⬜ |
+---
+
+## 十七、第二阶段需求规划
+
+*最后更新：2026-04-29*
+
+### P 系列功能列表
+
+| # | 需求 | 主要文件 | 状态 |
+|---|------|---------|------|
+| P1 | **图标** — 标题栏 + 任务栏共用 `.ico` | `Resty.Gui.csproj`, `MainWindow` | ✅ |
+| P2 | **去掉"运行"菜单** | `MainWindow` | ✅ |
+| P3 | **标签栏 dirty `●` 标记** — Tab 标题旁显示 | `MainWindow` | ✅ |
+| P4 | **Ctrl+W 关闭当前 Tab** | `MainWindow` | ✅ |
+| P5 | **响应面板绑定到 Tab** — 每个 Tab 独立 `ResponsePanelView` | `MainWindow` | ✅ |
+| P6 | **Activity Bar**（左侧图标竖栏） — 上部切换"集合/历史/工作区"面板，下部"设置"入口 | `MainWindow`, 新 `ActivityBarView` | ⬜ |
+| P7 | **侧边栏顶部重构** — 工作区名称 + "工作区"/"环境"切换按钮；去掉状态栏环境 ComboBox | `MainWindow`, `SidebarView` | ⬜ |
+| P8 | **环境管理面板** — "环境"视图内列出环境及变量，可切换 | 新 `EnvironmentPanelView` | ⬜ |
+| P9 | **工作区管理面板** — 收藏的工作区 + 最近打开，点击切换 | 新 `WorkspacePanelView` | ⬜ |
+| P10 | **新建请求 "+" 按钮** — 标签栏右侧，选文件+输入名称 | `MainWindow` | ⬜ |
+| P11 | **请求历史面板** — 按日期分组，持久化到 `.resty/history.json` | 新 `HistoryPanelView` | ⬜ |
+| P12 | **设置页** — 超时、代理、JSON 自动格式化等 | 新 `SettingsView` | ⬜ |
+
+### 实施批次
+
+#### 第一批（P1–P5）快速独立项
+- P1 图标
+- P2 去掉"运行"菜单
+- P3 标签栏 dirty 标记
+- P4 Ctrl+W 关闭 Tab
+- P5 响应面板绑定到 Tab
+
+#### 第二批（P6–P9）布局重构
+- P6 Activity Bar 框架（空壳 + 三个入口）
+- P7 侧边栏顶部重构 + P8 环境管理面板（同步）
+- P9 工作区管理面板
+
+#### 第三批（P10–P12）新功能
+- P10 新建请求 "+"
+- P11 请求历史
+- P12 设置页
+
+### 侧边栏顶部设计（P7）
+
+```
+┌─────────────────────────────┐
+│ [工作区名称]          [···] │  ← 工作区名 + 更多菜单
+│ [工作区]  [环境]            │  ← 切换按钮（激活态下划线）
+├─────────────────────────────┤
+│  文件树（工作区模式）        │
+│  or 环境列表（环境模式）     │
+└─────────────────────────────┘
+```
+
+- 环境仅在工作区打开时可用，与工作区绑定
+- 状态栏底部的环境 ComboBox 删除

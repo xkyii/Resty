@@ -68,6 +68,7 @@ public sealed class RequestEditorView
     public Action<string, HttpRequestDefinition>? SaveRequested; // (filePath, def)
     public string? CurrentFilePath { get; private set; }
     public bool IsDirty { get; private set; }
+    public event Action<bool>? DirtyChanged; // true = 变脏, false = 已保存
 
     private readonly TextBlock _dirtyLabel;
     /// <summary>切换发送/取消按钮状态。</summary>
@@ -97,6 +98,7 @@ public sealed class RequestEditorView
     {
         IsDirty = dirty;
         _dirtyLabel.Text = dirty ? "●" : string.Empty;
+        DirtyChanged?.Invoke(dirty);
     }
 
     /// <summary>F5: 解析文本内容并更新语法提示栏。</summary>
@@ -184,7 +186,6 @@ public sealed class RequestEditorView
         urlRow.Add(new Border { Width = 8 }.DockLeft());
         urlRow.Add(_methodCombo.DockLeft());
         urlRow.Add(new Border { Width = 8 }.DockLeft());
-        urlRow.Add(_dirtyLabel.DockLeft());
         urlRow.Add(new Border { Width = 8 }.DockRight());
         urlRow.Add(_sendBtn.DockRight());
         urlRow.Add(_urlBox);

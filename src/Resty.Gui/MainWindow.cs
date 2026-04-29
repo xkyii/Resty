@@ -33,15 +33,15 @@ public sealed class MainWindow : NativeCustomWindow
 
     // G2 组件
     private RequestEditorView? _editor; // 当前激活的编辑器
-    private readonly ResponsePanelView  _responsePanel = new();
-    private readonly HttpRequestExecutor _executor     = new(timeoutMs: 30_000);
+    private readonly HttpRequestExecutor _executor = new(timeoutMs: 30_000);
 
     // 主区容器（切换欢迎页 ↔ 编辑器）
     private readonly Border _mainArea;
     // 多标签支持
     private readonly StackPanel _tabBar;
     private readonly Border     _editorArea;
-    private sealed record EditorTab(string Key, HttpFileNode File, RequestNode Request, RequestEditorView Editor, Button Btn);
+    private readonly Border     _responseArea;  // P5: 每个 Tab 独立响应面板
+    private sealed record EditorTab(string Key, HttpFileNode File, RequestNode Request, RequestEditorView Editor, Button Btn, TextBlock TitleBlock, ResponsePanelView ResponsePanel);
     private readonly List<EditorTab> _tabs = [];
     private int _activeTabIdx = -1;
     private string _currentEnv = string.Empty;
@@ -59,10 +59,28 @@ public sealed class MainWindow : NativeCustomWindow
         _workspaceName.Changed += () => this.Title = _workspaceName.Value;
         this.Title = _workspaceName.Value;
 
+        // 窗口图标（标题栏 + 任务栏）
+        var icoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "resty.ico");
+        if (File.Exists(icoPath))
+            Icon = IconSource.FromFile(icoPath);
+
         // 背景色
         Background = BgPanel;
 
-        // ── 标题栏左：MenuBar ─────────────────────────────────────
+        // ── 标题栏左：图标 + MenuBar ──────────────────────────────
+        var icoImgPath = Path.Combine(AppContext.BaseDirectory, "Assets", "resty.ico");
+        if (File.Exists(icoImgPath))
+        {
+            var appIcon = new Image
+            {
+                Source = ImageSource.FromFile(icoImgPath),
+                Width  = 18,
+                Height = 18,
+                Margin = new Thickness(8, 0, 4, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            TitleBarLeft.Add(appIcon);
+        }
         TitleBarLeft.Add(BuildMenuBar());
 
         // ── 侧边栏事件 ───────────────────────────────────────────
@@ -71,12 +89,20 @@ public sealed class MainWindow : NativeCustomWindow
         // ── 主区容器（层次：_mainArea > DockPanel > _tabBar + _editorArea）──
         _tabBar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
         _editorArea = new Border { Background = BgBase, Child = BuildNoRequestView() };
+        _responseArea = new Border { Background = BgBase, Child = new ResponsePanelView().RootElement };
 
         var tabContainer = new DockPanel();
         tabContainer.Add(new Border { Height = 35, Background = BgPanel, Child = _tabBar }.DockTop());
         tabContainer.Add(_editorArea);
 
         _mainArea = new Border { Child = tabContainer };
+
+        // P4: Ctrl+W 关闭当前 Tab
+        this.KeyDown += e =>
+        {
+            if (e.Key == Key.W && e.Modifiers == ModifierKeys.Primary)
+                CloseTab(_activeTabIdx);
+        };
 
         // 初始布局：不把 _mainArea 直接作为 Content，
         // 避免首次 LoadWorkspace 时 SplitPanel 接管 _mainArea 产生父节点冲突。
@@ -85,7 +111,7 @@ public sealed class MainWindow : NativeCustomWindow
     }
 
     // ── 编辑器事件绑定 ─────────────────────────────────────
-    private void WireEditorEvents(RequestEditorView editor)
+    private void WireEditorEvents(RequestEditorView editor, ResponsePanelView responsePanel)
     {
         editor.CancelRequested = () => { try { _currentCts?.Cancel(); } catch (ObjectDisposedException) { _currentCts = null; } };
         editor.SaveRequested = (filePath, def) => _workspace.SaveRequest(filePath, def);
@@ -95,10 +121,11 @@ public sealed class MainWindow : NativeCustomWindow
             var envName       = _currentEnv;
             var workspacePath = _workspace.WorkspacePath;
             var capturedEditor = editor;
+            var capturedPanel  = responsePanel;
             _currentCts?.Cancel();
             _currentCts = new CancellationTokenSource();
             var cts = _currentCts;
-            _responsePanel.ShowLoading();
+            capturedPanel.ShowLoading();
             capturedEditor.SetSendingState(true);
             _ = System.Threading.Tasks.Task.Run(async () =>
             {
@@ -118,23 +145,22 @@ public sealed class MainWindow : NativeCustomWindow
                     sc?.Post(_ =>
                     {
                         capturedEditor.SetSendingState(false);
-                        _responsePanel.ShowResult(result, assertions);
+                        capturedPanel.ShowResult(result, assertions);
                         UpdateStatusBar(result.StatusCode, result.ElapsedMs,
                             System.Text.Encoding.UTF8.GetByteCount(result.Body));
                     }, null);
                 }
                 catch (OperationCanceledException)
                 {
-                    sc?.Post(_ => { capturedEditor.SetSendingState(false); _responsePanel.ShowEmpty(); }, null);
+                    sc?.Post(_ => { capturedEditor.SetSendingState(false); capturedPanel.ShowEmpty(); }, null);
                 }
                 catch (Exception ex)
                 {
-                    sc?.Post(_ => { capturedEditor.SetSendingState(false); _responsePanel.ShowError(ex.Message); }, null);
+                    sc?.Post(_ => { capturedEditor.SetSendingState(false); capturedPanel.ShowError(ex.Message); }, null);
                 }
                 finally
                 {
                     cts.Dispose();
-                    // 避免下次 Cancel() 作用在已销毁的 CTS 上（ObjectDisposedException）
                     if (ReferenceEquals(_currentCts, cts)) _currentCts = null;
                 }
             });
@@ -154,7 +180,8 @@ public sealed class MainWindow : NativeCustomWindow
         }
         _activeTabIdx = idx;
         _editor = _tabs[idx].Editor;
-        _editorArea.Child = _editor.RootElement;
+        _editorArea.Child  = _editor.RootElement;
+        _responseArea.Child = _tabs[idx].ResponsePanel.RootElement; // P5: 同步切换响应面板
     }
 
     private void CloseTab(int idx)
@@ -167,7 +194,8 @@ public sealed class MainWindow : NativeCustomWindow
         {
             _activeTabIdx = -1;
             _editor = null;
-            _editorArea.Child = BuildNoRequestView();
+            _editorArea.Child   = BuildNoRequestView();
+            _responseArea.Child = new ResponsePanelView().RootElement;
         }
         else
         {
@@ -241,17 +269,14 @@ public sealed class MainWindow : NativeCustomWindow
     {
         _sidebar.SetWorkspace(_workspace);
 
-        // 重置编辑器和响应面板状态
-        _responsePanel.ShowEmpty();
-
-        // 请求编辑区 + 响应区（上下 SplitPanel）
+        // 请求编辑区 + 响应区（上下 SplitPanel），响应区用 _responseArea（随 tab 切换）
         var editorAndResponse = new SplitPanel
         {
             Orientation      = Orientation.Vertical,
             FirstLength      = 360,
             SplitterThickness = 4,
             First            = _mainArea,
-            Second           = _responsePanel.RootElement,
+            Second           = _responseArea,
         };
 
         // 右侧主区（直接内容，无标签栏）
@@ -397,10 +422,6 @@ public sealed class MainWindow : NativeCustomWindow
         var viewMenu = new Menu()
             .Item("切换侧边栏", () => { }, shortcut: new KeyGesture(Key.B, ModifierKeys.Primary));
 
-        var runMenu = new Menu()
-            .Item("发送请求",  () => { }, shortcut: new KeyGesture(Key.Enter, ModifierKeys.Primary))
-            .Item("取消请求",  () => { });
-
         var helpMenu = new Menu()
             .Item("HTTP 语法参考…", () => { })
             .Separator()
@@ -410,7 +431,6 @@ public sealed class MainWindow : NativeCustomWindow
         bar.Background = Color.Transparent;
         bar.Add(new MenuItem("\u6587\u4ef6(_F)").Menu(fileMenu));
         bar.Add(new MenuItem("\u89c6\u56fe(_V)").Menu(viewMenu));
-        bar.Add(new MenuItem("\u8fd0\u884c(_R)").Menu(runMenu));
         bar.Add(new MenuItem("\u5e2e\u52a9(_H)").Menu(helpMenu));
         return bar;
     }
@@ -468,24 +488,30 @@ public sealed class MainWindow : NativeCustomWindow
         var def = _workspace.GetRequestDefinition(file.FilePath, req.Name);
         if (def is null) return;
 
-        // 创建新编辑器
+        // 创建新编辑器 + 独立响应面板（P5）
+        var responsePanel = new ResponsePanelView();
         var editor = new RequestEditorView();
-        WireEditorEvents(editor);
+        WireEditorEvents(editor, responsePanel);
         editor.SetFilePath(file.FilePath);
 
-        // 创建标签按钮（含关闭 ✕）
+        // 创建标签按钮（含关闭 ✕ 和 dirty 标记）
         var title = req.Name.Length > 20 ? req.Name[..20] + "…" : req.Name;
         var newIdx = _tabs.Count;
 
+        var dirtyDot  = new TextBlock { Text = string.Empty, FontSize = 10, Foreground = Color.FromRgb(0xE0, 0x6C, 0x75), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(3, 0, 0, 0) };
         var titleBlock = new TextBlock { Text = title, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
         var closeBtn = new Button { Width = 18, Height = 18, Padding = new Thickness(0), IsVisible = false };
         closeBtn.Content("✕", false).FontSize(9).Background(Color.Transparent).Foreground(TextSec);
         closeBtn.Click += () => CloseTab(_tabs.FindIndex(t => t.Key == key));
 
+        // P3: 订阅 dirty 变化，更新 tab 上的 ● 标记
+        editor.DirtyChanged += dirty => dirtyDot.Text = dirty ? "●" : string.Empty;
+
         var tabContent = new DockPanel { Margin = new Thickness(12, 0, 6, 0) };
         tabContent.Add(closeBtn.DockRight());
         tabContent.Add(new Border { Width = 6 }.DockRight());
         tabContent.Add(titleBlock);
+        tabContent.Add(dirtyDot);
 
         var tabBtn = new Button { Height = 34, Padding = new Thickness(0) };
         tabBtn.Content(tabContent as Element).Background(Color.Transparent).Foreground(TextSec);
@@ -493,12 +519,11 @@ public sealed class MainWindow : NativeCustomWindow
         tabBtn.MouseEnter += () => closeBtn.IsVisible = true;
         tabBtn.MouseLeave += () => closeBtn.IsVisible = false;
 
-        var tab = new EditorTab(key, file, req, editor, tabBtn);
+        var tab = new EditorTab(key, file, req, editor, tabBtn, titleBlock, responsePanel);
         _tabs.Add(tab);
         _tabBar.Add(tabBtn);
         ActivateTab(newIdx);   // 先把编辑器放入可视树
-        editor.Load(def);      // 再加载数据（控件已在树中，Text/SelectedIndex 赋值生效）
+        editor.Load(def);      // 再加载数据
         RefreshEditorEnvVars();
-        _responsePanel.ShowEmpty();
     }
 }
