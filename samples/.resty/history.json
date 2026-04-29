@@ -1,0 +1,18 @@
+[
+  {
+    "RequestName": "Get GitHub API",
+    "Method": "GET",
+    "Url": "https://api.github.com/zen",
+    "StatusCode": 200,
+    "ElapsedMs": 433,
+    "Timestamp": "2026-04-29T14:14:49.3655759+08:00"
+  },
+  {
+    "RequestName": "Get 163.com",
+    "Method": "GET",
+    "Url": "https://www.163.com?a=1",
+    "StatusCode": 403,
+    "ElapsedMs": 126,
+    "Timestamp": "2026-04-29T14:14:40.1977494+08:00"
+  }
+]

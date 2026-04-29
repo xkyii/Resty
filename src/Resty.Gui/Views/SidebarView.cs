@@ -58,6 +58,8 @@ public sealed class SidebarView
     public event Action<HttpFileNode, RequestNode>? RequestSelected;
     public event Action<bool>? EnvModeChanged;
     public event Action<string>? EnvActivated;
+    /// <summary>新建 .http 文件后触发，参数为文件绝对路径。</summary>
+    public event Action<string>? NewFileCreated;
 
     // ─────────────────────────────────────────────────────────────
     public SidebarView()
@@ -73,6 +75,14 @@ public sealed class SidebarView
             TextTrimming      = TextTrimming.CharacterEllipsis,
         };
         var headerRow = new DockPanel { Height = 30 };
+        // 新建文件按钮（DockRight，仅在工作区模式下使用）
+        var newFileBtn = new Button { Width = 28, Height = 28, Padding = new Thickness(0) };
+        newFileBtn.Content(new TextBlock { Text = "+", FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element)
+            .Background(Color.Transparent).Foreground(TextSec);
+        newFileBtn.MouseEnter += () => newFileBtn.Background(BgHover).Foreground(TextPri);
+        newFileBtn.MouseLeave += () => newFileBtn.Background(Color.Transparent).Foreground(TextSec);
+        newFileBtn.Click += () => { if (!_isEnvMode) BeginNewFile(); };
+        headerRow.Add(newFileBtn.DockRight());
         headerRow.Add(_workspaceNameLabel);
 
         // Tab 行
@@ -314,6 +324,50 @@ public sealed class SidebarView
     }
 
     // ── 集合树 ────────────────────────────────────────────────────
+    private void BeginNewFile()
+    {
+        if (_workspace is null) return;
+        var nameBox = new TextBox { Placeholder = "文件名 (不含 .http)…", FontSize = 12, Margin = new Thickness(12, 4, 4, 4) };
+        var confirmBtn = new Button { Width = 28, Height = 28, Padding = new Thickness(0) };
+        confirmBtn.Content(new TextBlock { Text = "✓", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element)
+            .Background(Accent).Foreground(Color.White);
+        var cancelBtn = new Button { Width = 28, Height = 28, Padding = new Thickness(0) };
+        cancelBtn.Content(new TextBlock { Text = "✕", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element)
+            .Background(Color.Transparent).Foreground(TextSec);
+        var newRow = new DockPanel { Height = 36 };
+        newRow.Add(cancelBtn.DockRight());
+        newRow.Add(confirmBtn.DockRight());
+        newRow.Add(nameBox);
+        _treeContainer.Clear();
+        _treeContainer.Add(new Border { Background = BgActive, Child = newRow });
+        confirmBtn.Click += () => { var n = nameBox.Text?.Trim() ?? string.Empty; if (!string.IsNullOrEmpty(n)) CreateHttpFile(n); };
+        cancelBtn.Click  += RefreshTree;
+    }
+
+    private void CreateHttpFile(string name)
+    {
+        if (_workspace is null) return;
+        // 清理非法字符
+        var safeName = string.Concat(name.Split(System.IO.Path.GetInvalidFileNameChars())).Trim();
+        if (string.IsNullOrEmpty(safeName)) { RefreshTree(); return; }
+        if (!safeName.EndsWith(".http", StringComparison.OrdinalIgnoreCase))
+            safeName += ".http";
+        var filePath = System.IO.Path.Combine(_workspace.WorkspacePath, safeName);
+        try
+        {
+            if (!System.IO.File.Exists(filePath))
+            {
+                // 写入默认模板（含一个示例 GET 请求）
+                System.IO.File.WriteAllText(filePath,
+                    $"### New Request{Environment.NewLine}GET https://example.com{Environment.NewLine}{Environment.NewLine}");
+            }
+            _workspace.Load(_workspace.WorkspacePath);
+            RefreshTree();
+            NewFileCreated?.Invoke(filePath);
+        }
+        catch { RefreshTree(); }
+    }
+
     private void RefreshTree()
     {
         _treeContainer.Clear();

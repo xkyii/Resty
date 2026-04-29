@@ -28,6 +28,9 @@ public sealed class RequestEditorView
     private readonly ComboBox _methodCombo;
     private readonly TextBox  _urlBox;
     private readonly Button   _sendBtn;
+    // P16 cURL 导入行
+    private readonly Border   _curlImportRow;
+    private readonly TextBox  _curlImportBox;
 
     // ── 内容区 ───────────────────────────────────────────────────
     private readonly Border            _contentArea;
@@ -182,13 +185,83 @@ public sealed class RequestEditorView
             .OnClick(OnSendClicked);
 
         // ── 工具栏（单行：方法 + URL + 发送）────────────
+        // cURL 导出按钮
+        var curlExportBtn = new Button { Width = 56, Height = 28, Padding = new Thickness(0) };
+        curlExportBtn.Content("⬇cURL", false).FontSize(10).Background(Color.Transparent).Foreground(TextSec);
+        curlExportBtn.MouseEnter += () => curlExportBtn.Background(BgSurface).Foreground(TextPri);
+        curlExportBtn.MouseLeave += () => curlExportBtn.Background(Color.Transparent).Foreground(TextSec);
+        curlExportBtn.OnClick(() =>
+        {
+            var def = GetCurrentDefinition();
+            if (def is null) return;
+            var curlStr = Resty.Core.Parsing.CurlConverter.Export(def);
+            CopyToClipboard(curlStr);
+        });
+        // cURL 导入按钮
+        var curlImportBtn = new Button { Width = 56, Height = 28, Padding = new Thickness(0) };
+        curlImportBtn.Content("⬆cURL", false).FontSize(10).Background(Color.Transparent).Foreground(TextSec);
+        curlImportBtn.MouseEnter += () => curlImportBtn.Background(BgSurface).Foreground(TextPri);
+        curlImportBtn.MouseLeave += () => curlImportBtn.Background(Color.Transparent).Foreground(TextSec);
+
         var urlRow = new DockPanel { Height = 44 };
         urlRow.Add(new Border { Width = 8 }.DockLeft());
         urlRow.Add(_methodCombo.DockLeft());
         urlRow.Add(new Border { Width = 8 }.DockLeft());
         urlRow.Add(new Border { Width = 8 }.DockRight());
         urlRow.Add(_sendBtn.DockRight());
+        urlRow.Add(new Border { Width = 4 }.DockRight());
+        urlRow.Add(curlExportBtn.DockRight());
+        urlRow.Add(curlImportBtn.DockRight());
         urlRow.Add(_urlBox);
+
+        // ── cURL 导入行（初始隐藏）───────────────────────────────
+        _curlImportBox = new TextBox
+        {
+            Placeholder = "粘贴 curl 命令…",
+            FontSize    = 12,
+            Foreground  = TextPri,
+            Background  = BgBase,
+        };
+        var curlConfirmBtn = new Button { Width = 52, Height = 28, Padding = new Thickness(0) };
+        curlConfirmBtn.Content("导入", false).FontSize(11).Background(Accent).Foreground(Color.White);
+        var curlCancelBtn = new Button { Width = 40, Height = 28, Padding = new Thickness(0) };
+        curlCancelBtn.Content("✕", false).FontSize(11).Background(Color.Transparent).Foreground(TextSec);
+        curlCancelBtn.MouseEnter += () => curlCancelBtn.Background(BgSurface);
+        curlCancelBtn.MouseLeave += () => curlCancelBtn.Background(Color.Transparent);
+
+        var curlImportInner = new DockPanel { Height = 36 };
+        curlImportInner.Add(new Border { Width = 8 }.DockLeft());
+        curlImportInner.Add(new Border { Width = 4 }.DockRight());
+        curlImportInner.Add(curlCancelBtn.DockRight());
+        curlImportInner.Add(new Border { Width = 4 }.DockRight());
+        curlImportInner.Add(curlConfirmBtn.DockRight());
+        curlImportInner.Add(_curlImportBox);
+
+        _curlImportRow = new Border
+        {
+            Background = BgPanel,
+            Padding    = new Thickness(0, 4),
+            Child      = curlImportInner,
+            IsVisible  = false,
+        };
+
+        // 事件绑定
+        curlImportBtn.OnClick(() =>
+        {
+            _curlImportRow.IsVisible = !_curlImportRow.IsVisible;
+        });
+        curlConfirmBtn.OnClick(() =>
+        {
+            var cmd = _curlImportBox.Text?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(cmd)) return;
+            if (Resty.Core.Parsing.CurlConverter.TryImport(cmd, out var imported))
+            {
+                Load(imported);
+                _curlImportRow.IsVisible = false;
+                _curlImportBox.Text = string.Empty;
+            }
+        });
+        curlCancelBtn.OnClick(() => { _curlImportRow.IsVisible = false; _curlImportBox.Text = string.Empty; });
 
         // ── URL 变量预览行（F6）──────────────────────────────────
         _urlPreviewLabel = new TextBlock { FontSize = 11 };
@@ -214,8 +287,6 @@ public sealed class RequestEditorView
             BorderBrush = BorderCol,
             Child       = toolbarInner,
         };
-
-        // ── 文本编辑器 ────────────────────────────────────────────
         _textEditor = new MultiLineTextBox
         {
             FontSize   = 13,
@@ -431,6 +502,7 @@ public sealed class RequestEditorView
         // ── 根布局 ────────────────────────────────────────────────
         _root = new DockPanel();
         _root.Add(toolbarBorder.DockTop());
+        _root.Add(_curlImportRow.DockTop());
         _root.Add(_urlPreviewRow.DockTop());
         _root.Add(_contentArea);
 
@@ -495,6 +567,24 @@ public sealed class RequestEditorView
         }
         SaveRequested?.Invoke(CurrentFilePath, req);
         SetDirty(false);
+    }
+
+    /// <summary>获取当前编辑器内容快照（用于标签关闭时缓存状态）。</summary>
+    public HttpRequestDefinition? GetCurrentDefinition()
+    {
+        if (!_hasLoaded) return null;
+        try
+        {
+            if (_isRawTabActive)
+            {
+                var raw = _textEditor.Text;
+                if (string.IsNullOrWhiteSpace(raw)) return null;
+                var fd = HttpFileParser.ParseContent(raw);
+                return fd.Requests.Count > 0 ? fd.Requests[0] : null;
+            }
+            return BuildDefinitionFromStructured();
+        }
+        catch { return null; }
     }
 
     // ── 同步逻辑 ─────────────────────────────────────────────────
@@ -862,5 +952,24 @@ public sealed class RequestEditorView
             sb.AppendLine("%}");
         }
         return sb.ToString();
+    }
+
+    private static void CopyToClipboard(string text)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("cmd", "/c clip")
+            {
+                RedirectStandardInput = true,
+                UseShellExecute       = false,
+                CreateNoWindow        = true,
+            };
+            using var proc = System.Diagnostics.Process.Start(psi);
+            if (proc is null) return;
+            proc.StandardInput.Write(text);
+            proc.StandardInput.Close();
+            proc.WaitForExit(2000);
+        }
+        catch { }
     }
 }

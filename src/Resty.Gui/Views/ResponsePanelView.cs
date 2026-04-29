@@ -37,10 +37,13 @@ public sealed class ResponsePanelView
     // Body 子切换
     private bool _bodyShowTree = false;
     private string _lastBodyJson = string.Empty;
+    private string _lastBodyRaw  = string.Empty;
     private readonly Button _bodyRawBtn;
     private readonly Button _bodyTreeBtn;
+    private readonly Button _bodyCopyBtn;
     private readonly Border _bodyContentArea;  // 切换 raw 与 tree
     private readonly Border _bodyTreeScroll;   // 树视图容器
+    private readonly Border _bodyColorScroll;  // JSON 着色原始视图容器
 
     // ── 公共接口 ─────────────────────────────────────────────────
     /// <summary>根元素，放入父布局。</summary>
@@ -115,6 +118,12 @@ public sealed class ResponsePanelView
         _bodyTreeBtn.Content("JSON 树", false).FontSize(11)
             .Background(Color.Transparent).Foreground(TextSec)
             .OnClick(() => SetBodyView(true));
+        _bodyCopyBtn = new Button { Height = 22, Width = 44 };
+        _bodyCopyBtn.Content("复制", false).FontSize(11)
+            .Background(Color.Transparent).Foreground(TextSec)
+            .OnClick(() => CopyToClipboard(_lastBodyRaw));
+        _bodyCopyBtn.MouseEnter += () => _bodyCopyBtn.Background(Color.FromRgb(0x37, 0x37, 0x38)).Foreground(TextPri);
+        _bodyCopyBtn.MouseLeave += () => _bodyCopyBtn.Background(Color.Transparent).Foreground(TextSec);
 
         var bodySubToolbar = new StackPanel
         {
@@ -124,9 +133,11 @@ public sealed class ResponsePanelView
         };
         bodySubToolbar.Add(_bodyRawBtn);
         bodySubToolbar.Add(_bodyTreeBtn);
+        bodySubToolbar.Add(_bodyCopyBtn);
 
         _bodyContentArea = new Border { Background = BgBase, Child = _bodyText };
         _bodyTreeScroll  = new Border { Background = BgBase };
+        _bodyColorScroll = new Border { Background = BgBase };
 
         var bodyTabContent = new DockPanel();
         bodyTabContent.Add(bodySubToolbar.DockTop());
@@ -185,6 +196,7 @@ public sealed class ResponsePanelView
             }
             catch { /* 非 JSON，原样显示 */ }
         }
+        _lastBodyRaw  = displayBody ?? string.Empty;
         _lastBodyJson = isJson ? displayBody! : string.Empty;
         _bodyText.Text = string.IsNullOrEmpty(displayBody) ? "(空响应体)" : displayBody;
 
@@ -192,6 +204,10 @@ public sealed class ResponsePanelView
         if (isJson)
         {
             _bodyTreeBtn.Foreground(TextSec).Background(Color.Transparent);
+            // JSON：原始视图使用着色渲染
+            RefreshColorJson();
+            _bodyContentArea.Child = _bodyColorScroll;
+            _bodyRawBtn.Background(Color.FromRgb(0x37, 0x37, 0x38)).Foreground(TextPri);
         }
         else
         {
@@ -305,9 +321,116 @@ public sealed class ResponsePanelView
         }
         else
         {
-            _bodyContentArea.Child = _bodyText;
+            // 原始视图：JSON 用着色，非 JSON 用 MultiLineTextBox
+            if (!string.IsNullOrEmpty(_lastBodyJson))
+            {
+                RefreshColorJson();
+                _bodyContentArea.Child = _bodyColorScroll;
+            }
+            else
+            {
+                _bodyContentArea.Child = _bodyText;
+            }
             _bodyRawBtn.Background(Color.FromRgb(0x37, 0x37, 0x38)).Foreground(TextPri);
             _bodyTreeBtn.Background(Color.Transparent).Foreground(TextSec);
+        }
+    }
+
+    private void RefreshColorJson()
+    {
+        try
+        {
+            var linesPanel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(12, 8) };
+            RenderColorizedJsonLines(linesPanel, _lastBodyJson);
+            var scroll = new ScrollViewer { VerticalScroll = ScrollMode.Auto, HorizontalScroll = ScrollMode.Auto, Content = linesPanel };
+            _bodyColorScroll.Child = scroll;
+        }
+        catch
+        {
+            _bodyColorScroll.Child = BuildCenteredLabel("JSON 渲染失败", TextSec, 12);
+        }
+    }
+
+    private static void RenderColorizedJsonLines(StackPanel parent, string json)
+    {
+        // 逐行着色，使用正则识别 key/value 对
+        var keyRe   = new System.Text.RegularExpressions.Regex(@"^(\s*)(""(?:[^""\\]|\\.)*"")(\s*:\s*)(.*)$");
+        var strRe   = new System.Text.RegularExpressions.Regex(@"^(""(?:[^""\\]|\\.)*"",?)$");
+        var numRe   = new System.Text.RegularExpressions.Regex(@"^(-?\d[\d.eE+\-]*,?)$");
+        var boolRe  = new System.Text.RegularExpressions.Regex(@"^(true|false|null),?$");
+
+        static Color KeyColor()  => Color.FromRgb(0x9C, 0xDC, 0xFE);
+        static Color StrColor()  => Color.FromRgb(0xCE, 0x91, 0x78);
+        static Color NumColor()  => Color.FromRgb(0xB5, 0xCE, 0xA8);
+        static Color BoolColor() => Color.FromRgb(0x56, 0x9C, 0xD6);
+        static Color PunColor()  => Color.FromRgb(0x85, 0x85, 0x85);
+        static Color TextPriCol()=> Color.FromRgb(0xCC, 0xCC, 0xCC);
+
+        void AddSpan(StackPanel row, string text, Color color, bool mono = false) =>
+            row.Add(new TextBlock
+            {
+                Text      = text,
+                FontSize  = 12,
+                Foreground = color,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+
+        foreach (var rawLine in json.Split('\n'))
+        {
+            var line = rawLine.TrimEnd('\r');
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+
+            var km = keyRe.Match(line);
+            if (km.Success)
+            {
+                // indent
+                if (km.Groups[1].Length > 0)
+                    AddSpan(row, km.Groups[1].Value, PunColor());
+                // key (quoted string)
+                AddSpan(row, km.Groups[2].Value, KeyColor());
+                // colon
+                AddSpan(row, km.Groups[3].Value, PunColor());
+                // value
+                var valPart = km.Groups[4].Value.TrimEnd();
+                var trail   = valPart.EndsWith(',') ? "," : string.Empty;
+                var val     = trail.Length > 0 ? valPart[..^1] : valPart;
+                if (strRe.IsMatch(val) || val.StartsWith('"'))
+                    AddSpan(row, val + trail, StrColor());
+                else if (numRe.IsMatch(val))
+                    AddSpan(row, val + trail, NumColor());
+                else if (boolRe.IsMatch(val))
+                    AddSpan(row, val + trail, BoolColor());
+                else
+                    AddSpan(row, valPart, PunColor());
+            }
+            else
+            {
+                var trimmed = line.Trim();
+                if (strRe.IsMatch(trimmed))
+                {
+                    if (line.Length - trimmed.Length > 0)
+                        AddSpan(row, line[..(line.Length - trimmed.Length)], PunColor());
+                    AddSpan(row, trimmed, StrColor());
+                }
+                else if (numRe.IsMatch(trimmed))
+                {
+                    if (line.Length - trimmed.Length > 0)
+                        AddSpan(row, line[..(line.Length - trimmed.Length)], PunColor());
+                    AddSpan(row, trimmed, NumColor());
+                }
+                else if (boolRe.IsMatch(trimmed))
+                {
+                    if (line.Length - trimmed.Length > 0)
+                        AddSpan(row, line[..(line.Length - trimmed.Length)], PunColor());
+                    AddSpan(row, trimmed, BoolColor());
+                }
+                else
+                {
+                    // structural or empty
+                    AddSpan(row, line, string.IsNullOrWhiteSpace(line) ? TextPriCol() : PunColor());
+                }
+            }
+            parent.Add(row);
         }
     }
 
@@ -463,7 +586,7 @@ public sealed class ResponsePanelView
     // ── 私有辅助 ─────────────────────────────────────────────────
     private static void AddHeaderRow(StackPanel panel, string key, Color keyColor, string value)
     {
-        var row = new DockPanel { Margin = new Thickness(0, 1) };
+        var row = new DockPanel();
         row.Add(new TextBlock
         {
             Text              = key,
@@ -477,11 +600,38 @@ public sealed class ResponsePanelView
         {
             Text              = value,
             FontSize          = 12,
-            Foreground        = TextPri,
+            Foreground        = Color.FromRgb(0xCC, 0xCC, 0xCC),
             Margin            = new Thickness(0, 2, 8, 2),
             VerticalAlignment = VerticalAlignment.Center,
         });
-        panel.Add(row);
+
+        // 用 Button 包装实现点击复制 + 悬停高亮
+        var btn = new Button { Height = 26, Margin = new Thickness(0, 1) };
+        btn.Content(row).Background(Color.Transparent);
+        btn.MouseEnter += () => btn.Background(Color.FromRgb(0x2A, 0x2D, 0x2E));
+        btn.MouseLeave += () => btn.Background(Color.Transparent);
+        var capturedValue = value;
+        btn.OnClick(() => CopyToClipboard(capturedValue));
+        panel.Add(btn);
+    }
+
+    private static void CopyToClipboard(string text)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("cmd", "/c clip")
+            {
+                RedirectStandardInput = true,
+                UseShellExecute       = false,
+                CreateNoWindow        = true,
+            };
+            using var proc = System.Diagnostics.Process.Start(psi);
+            if (proc is null) return;
+            proc.StandardInput.Write(text);
+            proc.StandardInput.Close();
+            proc.WaitForExit(2000);
+        }
+        catch { }
     }
     private static UIElement BuildCenteredLabel(string text, Color color, double fontSize) =>
         new Border

@@ -52,6 +52,12 @@ public sealed class MainWindow : NativeCustomWindow
     private UIElement  _editorAndResponse   = null!;  // 请求编辑器 + 响应面板组合
     private CancellationTokenSource? _currentCts;
     private TextBlock? _statusLabel;
+    // P15: Tab 状态缓存（key = "filePath||reqName"）
+    private readonly Dictionary<string, Resty.Core.Models.HttpRequestDefinition> _tabStateCache = new();
+    // P11: 请求历史面板
+    private readonly HistoryPanelView _historyPanel = new();
+    // P12: 设置面板
+    private readonly SettingsView _settingsView = new();
 
     public MainWindow()
     {
@@ -88,6 +94,7 @@ public sealed class MainWindow : NativeCustomWindow
 
         // ── 侧边栏事件 ───────────────────────────────────────────
         _sidebar.RequestSelected += OnRequestSelected;
+        _sidebar.NewFileCreated  += OnNewFileCreated;
 
         // ── 主区容器（层次：_mainArea > DockPanel > _tabBar + _editorArea）──
         _tabBar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
@@ -114,7 +121,7 @@ public sealed class MainWindow : NativeCustomWindow
     }
 
     // ── 编辑器事件绑定 ─────────────────────────────────────
-    private void WireEditorEvents(RequestEditorView editor, ResponsePanelView responsePanel)
+    private void WireEditorEvents(RequestEditorView editor, ResponsePanelView responsePanel, string requestName = "")
     {
         editor.CancelRequested = () => { try { _currentCts?.Cancel(); } catch (ObjectDisposedException) { _currentCts = null; } };
         editor.SaveRequested = (filePath, def) => _workspace.SaveRequest(filePath, def);
@@ -125,6 +132,8 @@ public sealed class MainWindow : NativeCustomWindow
             var workspacePath = _workspace.WorkspacePath;
             var capturedEditor = editor;
             var capturedPanel  = responsePanel;
+            var capturedName   = requestName;
+            var capturedHistory = _historyPanel;
             _currentCts?.Cancel();
             _currentCts = new CancellationTokenSource();
             var cts = _currentCts;
@@ -145,12 +154,20 @@ public sealed class MainWindow : NativeCustomWindow
                     var assertions = req.Assertions.Count > 0
                         ? AssertionEngine.Evaluate(req.Assertions, result)
                         : null;
+                    var entry = new HistoryEntry(
+                        capturedName,
+                        resolvedReq.Method,
+                        resolvedReq.Url,
+                        result.StatusCode,
+                        result.ElapsedMs,
+                        DateTime.Now);
                     sc?.Post(_ =>
                     {
                         capturedEditor.SetSendingState(false);
                         capturedPanel.ShowResult(result, assertions);
                         UpdateStatusBar(result.StatusCode, result.ElapsedMs,
                             System.Text.Encoding.UTF8.GetByteCount(result.Body));
+                        capturedHistory.AddEntry(entry);
                     }, null);
                 }
                 catch (OperationCanceledException)
@@ -191,6 +208,10 @@ public sealed class MainWindow : NativeCustomWindow
     {
         if (idx < 0 || idx >= _tabs.Count) return;
         var tab = _tabs[idx];
+        // P15: 关闭前缓存编辑器当前状态
+        var snapshot = tab.Editor.GetCurrentDefinition();
+        if (snapshot is not null)
+            _tabStateCache[tab.Key] = snapshot;
         _tabBar.Remove(tab.Btn);
         _tabs.RemoveAt(idx);
         if (_tabs.Count == 0)
@@ -325,18 +346,20 @@ public sealed class MainWindow : NativeCustomWindow
     {
         var bgBar = Color.FromRgb(0x33, 0x33, 0x33);
 
-        Border collectionLine = null!, historyLine = null!, workspaceLine = null!;
+        Border collectionLine = null!, historyLine = null!, workspaceLine = null!, settingsLine = null!;
         Button collectionBtn  = null!, historyBtn  = null!, workspaceBtn  = null!;
 
         collectionLine = new Border { Width = 2, Background = Accent };
         historyLine    = new Border { Width = 2, Background = Color.Transparent };
         workspaceLine  = new Border { Width = 2, Background = Color.Transparent };
+        settingsLine   = new Border { Width = 2, Background = Color.Transparent };
 
         void SetActive(int idx)
         {
             collectionLine.Background = idx == 0 ? Accent : Color.Transparent;
             historyLine.Background    = idx == 1 ? Accent : Color.Transparent;
             workspaceLine.Background  = idx == 2 ? Accent : Color.Transparent;
+            settingsLine.Background   = idx == 3 ? Accent : Color.Transparent;
 
             collectionBtn.Foreground(idx == 0 ? Color.White : TextSec);
             historyBtn.Foreground(idx == 1 ? Color.White : TextSec);
@@ -345,8 +368,9 @@ public sealed class MainWindow : NativeCustomWindow
             _sidebarPanelBorder.Child = idx switch
             {
                 0 => _sidebar.RootElement,
-                1 => BuildHistoryPlaceholder(),
+                1 => _historyPanel.RootElement,
                 2 => _workspacePanel.RootElement,
+                3 => _settingsView.RootElement,
                 _ => _sidebar.RootElement,
             };
         }
@@ -355,8 +379,7 @@ public sealed class MainWindow : NativeCustomWindow
         historyBtn    = MakeActivityBtn("⧗", historyLine,    () => SetActive(1));
         workspaceBtn  = MakeActivityBtn("⊞", workspaceLine,  () => SetActive(2));
 
-        var settingsLine = new Border { Width = 2, Background = Color.Transparent };
-        var settingsBtn  = MakeActivityBtn("⚙", settingsLine, () => { });
+        var settingsBtn = MakeActivityBtn("⚙", settingsLine, () => SetActive(3));
 
         var topPanel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 0 };
         topPanel.Add(collectionBtn);
@@ -395,19 +418,6 @@ public sealed class MainWindow : NativeCustomWindow
         btn.MouseLeave += () => btn.Background(Color.Transparent);
         return btn;
     }
-
-    private UIElement BuildHistoryPlaceholder() => new Border
-    {
-        Background = BgSidebar,
-        Child = new TextBlock
-        {
-            Text                = "请求历史\n(待实现)",
-            FontSize            = 13,
-            Foreground          = TextSec,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment   = VerticalAlignment.Center,
-        },
-    };
 
     // ── 状态栏 ───────────────────────────────────────────────────
     private UIElement BuildStatusBar()
@@ -530,6 +540,9 @@ public sealed class MainWindow : NativeCustomWindow
         // P9: 记录最近工作区
         RecentWorkspacesService.Add(path);
 
+        // P11: 初始化历史面板
+        _historyPanel.SetWorkspacePath(path);
+
         // 订阅 SidebarView 事件
         _sidebar.EnvModeChanged -= OnEnvModeChanged;
         _sidebar.EnvModeChanged += OnEnvModeChanged;
@@ -580,7 +593,7 @@ public sealed class MainWindow : NativeCustomWindow
         // 创建新编辑器 + 独立响应面板（P5）
         var responsePanel = new ResponsePanelView();
         var editor = new RequestEditorView();
-        WireEditorEvents(editor, responsePanel);
+        WireEditorEvents(editor, responsePanel, req.Name);
         editor.SetFilePath(file.FilePath);
 
         // 创建标签按钮（含关闭 ✕ 和 dirty 标记）
@@ -612,7 +625,20 @@ public sealed class MainWindow : NativeCustomWindow
         _tabs.Add(tab);
         _tabBar.Add(tabBtn);
         ActivateTab(newIdx);   // 先把编辑器放入可视树
-        editor.Load(def);      // 再加载数据
+        // P15: 优先从缓存恢复，否则从文件加载
+        if (_tabStateCache.TryGetValue(key, out var cached))
+            editor.Load(cached);
+        else
+            editor.Load(def);
         RefreshEditorEnvVars();
+    }
+
+    private void OnNewFileCreated(string filePath)
+    {
+        // 找到新文件的第一个请求并自动打开
+        var fileNode = _workspace.Files.FirstOrDefault(f =>
+            string.Equals(f.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
+        if (fileNode is null || fileNode.Requests.Count == 0) return;
+        OnRequestSelected(fileNode, fileNode.Requests[0]);
     }
 }
