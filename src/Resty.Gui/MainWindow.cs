@@ -58,6 +58,8 @@ public sealed class MainWindow : NativeCustomWindow
     private readonly HistoryPanelView _historyPanel = new();
     // P12: 设置面板
     private readonly SettingsView _settingsView = new();
+    // Lab: 实验面板
+    private readonly LabView _labView = new();
 
     public MainWindow()
     {
@@ -310,6 +312,9 @@ public sealed class MainWindow : NativeCustomWindow
 
         // 右侧主区（Border 方便切换内容）
         _rightContentBorder = new Border { Child = _editorAndResponse };
+        // 订阅 LabView 的试验打开事件：当左侧点击某个试验时，将具体试验内容显示到右侧主区
+        _labView.ExperimentRequested -= ui => _rightContentBorder.Child = ui;
+        _labView.ExperimentRequested += ui => _rightContentBorder.Child = ui;
         var rightArea = new DockPanel();
         rightArea.Add(_rightContentBorder);
 
@@ -346,12 +351,13 @@ public sealed class MainWindow : NativeCustomWindow
     {
         var bgBar = Color.FromRgb(0x33, 0x33, 0x33);
 
-        Border collectionLine = null!, historyLine = null!, workspaceLine = null!, settingsLine = null!;
-        Button collectionBtn  = null!, historyBtn  = null!, workspaceBtn  = null!;
+        Border collectionLine = null!, historyLine = null!, workspaceLine = null!, labLine = null!, settingsLine = null!;
+        Button collectionBtn  = null!, historyBtn  = null!, workspaceBtn  = null!, labBtn = null!;
 
         collectionLine = new Border { Width = 2, Background = Accent };
         historyLine    = new Border { Width = 2, Background = Color.Transparent };
         workspaceLine  = new Border { Width = 2, Background = Color.Transparent };
+        labLine        = new Border { Width = 2, Background = Color.Transparent };
         settingsLine   = new Border { Width = 2, Background = Color.Transparent };
 
         void SetActive(int idx)
@@ -360,18 +366,21 @@ public sealed class MainWindow : NativeCustomWindow
             collectionLine.Background = idx == 0 ? Accent : Color.Transparent;
             historyLine.Background    = idx == 1 ? Accent : Color.Transparent;
             workspaceLine.Background  = idx == 2 ? Accent : Color.Transparent;
-            settingsLine.Background   = idx == 3 ? Accent : Color.Transparent;
+            labLine.Background        = idx == 3 ? Accent : Color.Transparent;
+            settingsLine.Background   = idx == 4 ? Accent : Color.Transparent;
 
             collectionBtn.Foreground(idx == 0 ? Color.White : TextSec);
             historyBtn.Foreground(idx == 1 ? Color.White : TextSec);
             workspaceBtn.Foreground(idx == 2 ? Color.White : TextSec);
+            labBtn.Foreground(idx == 3 ? Color.White : TextSec);
 
             _sidebarPanelBorder.Child = idx switch
             {
                 0 => _sidebar.RootElement,
                 1 => _historyPanel.RootElement,
                 2 => _workspacePanel.RootElement,
-                3 => _settingsView.RootElement,
+                3 => _labView.RootElement,
+                4 => _settingsView.RootElement,
                 _ => _sidebar.RootElement,
             };
         }
@@ -379,13 +388,15 @@ public sealed class MainWindow : NativeCustomWindow
         collectionBtn = MakeActivityBtn("☰", collectionLine, () => SetActive(0));
         historyBtn    = MakeActivityBtn("⧗", historyLine,    () => SetActive(1));
         workspaceBtn  = MakeActivityBtn("⊞", workspaceLine,  () => SetActive(2));
+        labBtn        = MakeActivityBtn("⚗", labLine,        () => SetActive(3));
 
-        var settingsBtn = MakeActivityBtn("⚙", settingsLine, () => SetActive(3));
+        var settingsBtn = MakeActivityBtn("⚙", settingsLine, () => SetActive(4));
 
         var topPanel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 0 };
         topPanel.Add(collectionBtn);
         topPanel.Add(historyBtn);
         topPanel.Add(workspaceBtn);
+        topPanel.Add(labBtn);
 
         var barDock = new DockPanel();
         barDock.Add(settingsBtn.DockBottom());
