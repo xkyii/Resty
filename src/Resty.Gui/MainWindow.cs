@@ -40,10 +40,10 @@ public sealed class MainWindow : NativeCustomWindow
     // 主区容器（切换欢迎页 ↔ 编辑器）
     private readonly Border _mainArea;
     // 多标签支持
-    private readonly StackPanel _tabBar;
-    private readonly Border     _editorArea;
+    private readonly TabControl   _editorTabControl = new();
+    private readonly List<Button> _editorTabCloseBtns = [];
     private readonly Border     _responseArea;  // P5: 每个 Tab 独立响应面板
-    private sealed record EditorTab(string Key, HttpFileNode File, RequestNode Request, RequestEditorView Editor, Button Btn, TextBlock TitleBlock, ResponsePanelView ResponsePanel);
+    private sealed record EditorTab(string Key, HttpFileNode File, RequestNode Request, RequestEditorView Editor, TextBlock TitleBlock, ResponsePanelView ResponsePanel, TabItem TabItem);
     private readonly List<EditorTab> _tabs = [];
     private int _activeTabIdx = -1;
     private string _currentEnv = string.Empty;
@@ -99,15 +99,20 @@ public sealed class MainWindow : NativeCustomWindow
         _sidebar.NewFileCreated  += OnNewFileCreated;
 
         // ── 主区容器（层次：_mainArea > DockPanel > _tabBar + _editorArea）──
-        _tabBar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
-        _editorArea = new Border { Background = BgBase, Child = BuildNoRequestView() };
         _responseArea = new Border { Background = BgBase, Child = new ResponsePanelView().RootElement };
 
-        var tabContainer = new DockPanel();
-        tabContainer.Add(new Border { Height = 35, Background = BgPanel, Child = _tabBar }.DockTop());
-        tabContainer.Add(_editorArea);
+        _editorTabControl.OnSelectionChanged(selected =>
+        {
+            var idx = _tabs.FindIndex(t => ReferenceEquals(t.TabItem, selected));
+            if (idx >= 0)
+            {
+                _activeTabIdx = idx;
+                _editor = _tabs[idx].Editor;
+                _responseArea.Child = _tabs[idx].ResponsePanel.RootElement;
+            }
+        });
 
-        _mainArea = new Border { Child = tabContainer };
+        _mainArea = new Border { Child = _editorTabControl };
 
         // P4: Ctrl+W 关闭当前 Tab
         this.KeyDown += e =>
@@ -193,17 +198,10 @@ public sealed class MainWindow : NativeCustomWindow
     private void ActivateTab(int idx)
     {
         if (idx < 0 || idx >= _tabs.Count) return;
-        // 更新按钮样式
-        for (int i = 0; i < _tabs.Count; i++)
-        {
-            bool active = i == idx;
-            _tabs[i].Btn.Background(active ? BgBase : Color.Transparent)
-                        .Foreground(active ? TextPri : TextSec);
-        }
         _activeTabIdx = idx;
         _editor = _tabs[idx].Editor;
-        _editorArea.Child  = _editor.RootElement;
-        _responseArea.Child = _tabs[idx].ResponsePanel.RootElement; // P5: 同步切换响应面板
+        _responseArea.Child = _tabs[idx].ResponsePanel.RootElement;
+        _editorTabControl.SelectedIndex(idx);
     }
 
     private void CloseTab(int idx)
@@ -214,13 +212,13 @@ public sealed class MainWindow : NativeCustomWindow
         var snapshot = tab.Editor.GetCurrentDefinition();
         if (snapshot is not null)
             _tabStateCache[tab.Key] = snapshot;
-        _tabBar.Remove(tab.Btn);
+        _editorTabCloseBtns.RemoveAt(idx);
         _tabs.RemoveAt(idx);
+        _editorTabControl.RemoveTabAt(idx);
         if (_tabs.Count == 0)
         {
             _activeTabIdx = -1;
             _editor = null;
-            _editorArea.Child   = BuildNoRequestView();
             _responseArea.Child = new ResponsePanelView().RootElement;
         }
         else
@@ -228,6 +226,22 @@ public sealed class MainWindow : NativeCustomWindow
             var newIdx = Math.Min(idx, _tabs.Count - 1);
             ActivateTab(newIdx);
         }
+        BindEditorTabHeaders();
+    }
+
+    private void BindEditorTabHeaders()
+    {
+        var i = 0;
+        VisualTree.Visit(_editorTabControl, el =>
+        {
+            if (el.GetType().Name == "TabHeaderButton" && el is UIElement thb)
+            {
+                if (i >= _editorTabCloseBtns.Count) return;
+                var btn = _editorTabCloseBtns[i++];
+                thb.MouseEnter += () => btn.Foreground(TextSec);
+                thb.MouseLeave += () => btn.Foreground(Color.Transparent);
+            }
+        });
     }
 
     // ── 欢迎视图 ─────────────────────────────────────────────────
@@ -620,30 +634,42 @@ public sealed class MainWindow : NativeCustomWindow
         var title = req.Name.Length > 20 ? req.Name[..20] + "…" : req.Name;
         var newIdx = _tabs.Count;
 
-        var dirtyDot  = new TextBlock { Text = string.Empty, FontSize = 10, Foreground = Color.FromRgb(0xE0, 0x6C, 0x75), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(3, 0, 0, 0) };
+        var dirtyDot  = new TextBlock { Text = string.Empty, FontSize = 10, Foreground = Color.FromRgb(0xE0, 0x6C, 0x75), VerticalAlignment = VerticalAlignment.Center };
         var titleBlock = new TextBlock { Text = title, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        var closeBtn = new Button { Width = 18, Height = 18, Padding = new Thickness(0), IsVisible = false };
-        closeBtn.Content("✕", false).FontSize(9).Background(Color.Transparent).Foreground(TextSec);
-        closeBtn.Click += () => CloseTab(_tabs.FindIndex(t => t.Key == key));
+        Button  closeBtn = null!;
+        TabItem tabItem  = null!;
 
         // P3: 订阅 dirty 变化，更新 tab 上的 ● 标记
         editor.DirtyChanged += dirty => dirtyDot.Text = dirty ? "●" : string.Empty;
 
-        var tabContent = new DockPanel { Margin = new Thickness(12, 0, 6, 0) };
-        tabContent.Add(closeBtn.DockRight());
-        tabContent.Add(new Border { Width = 6 }.DockRight());
-        tabContent.Add(titleBlock);
-        tabContent.Add(dirtyDot);
+        new TabItem().Ref(out tabItem)
+            .Header(
+                new StackPanel()
+                    .Horizontal()
+                    .CenterVertical()
+                    .Spacing(4)
+                    .Children(
+                        titleBlock,
+                        dirtyDot,
+                        new Button()
+                            .Ref(out closeBtn)
+                            .Content(new GlyphElement { Kind = GlyphKind.Cross, GlyphSize = 3.5, IsHitTestVisible = false })
+                            .MinHeight(0)
+                            .Size(16, 16)
+                            .Padding(new Thickness(0))
+                            .CenterVertical()
+                            .BorderThickness(0)
+                            .Background(Color.Transparent)
+                            .Foreground(Color.Transparent)
+                            .OnClick(() => CloseTab(_tabs.FindIndex(t => t.Key == key)))
+                    ))
+            .Content(editor.RootElement as Element);
 
-        var tabBtn = new Button { Height = 34, Padding = new Thickness(0) };
-        tabBtn.Content(tabContent as Element).Background(Color.Transparent).Foreground(TextSec);
-        tabBtn.Click += () => ActivateTab(_tabs.FindIndex(t => t.Key == key));
-        tabBtn.MouseEnter += () => closeBtn.IsVisible = true;
-        tabBtn.MouseLeave += () => closeBtn.IsVisible = false;
-
-        var tab = new EditorTab(key, file, req, editor, tabBtn, titleBlock, responsePanel);
+        var tab = new EditorTab(key, file, req, editor, titleBlock, responsePanel, tabItem);
         _tabs.Add(tab);
-        _tabBar.Add(tabBtn);
+        _editorTabCloseBtns.Add(closeBtn);
+        _editorTabControl.AddTab(tabItem);
+        BindEditorTabHeaders();
         ActivateTab(newIdx);   // 先把编辑器放入可视树
         // P15: 优先从缓存恢复，否则从文件加载
         if (_tabStateCache.TryGetValue(key, out var cached))
