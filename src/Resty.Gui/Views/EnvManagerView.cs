@@ -24,12 +24,11 @@ public sealed class EnvManagerView
     // ── 状态 ──────────────────────────────────────────────────────
     private WorkspaceService? _workspace;
     private string _selectedEnv = string.Empty;
-    private int    _activeTab   = 0;
 
     // ── UI 引用 ───────────────────────────────────────────────────
-    private readonly Border     _detailContent;
-    private readonly Border[]   _tabLines = new Border[4];
-    private readonly Button[]   _tabBtns  = new Button[4];
+    private readonly Border       _container;
+    private TabControl            _tabControl = new();
+    private readonly List<Button> _closeBtns  = [];
 
     // 可编辑行（公开/私有 Tab）
     private readonly List<(TextBox Key, TextBox Val)> _publicRows  = [];
@@ -39,15 +38,9 @@ public sealed class EnvManagerView
 
     public EnvManagerView()
     {
-        _detailContent = new Border { Background = BgRight };
-
-        var tabRow    = BuildTabRow();
-        var panel     = new DockPanel();
-        panel.Add(tabRow.DockTop());
-        panel.Add(new Border { Height = 1, Background = BorderCol }.DockTop());
-        panel.Add(_detailContent);
-
-        RootElement = new Border { Background = BgRight, Child = panel };
+        _container  = new Border { Background = BgRight };
+        RootElement = new Border { Background = BgRight, Child = _container };
+        RebuildTabs();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -58,59 +51,87 @@ public sealed class EnvManagerView
     {
         _workspace   = workspace;
         _selectedEnv = string.Empty;
-        ShowTab(_activeTab);
+        RebuildTabs();
     }
 
     /// <summary>切换当前展示的环境（由侧边栏环境选中事件驱动）。</summary>
     public void SelectEnv(string envName)
     {
         _selectedEnv = envName;
-        ShowTab(_activeTab);
+        RebuildTabs();
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Tab 行
+    // TabControl 构建
     // ─────────────────────────────────────────────────────────────
 
-    private UIElement BuildTabRow()
+    private void RebuildTabs()
     {
-        string[] labels = ["公开变量", "私有变量", "文件变量", "内置"];
-        var sp = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
+        _closeBtns.Clear();
+        _tabControl = new TabControl();
+
+        string[]    labels   = ["公开变量", "私有变量", "文件变量", "内置"];
+        UIElement[] contents = [BuildPublicTab(), BuildPrivateTab(), BuildFileTab(), BuildBuiltinTab()];
 
         for (int i = 0; i < 4; i++)
         {
-            var idx = i;
-            _tabLines[i] = new Border { Height = 2, Background = i == 0 ? Accent : Color.Transparent };
-            var lbl = new TextBlock { Text = labels[i], FontSize = 12, Foreground = i == 0 ? TextPri : TextSec, VerticalAlignment = VerticalAlignment.Center };
-            var dock = new DockPanel();
-            dock.Add(_tabLines[i].DockBottom());
-            dock.Add(lbl);
-            _tabBtns[i] = new Button { Height = 36, Padding = new Thickness(16, 0) };
-            _tabBtns[i].Content(dock as Element).Background(Color.Transparent);
-            _tabBtns[i].Click      += () => ShowTab(idx);
-            _tabBtns[i].MouseEnter += () => { if (_activeTab != idx) _tabBtns[idx].Background(BgHover); };
-            _tabBtns[i].MouseLeave += () => _tabBtns[idx].Background(Color.Transparent);
-            sp.Add(_tabBtns[i]);
+            TabItem item     = null!;
+            Button  closeBtn = null!;
+
+            new TabItem().Ref(out item)
+                .Header(
+                    new StackPanel()
+                        .Horizontal()
+                        .CenterVertical()
+                        .Spacing(6)
+                        .Children(
+                            new Label().Text(labels[i]).FontSize(12),
+                            new Button()
+                                .Ref(out closeBtn)
+                                .Content(new GlyphElement { Kind = GlyphKind.Cross, GlyphSize = 3.5, IsHitTestVisible = false })
+                                .MinHeight(0)
+                                .Size(16, 16)
+                                .Padding(new Thickness(0))
+                                .CenterVertical()
+                                .BorderThickness(0)
+                                .Background(Color.Transparent)
+                                .Foreground(Color.Transparent)
+                                .OnClick(() =>
+                                {
+                                    var removeIdx = -1;
+                                    for (int j = 0; j < _tabControl.Tabs.Count; j++)
+                                        if (ReferenceEquals(_tabControl.Tabs[j], item)) { removeIdx = j; break; }
+                                    if (removeIdx >= 0)
+                                    {
+                                        _closeBtns.RemoveAt(removeIdx);
+                                        _tabControl.RemoveTabAt(removeIdx);
+                                        BindTabHeaders();
+                                    }
+                                })
+                        ))
+                .Content(contents[i] as Element);
+
+            _closeBtns.Add(closeBtn);
+            _tabControl.AddTab(item);
         }
-        return sp;
+
+        BindTabHeaders();
+        _container.Child = _tabControl;
     }
 
-    private void ShowTab(int tab)
+    private void BindTabHeaders()
     {
-        _activeTab = tab;
-        for (int i = 0; i < 4; i++)
+        var i = 0;
+        VisualTree.Visit(_tabControl, el =>
         {
-            _tabLines[i].Background = i == tab ? Accent : Color.Transparent;
-            _tabBtns[i].Foreground(i == tab ? TextPri : TextSec);
-        }
-        _detailContent.Child = tab switch
-        {
-            0 => BuildPublicTab(),
-            1 => BuildPrivateTab(),
-            2 => BuildFileTab(),
-            3 => BuildBuiltinTab(),
-            _ => BuildPublicTab(),
-        };
+            if (el.GetType().Name == "TabHeaderButton" && el is UIElement thb)
+            {
+                if (i >= _closeBtns.Count) return;
+                var btn = _closeBtns[i++];
+                thb.MouseEnter += () => btn.Foreground(TextSec);
+                thb.MouseLeave += () => btn.Foreground(Color.Transparent);
+            }
+        });
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -186,7 +207,7 @@ public sealed class EnvManagerView
             delBtn.Content(new TextBlock { Text = "×", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element)
                   .Background(Color.Transparent).Foreground(TextSec);
             var capturedRow = (keyBox, valBox);
-            delBtn.Click += () => { rows.Remove(capturedRow); ShowTab(_activeTab); };
+            delBtn.Click += () => { rows.Remove(capturedRow); RebuildTabs(); };
             delBtn.MouseEnter += () => delBtn.Background(BgHover);
             delBtn.MouseLeave += () => delBtn.Background(Color.Transparent);
 
