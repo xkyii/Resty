@@ -634,7 +634,7 @@ public sealed class MainWindow : NativeCustomWindow
         var title = req.Name.Length > 20 ? req.Name[..20] + "…" : req.Name;
         var newIdx = _tabs.Count;
 
-        var dirtyDot  = new TextBlock { Text = string.Empty, FontSize = 10, Foreground = Color.FromRgb(0xE0, 0x6C, 0x75), VerticalAlignment = VerticalAlignment.Center };
+        var dirtyDot  = new TextBlock { Text = string.Empty, FontSize = 10, Foreground = Color.FromRgb(0xE0, 0x6C, 0x75), VerticalAlignment = VerticalAlignment.Center, Width = 12, TextAlignment = TextAlignment.Center };
         var titleBlock = new TextBlock { Text = title, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
         Button  closeBtn = null!;
         TabItem tabItem  = null!;
@@ -649,8 +649,8 @@ public sealed class MainWindow : NativeCustomWindow
                     .CenterVertical()
                     .Spacing(4)
                     .Children(
-                        titleBlock,
                         dirtyDot,
+                        titleBlock,
                         new Button()
                             .Ref(out closeBtn)
                             .Content(new GlyphElement { Kind = GlyphKind.Cross, GlyphSize = 3.5, IsHitTestVisible = false })
