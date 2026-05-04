@@ -28,7 +28,6 @@ public sealed class EnvManagerView
     // ── UI 引用 ───────────────────────────────────────────────────
     private readonly Border       _container;
     private TabControl            _tabControl = new();
-    private readonly List<Button> _closeBtns  = [];
 
     // 可编辑行（公开/私有 Tab）
     private readonly List<(TextBox Key, TextBox Val)> _publicRows  = [];
@@ -67,7 +66,6 @@ public sealed class EnvManagerView
 
     private void RebuildTabs()
     {
-        _closeBtns.Clear();
         _tabControl = new TabControl();
 
         string[]    labels   = ["公开变量", "私有变量", "文件变量", "内置"];
@@ -75,63 +73,14 @@ public sealed class EnvManagerView
 
         for (int i = 0; i < 4; i++)
         {
-            TabItem item     = null!;
-            Button  closeBtn = null!;
-
+            TabItem item = null!;
             new TabItem().Ref(out item)
-                .Header(
-                    new StackPanel()
-                        .Horizontal()
-                        .CenterVertical()
-                        .Spacing(6)
-                        .Children(
-                            new Label().Text(labels[i]).FontSize(12),
-                            new Button()
-                                .Ref(out closeBtn)
-                                .Content(new GlyphElement { Kind = GlyphKind.Cross, GlyphSize = 3.5, IsHitTestVisible = false })
-                                .MinHeight(0)
-                                .Size(16, 16)
-                                .Padding(new Thickness(0))
-                                .CenterVertical()
-                                .BorderThickness(0)
-                                .Background(Color.Transparent)
-                                .Foreground(Color.Transparent)
-                                .OnClick(() =>
-                                {
-                                    var removeIdx = -1;
-                                    for (int j = 0; j < _tabControl.Tabs.Count; j++)
-                                        if (ReferenceEquals(_tabControl.Tabs[j], item)) { removeIdx = j; break; }
-                                    if (removeIdx >= 0)
-                                    {
-                                        _closeBtns.RemoveAt(removeIdx);
-                                        _tabControl.RemoveTabAt(removeIdx);
-                                        BindTabHeaders();
-                                    }
-                                })
-                        ))
+                .Header(new Label().Text(labels[i]).FontSize(12))
                 .Content(contents[i] as Element);
-
-            _closeBtns.Add(closeBtn);
             _tabControl.AddTab(item);
         }
 
-        BindTabHeaders();
         _container.Child = _tabControl;
-    }
-
-    private void BindTabHeaders()
-    {
-        var i = 0;
-        VisualTree.Visit(_tabControl, el =>
-        {
-            if (el.GetType().Name == "TabHeaderButton" && el is UIElement thb)
-            {
-                if (i >= _closeBtns.Count) return;
-                var btn = _closeBtns[i++];
-                thb.MouseEnter += () => btn.Foreground(TextSec);
-                thb.MouseLeave += () => btn.Foreground(Color.Transparent);
-            }
-        });
     }
 
     // ─────────────────────────────────────────────────────────────

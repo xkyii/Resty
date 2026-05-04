@@ -40,7 +40,6 @@ public sealed class SidebarView
     private string _activeEnv   = string.Empty;
     private string _selectedEnv = string.Empty;
 
-    private readonly TextBlock  _workspaceNameLabel;
     private readonly TextBox    _searchBox;
     private readonly StackPanel _treeContainer;
     private readonly StackPanel _envListPanel;
@@ -64,48 +63,27 @@ public sealed class SidebarView
     // ─────────────────────────────────────────────────────────────
     public SidebarView()
     {
-        _workspaceNameLabel = new TextBlock
-        {
-            Text              = "无工作区",
-            FontSize          = 11,
-            FontWeight        = FontWeight.SemiBold,
-            Foreground        = TextSec,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin            = new Thickness(12, 0, 0, 0),
-            TextTrimming      = TextTrimming.CharacterEllipsis,
-        };
-        var headerRow = new DockPanel { Height = 30 };
-        // 新建文件按钮（DockRight，仅在工作区模式下使用）
-        var newFileBtn = new Button { Width = 28, Height = 28, Padding = new Thickness(0) };
-        newFileBtn.Content(new TextBlock { Text = "+", FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element)
-            .Background(Color.Transparent).Foreground(TextSec);
-        newFileBtn.MouseEnter += () => newFileBtn.Background(BgHover).Foreground(TextPri);
-        newFileBtn.MouseLeave += () => newFileBtn.Background(Color.Transparent).Foreground(TextSec);
-        newFileBtn.Click += () => { if (!_isEnvMode) BeginNewFile(); };
-        headerRow.Add(newFileBtn.DockRight());
-        headerRow.Add(_workspaceNameLabel);
-
-        // Tab 行
+        // Tab 行 — 图标按钮居中
         _collectionTabLine = new Border { Height = 2, Background = Accent };
-        var colLbl = new TextBlock { Text = "工作区", FontSize = 12, Foreground = TextPri, VerticalAlignment = VerticalAlignment.Center };
+        var colIcon = new TextBlock { Text = "☰", FontSize = 15, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         var colDock = new DockPanel();
         colDock.Add(_collectionTabLine.DockBottom());
-        colDock.Add(colLbl);
-        _collectionTabBtn = new Button { Height = 32, Padding = new Thickness(14, 0) };
-        _collectionTabBtn.Content(colDock as Element).Background(Color.Transparent);
+        colDock.Add(colIcon);
+        _collectionTabBtn = new Button { Width = 48, Height = 32, Padding = new Thickness(0) };
+        _collectionTabBtn.Content(colDock as Element).Background(Color.Transparent).Foreground(TextPri);
 
         _envTabLine = new Border { Height = 2, Background = Color.Transparent };
-        var envLbl = new TextBlock { Text = "环境", FontSize = 12, Foreground = TextSec, VerticalAlignment = VerticalAlignment.Center };
+        var envIcon = new TextBlock { Text = "◎", FontSize = 15, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         var envDock = new DockPanel();
         envDock.Add(_envTabLine.DockBottom());
-        envDock.Add(envLbl);
-        _envTabBtn = new Button { Height = 32, Padding = new Thickness(14, 0) };
-        _envTabBtn.Content(envDock as Element).Background(Color.Transparent);
+        envDock.Add(envIcon);
+        _envTabBtn = new Button { Width = 48, Height = 32, Padding = new Thickness(0) };
+        _envTabBtn.Content(envDock as Element).Background(Color.Transparent).Foreground(TextSec);
 
         _collectionTabBtn.Click += () => SwitchMode(false);
         _envTabBtn.Click        += () => SwitchMode(true);
 
-        var tabRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
+        var tabRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0, HorizontalAlignment = HorizontalAlignment.Center };
         tabRow.Add(_collectionTabBtn);
         tabRow.Add(_envTabBtn);
 
@@ -128,7 +106,6 @@ public sealed class SidebarView
         _contentArea = new Border { Child = _collectionContent };
 
         var root = new DockPanel();
-        root.Add(new Border { Height = 30, Background = BgPanel, Child = headerRow }.DockTop());
         root.Add(new Border { Height = 33, Child = tabDock }.DockTop());
         root.Add(_contentArea);
         RootElement = root;
@@ -138,8 +115,6 @@ public sealed class SidebarView
     public void SetWorkspace(WorkspaceService workspace)
     {
         _workspace = workspace;
-        _workspaceNameLabel.Text       = workspace.WorkspaceName;
-        _workspaceNameLabel.Foreground = TextPri;
         if (_isEnvMode) RefreshEnvList();
         else RefreshTree();
     }

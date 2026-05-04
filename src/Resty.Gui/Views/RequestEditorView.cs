@@ -28,17 +28,12 @@ public sealed class RequestEditorView
     private readonly ComboBox _methodCombo;
     private readonly TextBox  _urlBox;
     private readonly Button   _sendBtn;
-    // P16 cURL 导入行
-    private readonly Border   _curlImportRow;
-    private readonly TextBox  _curlImportBox;
 
     // ── 内容区 ───────────────────────────────────────────────────
     private readonly Border            _contentArea;
     private readonly MultiLineTextBox  _textEditor;
     private readonly TabControl        _tabControl;
-    // F5 语法提示栏
-    private readonly TextBlock _syntaxHintLabel;
-    private readonly Border    _textEditorWithHint; // DockPanel with hint + editor
+    private readonly Border    _textEditorWithHint;
     private bool _isRawTabActive = false; // 当前是否显示原文 Tab
     // F6 URL 变量预览
     private readonly TextBlock _urlPreviewLabel;
@@ -104,36 +99,6 @@ public sealed class RequestEditorView
         DirtyChanged?.Invoke(dirty);
     }
 
-    /// <summary>F5: 解析文本内容并更新语法提示栏。</summary>
-    private void UpdateSyntaxHint(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) { _syntaxHintLabel.Text = string.Empty; return; }
-        try
-        {
-            var fd = HttpFileParser.ParseContent(text);
-            if (fd.Requests.Count == 0) { _syntaxHintLabel.Text = "⚠ 无有效请求"; _syntaxHintLabel.Foreground(Color.FromRgb(0xE0, 0x6C, 0x75)); return; }
-            var r = fd.Requests[0];
-            var method = r.Method.ToUpperInvariant();
-            var methodColor = method switch
-            {
-                "GET"    => Color.FromRgb(0x61, 0xAF, 0xEF),
-                "POST"   => Color.FromRgb(0x98, 0xC3, 0x79),
-                "PUT"    => Color.FromRgb(0xE5, 0xC0, 0x7B),
-                "DELETE" => Color.FromRgb(0xE0, 0x6C, 0x75),
-                "PATCH"  => Color.FromRgb(0xD1, 0x9A, 0x66),
-                _        => Color.FromRgb(0xAB, 0xB2, 0xBF),
-            };
-            var extra = fd.Requests.Count > 1 ? $"  (+{fd.Requests.Count - 1} 个请求)" : string.Empty;
-            _syntaxHintLabel.Text = $"{method}  {r.Url}{extra}";
-            _syntaxHintLabel.Foreground(methodColor);
-        }
-        catch
-        {
-            _syntaxHintLabel.Text = "⚠ 解析错误";
-            _syntaxHintLabel.Foreground(Color.FromRgb(0xE0, 0x6C, 0x75));
-        }
-    }
-
     /// <summary>F6: URL 变量预览更新。</summary>
     private void UpdateUrlPreview(string url)
     {
@@ -185,83 +150,13 @@ public sealed class RequestEditorView
             .OnClick(OnSendClicked);
 
         // ── 工具栏（单行：方法 + URL + 发送）────────────
-        // cURL 导出按钮
-        var curlExportBtn = new Button { Width = 56, Height = 28, Padding = new Thickness(0) };
-        curlExportBtn.Content("⬇cURL", false).FontSize(10).Background(Color.Transparent).Foreground(TextSec);
-        curlExportBtn.MouseEnter += () => curlExportBtn.Background(BgSurface).Foreground(TextPri);
-        curlExportBtn.MouseLeave += () => curlExportBtn.Background(Color.Transparent).Foreground(TextSec);
-        curlExportBtn.OnClick(() =>
-        {
-            var def = GetCurrentDefinition();
-            if (def is null) return;
-            var curlStr = Resty.Core.Parsing.CurlConverter.Export(def);
-            CopyToClipboard(curlStr);
-        });
-        // cURL 导入按钮
-        var curlImportBtn = new Button { Width = 56, Height = 28, Padding = new Thickness(0) };
-        curlImportBtn.Content("⬆cURL", false).FontSize(10).Background(Color.Transparent).Foreground(TextSec);
-        curlImportBtn.MouseEnter += () => curlImportBtn.Background(BgSurface).Foreground(TextPri);
-        curlImportBtn.MouseLeave += () => curlImportBtn.Background(Color.Transparent).Foreground(TextSec);
-
         var urlRow = new DockPanel { Height = 44 };
         urlRow.Add(new Border { Width = 8 }.DockLeft());
         urlRow.Add(_methodCombo.DockLeft());
         urlRow.Add(new Border { Width = 8 }.DockLeft());
         urlRow.Add(new Border { Width = 8 }.DockRight());
         urlRow.Add(_sendBtn.DockRight());
-        urlRow.Add(new Border { Width = 4 }.DockRight());
-        urlRow.Add(curlExportBtn.DockRight());
-        urlRow.Add(curlImportBtn.DockRight());
         urlRow.Add(_urlBox);
-
-        // ── cURL 导入行（初始隐藏）───────────────────────────────
-        _curlImportBox = new TextBox
-        {
-            Placeholder = "粘贴 curl 命令…",
-            FontSize    = 12,
-            Foreground  = TextPri,
-            Background  = BgBase,
-        };
-        var curlConfirmBtn = new Button { Width = 52, Height = 28, Padding = new Thickness(0) };
-        curlConfirmBtn.Content("导入", false).FontSize(11).Background(Accent).Foreground(Color.White);
-        var curlCancelBtn = new Button { Width = 40, Height = 28, Padding = new Thickness(0) };
-        curlCancelBtn.Content("✕", false).FontSize(11).Background(Color.Transparent).Foreground(TextSec);
-        curlCancelBtn.MouseEnter += () => curlCancelBtn.Background(BgSurface);
-        curlCancelBtn.MouseLeave += () => curlCancelBtn.Background(Color.Transparent);
-
-        var curlImportInner = new DockPanel { Height = 36 };
-        curlImportInner.Add(new Border { Width = 8 }.DockLeft());
-        curlImportInner.Add(new Border { Width = 4 }.DockRight());
-        curlImportInner.Add(curlCancelBtn.DockRight());
-        curlImportInner.Add(new Border { Width = 4 }.DockRight());
-        curlImportInner.Add(curlConfirmBtn.DockRight());
-        curlImportInner.Add(_curlImportBox);
-
-        _curlImportRow = new Border
-        {
-            Background = BgPanel,
-            Padding    = new Thickness(0, 4),
-            Child      = curlImportInner,
-            IsVisible  = false,
-        };
-
-        // 事件绑定
-        curlImportBtn.OnClick(() =>
-        {
-            _curlImportRow.IsVisible = !_curlImportRow.IsVisible;
-        });
-        curlConfirmBtn.OnClick(() =>
-        {
-            var cmd = _curlImportBox.Text?.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(cmd)) return;
-            if (Resty.Core.Parsing.CurlConverter.TryImport(cmd, out var imported))
-            {
-                Load(imported);
-                _curlImportRow.IsVisible = false;
-                _curlImportBox.Text = string.Empty;
-            }
-        });
-        curlCancelBtn.OnClick(() => { _curlImportRow.IsVisible = false; _curlImportBox.Text = string.Empty; });
 
         // ── URL 变量预览行（F6）──────────────────────────────────
         _urlPreviewLabel = new TextBlock { FontSize = 11 };
@@ -296,23 +191,7 @@ public sealed class RequestEditorView
         };
         _textEditor.Wrap(false);
 
-        // F5 语法提示栏（文本模式下显示解析摘要）
-        _syntaxHintLabel = new TextBlock
-        {
-            FontSize  = 12,
-            Foreground = TextSec,
-        };
-        var syntaxHintBorder = new Border
-        {
-            Background  = BgPanel,
-            BorderBrush = BorderCol,
-            Padding     = new Thickness(12, 3, 12, 3),
-            Child       = _syntaxHintLabel,
-        };
-        var textWithHintPanel = new DockPanel();
-        textWithHintPanel.Add(syntaxHintBorder.DockTop());
-        textWithHintPanel.Add(_textEditor);
-        _textEditorWithHint = new Border { Child = textWithHintPanel };
+        _textEditorWithHint = new Border { Child = _textEditor };
 
         // ── 结构化面板 ────────────────────────────────────────────
         // Params Tab
@@ -502,13 +381,12 @@ public sealed class RequestEditorView
         // ── 根布局 ────────────────────────────────────────────────
         _root = new DockPanel();
         _root.Add(toolbarBorder.DockTop());
-        _root.Add(_curlImportRow.DockTop());
         _root.Add(_urlPreviewRow.DockTop());
         _root.Add(_contentArea);
 
         // ── Dirty 追踪 + F5/F6 语法提示 ──────────────────────────
         _urlBox.OnTextChanged(text => { SetDirty(true); UpdateUrlPreview(text); });
-        _textEditor.OnTextChanged(text => { SetDirty(true); UpdateSyntaxHint(text); });
+        _textEditor.OnTextChanged(_ => { SetDirty(true); });
         _bodyText.OnTextChanged(_ => SetDirty(true));
         _methodCombo.OnSelectionChanged(_ => SetDirty(true));
         _contentTypeCombo.OnSelectionChanged(_ => SetDirty(true));
@@ -954,22 +832,5 @@ public sealed class RequestEditorView
         return sb.ToString();
     }
 
-    private static void CopyToClipboard(string text)
-    {
-        try
-        {
-            var psi = new System.Diagnostics.ProcessStartInfo("cmd", "/c clip")
-            {
-                RedirectStandardInput = true,
-                UseShellExecute       = false,
-                CreateNoWindow        = true,
-            };
-            using var proc = System.Diagnostics.Process.Start(psi);
-            if (proc is null) return;
-            proc.StandardInput.Write(text);
-            proc.StandardInput.Close();
-            proc.WaitForExit(2000);
-        }
-        catch { }
-    }
 }
+

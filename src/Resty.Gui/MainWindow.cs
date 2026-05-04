@@ -51,7 +51,6 @@ public sealed class MainWindow : NativeCustomWindow
     private Border     _rightContentBorder  = new();  // 右侧主区（切换编辑器 ↔ 环境管理）
     private UIElement  _editorAndResponse   = null!;  // 请求编辑器 + 响应面板组合
     private CancellationTokenSource? _currentCts;
-    private TextBlock? _statusLabel;
     // P15: Tab 状态缓存（key = "filePath||reqName"）
     private readonly Dictionary<string, Resty.Core.Models.HttpRequestDefinition> _tabStateCache = new();
     // P11: 请求历史面板
@@ -172,8 +171,6 @@ public sealed class MainWindow : NativeCustomWindow
                     {
                         capturedEditor.SetSendingState(false);
                         capturedPanel.ShowResult(result, assertions);
-                        UpdateStatusBar(result.StatusCode, result.ElapsedMs,
-                            System.Text.Encoding.UTF8.GetByteCount(result.Body));
                         capturedHistory.AddEntry(entry);
                     }, null);
                 }
@@ -350,12 +347,8 @@ public sealed class MainWindow : NativeCustomWindow
             Second            = rightArea,
         };
 
-        // 状态栏
-        var statusbar = BuildStatusBar();
-
         // 整体 DockPanel
         var root = new DockPanel();
-        root.Add(statusbar.DockBottom());
         root.Add(bodyPanel);
         return root;
     }
@@ -451,49 +444,6 @@ public sealed class MainWindow : NativeCustomWindow
         btn.MouseEnter += () => btn.Background(Color.FromRgb(0x45, 0x45, 0x45));
         btn.MouseLeave += () => btn.Background(Color.Transparent);
         return btn;
-    }
-
-    // ── 状态栏 ───────────────────────────────────────────────────
-    private UIElement BuildStatusBar()
-    {
-        _statusLabel = new TextBlock
-        {
-            Text      = "◎ 就绪",
-            FontSize  = 12,
-            Foreground = Color.FromRgb(0x4E, 0xC9, 0xB0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin    = new Thickness(8, 0),
-        };
-
-        var bar = new DockPanel { Height = 22 };
-        bar.Add(_statusLabel);
-        return new Border { Height = 22, Background = Color.FromRgb(0x25, 0x25, 0x26), Child = bar };
-    }
-    private void UpdateStatusBar(int statusCode, long elapsedMs, long bodyBytes)
-    {
-        if (_statusLabel is null) return;
-        var statusText = statusCode switch
-        {
-            >= 200 and < 300 => $"● {statusCode}",
-            >= 300 and < 400 => $"● {statusCode}",
-            >= 400 and < 500 => $"● {statusCode}",
-            >= 500           => $"● {statusCode}",
-            _                => $"✗ {statusCode}",
-        };
-        var sizeText = bodyBytes switch
-        {
-            < 1024        => $"{bodyBytes} B",
-            < 1024 * 1024 => $"{bodyBytes / 1024.0:F1} KB",
-            _             => $"{bodyBytes / (1024.0 * 1024):F1} MB",
-        };
-        _statusLabel.Text = $"{statusText}  {elapsedMs} ms  {sizeText}";
-        _statusLabel.Foreground = statusCode switch
-        {
-            >= 200 and < 300 => Color.FromRgb(0x4E, 0xC9, 0xB0),
-            >= 300 and < 400 => Color.FromRgb(0x4F, 0xC1, 0xFF),
-            >= 400 and < 500 => Color.FromRgb(0xCE, 0x91, 0x78),
-            _                => Color.FromRgb(0xF4, 0x47, 0x47),
-        };
     }
 
     private void RefreshEditorEnvVars()
