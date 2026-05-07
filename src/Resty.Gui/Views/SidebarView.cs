@@ -507,7 +507,9 @@ public sealed class SidebarView
 
     private Element BuildRequestNode(HttpFileNode file, RequestNode req)
     {
-        var isActive = _activeFile == file && _activeRequest == req;
+        var isActive = _activeFile?.FilePath == file.FilePath &&
+                       _activeRequest?.Name == req.Name &&
+                       _activeRequest?.Method == req.Method;
         var badge = new Border
         {
             Padding = new Thickness(4, 1), CornerRadius = 3,

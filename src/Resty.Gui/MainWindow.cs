@@ -106,8 +106,10 @@ public sealed class MainWindow : NativeCustomWindow
             if (idx >= 0)
             {
                 _activeTabIdx = idx;
-                _editor = _tabs[idx].Editor;
-                _responseArea.Child = _tabs[idx].ResponsePanel.RootElement;
+                var tab = _tabs[idx];
+                _editor = tab.Editor;
+                _responseArea.Child = tab.ResponsePanel.RootElement;
+                _sidebar.SetActiveRequest(tab.File, tab.Request);
             }
         });
 
