@@ -15,6 +15,28 @@ public sealed class SidebarView
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
     private const uint WM_CONTEXTMENU = 0x007B;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct INPUT
+    {
+        public uint type;
+        public MOUSEINPUT mi;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MOUSEINPUT
+    {
+        public int dx, dy, mouseData;
+        public uint dwFlags, time;
+        public IntPtr dwExtraInfo;
+    }
+
+    private const uint INPUT_MOUSE = 0;
+    private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
+    private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
     // ── 色彩 ──────────────────────────────────────────────────────
     private static readonly Color BgPanel   = Color.FromRgb(0x2D, 0x2D, 0x30);
     private static readonly Color BgHover   = Color.FromRgb(0x2A, 0x2D, 0x2E);
@@ -513,12 +535,15 @@ public sealed class SidebarView
                 menu.Item("新建环境", BeginNewEnv);
             }
             btn.ContextMenu(menu);
-            // 左键点击时显示菜单
+            // 模拟右键点击来显示菜单
             try
             {
-                var h = btn.GetType().GetProperty("Handle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(btn) as IntPtr?;
-                if (h.HasValue && h.Value != IntPtr.Zero)
-                    PostMessage(h.Value, WM_CONTEXTMENU, IntPtr.Zero, new IntPtr(-1));
+                var inputs = new INPUT[]
+                {
+                    new() { type = INPUT_MOUSE, mi = new() { dwFlags = MOUSEEVENTF_RIGHTDOWN } },
+                    new() { type = INPUT_MOUSE, mi = new() { dwFlags = MOUSEEVENTF_RIGHTUP } }
+                };
+                SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
             }
             catch { }
         };
