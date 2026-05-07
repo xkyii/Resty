@@ -51,7 +51,9 @@ public sealed class SidebarView
     private readonly Button     _collectionTabBtn;
     private readonly Button     _envTabBtn;
     private readonly Button     _operationsBtn;
+    private readonly DockPanel  _rootDock;
     private UIElement?          _envContentEl;
+    private Border?             _dropdownMenuBorder;  // 用于显示自定义下拉菜单
 
     // ── 公开 ──────────────────────────────────────────────────────
     public UIElement RootElement { get; }
@@ -117,10 +119,10 @@ public sealed class SidebarView
 
         _contentArea = new Border { Child = _collectionContent };
 
-        var root = new DockPanel();
-        root.Add(new Border { Height = 33, Child = tabDock }.DockTop());
-        root.Add(_contentArea);
-        RootElement = root;
+        _rootDock = new DockPanel();
+        _rootDock.Add(new Border { Height = 33, Child = tabDock }.DockTop());
+        _rootDock.Add(_contentArea);
+        RootElement = _rootDock;
     }
 
     // ── 公开方法 ──────────────────────────────────────────────────
@@ -491,28 +493,88 @@ public sealed class SidebarView
         var btn = new Button { Width = 48, Height = 32, Padding = new Thickness(0) };
         btn.Content(icon as Element).Background(Color.Transparent);
 
-        // 点击时显示菜单
-        btn.Click += () =>
-        {
-            var menu = new ContextMenu();
-            if (!_isEnvMode)
-            {
-                // 工作区模式菜单
-                menu.Item("新建HTTP请求", BeginNewFile);
-                menu.Item(_syncTabToSelection ? "✓ 跟随打开" : "☐ 跟随打开", () => { _syncTabToSelection = !_syncTabToSelection; });
-            }
-            else
-            {
-                // 环境模式菜单
-                menu.Item("新建环境", BeginNewEnv);
-            }
-            btn.ContextMenu(menu);
-        };
+        btn.Click += () => ShowOperationsMenu();
 
         btn.MouseEnter += () => icon.Foreground = TextPri;
         btn.MouseLeave += () => icon.Foreground = TextSec;
 
         return btn;
+    }
+
+    private void ShowOperationsMenu()
+    {
+        // 如果菜单已显示，先隐藏
+        if (_dropdownMenuBorder is not null)
+        {
+            HideOperationsMenu();
+            return;
+        }
+
+        // 创建菜单项堆栈
+        var menuStack = new StackPanel { Orientation = Orientation.Vertical, Spacing = 0 };
+
+        if (!_isEnvMode)
+        {
+            // 工作区模式
+            var item1 = new Button { Height = 32, Padding = new Thickness(12, 6) };
+            item1.Content(new TextBlock { Text = "新建HTTP请求", FontSize = 12, Foreground = TextPri } as Element)
+                .Background(Color.Transparent);
+            item1.Click += () => { BeginNewFile(); HideOperationsMenu(); };
+            item1.MouseEnter += () => item1.Background(BgHover);
+            item1.MouseLeave += () => item1.Background(Color.Transparent);
+            menuStack.Add(item1);
+
+            var separator = new Border { Height = 1, Background = BorderCol };
+            menuStack.Add(separator);
+
+            var checkmark = _syncTabToSelection ? "✓" : "☐";
+            var item2 = new Button { Height = 32, Padding = new Thickness(12, 6) };
+            item2.Content(new TextBlock { Text = $"{checkmark} 跟随打开", FontSize = 12, Foreground = TextPri } as Element)
+                .Background(Color.Transparent);
+            item2.Click += () => { _syncTabToSelection = !_syncTabToSelection; HideOperationsMenu(); ShowOperationsMenu(); };
+            item2.MouseEnter += () => item2.Background(BgHover);
+            item2.MouseLeave += () => item2.Background(Color.Transparent);
+            menuStack.Add(item2);
+        }
+        else
+        {
+            // 环境模式
+            var item = new Button { Height = 32, Padding = new Thickness(12, 6) };
+            item.Content(new TextBlock { Text = "新建环境", FontSize = 12, Foreground = TextPri } as Element)
+                .Background(Color.Transparent);
+            item.Click += () => { BeginNewEnv(); HideOperationsMenu(); };
+            item.MouseEnter += () => item.Background(BgHover);
+            item.MouseLeave += () => item.Background(Color.Transparent);
+            menuStack.Add(item);
+        }
+
+        // 包装在 Border 中
+        _dropdownMenuBorder = new Border
+        {
+            Background = BgPanel,
+            BorderBrush = BorderCol,
+            BorderThickness = 1,
+            Child = menuStack
+        };
+
+        // 在底部标签页下方添加菜单
+        _rootDock.Add(_dropdownMenuBorder.DockTop());
+    }
+
+    private void HideOperationsMenu()
+    {
+        if (_dropdownMenuBorder is not null && _rootDock.Children.Contains(_dropdownMenuBorder))
+        {
+            // 通过清空并重新添加其他元素来移除菜单
+            var children = _rootDock.Children.ToList();
+            _rootDock.Clear();
+            foreach (var child in children)
+            {
+                if (child != _dropdownMenuBorder)
+                    _rootDock.Add(child);
+            }
+            _dropdownMenuBorder = null;
+        }
     }
 
     private static void CopyToClipboard(string text)
