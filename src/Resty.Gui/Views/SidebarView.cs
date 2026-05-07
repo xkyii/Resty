@@ -67,6 +67,8 @@ public sealed class SidebarView
     private string _activeEnv   = string.Empty;
     private string _selectedEnv = string.Empty;
     private bool   _syncTabToSelection = false;  // 跟随打开标志
+    private HttpFileNode? _activeFile;
+    private RequestNode? _activeRequest;
 
     private readonly TextBox    _searchBox;
     private readonly StackPanel _treeContainer;
@@ -89,6 +91,15 @@ public sealed class SidebarView
     public event Action<string>? EnvActivated;
     /// <summary>新建 .http 文件后触发，参数为文件绝对路径。</summary>
     public event Action<string>? NewFileCreated;
+
+    /// <summary>设置活跃的请求，高京显示左侧树中对应的项。</summary>
+    public void SetActiveRequest(HttpFileNode? file, RequestNode? request)
+    {
+        _activeFile = file;
+        _activeRequest = request;
+        // 刷新树形结构以更新高亮
+        RefreshTree();
+    }
     /// <summary>当跟随打开启用时，Tab 激活时触发，参数为要高亮的文件和请求。</summary>
     public event Action<HttpFileNode, RequestNode>? SyncTabActive;
 
@@ -496,6 +507,7 @@ public sealed class SidebarView
 
     private Element BuildRequestNode(HttpFileNode file, RequestNode req)
     {
+        var isActive = _activeFile == file && _activeRequest == req;
         var badge = new Border
         {
             Padding = new Thickness(4, 1), CornerRadius = 3,
@@ -507,7 +519,7 @@ public sealed class SidebarView
         rowContent.Add(badge);
         rowContent.Add(nameLabel);
         var row = new Button { Height = 26 };
-        row.Content(rowContent as Element).Background(Color.Transparent).Foreground(TextPri).Padding(0, 0);
+        row.Content(rowContent as Element).Background(isActive ? BgActive : Color.Transparent).Foreground(TextPri).Padding(0, 0);
         row.Click += () => RequestSelected?.Invoke(file, req);
         row.ContextMenu(new ContextMenu().Item("复制请求名称", () => CopyToClipboard(req.Name)));
         return row;

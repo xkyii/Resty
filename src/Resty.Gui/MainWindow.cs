@@ -196,9 +196,12 @@ public sealed class MainWindow : NativeCustomWindow
     {
         if (idx < 0 || idx >= _tabs.Count) return;
         _activeTabIdx = idx;
-        _editor = _tabs[idx].Editor;
-        _responseArea.Child = _tabs[idx].ResponsePanel.RootElement;
+        var tab = _tabs[idx];
+        _editor = tab.Editor;
+        _responseArea.Child = tab.ResponsePanel.RootElement;
         _editorTabControl.SelectedIndex(idx);
+        // 同步左侧树中的激活请求
+        _sidebar.SetActiveRequest(tab.File, tab.Request);
     }
 
     private void CloseTab(int idx)
