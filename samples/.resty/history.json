@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "RequestName": "Get 163.com",
+    "Method": "GET",
+    "Url": "https://www.163.com?a=1",
+    "StatusCode": 403,
+    "ElapsedMs": 132,
+    "Timestamp": "2026-05-07T14:04:54.0921561+08:00"
+  }
+]

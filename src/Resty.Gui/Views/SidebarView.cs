@@ -90,11 +90,13 @@ public sealed class SidebarView
         // 操作菜单按钮
         _operationsBtn = BuildOperationsButton();
 
-        var tabRow = new DockPanel { Height = 32 };
-        tabRow.Add(_operationsBtn.DockRight());
-        var tabsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0, HorizontalAlignment = HorizontalAlignment.Left };
+        // Tab 按钮居中，操作按钮靠右
+        var tabsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0, HorizontalAlignment = HorizontalAlignment.Center };
         tabsPanel.Add(_collectionTabBtn);
         tabsPanel.Add(_envTabBtn);
+
+        var tabRow = new DockPanel { Height = 32 };
+        tabRow.Add(_operationsBtn.DockRight());
         tabRow.Add(tabsPanel);
 
         var tabDock = new DockPanel();
@@ -485,27 +487,30 @@ public sealed class SidebarView
 
     private Button BuildOperationsButton()
     {
-        var icon = new TextBlock { Text = "▼", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        var icon = new TextBlock { Text = "···", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Foreground = TextSec };
         var btn = new Button { Width = 48, Height = 32, Padding = new Thickness(0) };
-        btn.Content(icon as Element).Background(Color.Transparent).Foreground(TextSec);
+        btn.Content(icon as Element).Background(Color.Transparent);
 
-        var menu = new ContextMenu();
-        // 工作区菜单项
-        var newHttpItem = menu.Item("新建 HTTP", BeginNewFile);
-        var syncItem = menu.Item("☐ 跟随打开", () => { _syncTabToSelection = !_syncTabToSelection; });
-        // 环境菜单项
-        var newEnvItem = menu.Item("新建环境", BeginNewEnv);
-
+        // 点击时显示菜单
         btn.Click += () =>
         {
-            // 根据模式显示/隐藏相应的菜单项
-            // 简化方案：总是显示所有项，但仅在相应模式下有效果
+            var menu = new ContextMenu();
+            if (!_isEnvMode)
+            {
+                // 工作区模式菜单
+                menu.Item("新建HTTP请求", BeginNewFile);
+                menu.Item(_syncTabToSelection ? "✓ 跟随打开" : "☐ 跟随打开", () => { _syncTabToSelection = !_syncTabToSelection; });
+            }
+            else
+            {
+                // 环境模式菜单
+                menu.Item("新建环境", BeginNewEnv);
+            }
+            btn.ContextMenu(menu);
         };
 
-        btn.ContextMenu(menu);
-
-        btn.MouseEnter += () => btn.Background(BgHover);
-        btn.MouseLeave += () => btn.Background(Color.Transparent);
+        btn.MouseEnter += () => icon.Foreground = TextPri;
+        btn.MouseLeave += () => icon.Foreground = TextSec;
 
         return btn;
     }
