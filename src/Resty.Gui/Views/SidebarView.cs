@@ -1,6 +1,7 @@
 ﻿using Aprillz.MewUI;
 using Aprillz.MewUI.Controls;
 using Resty.Gui.Services;
+using System.Runtime.InteropServices;
 
 namespace Resty.Gui.Views;
 
@@ -10,6 +11,10 @@ namespace Resty.Gui.Views;
 /// </summary>
 public sealed class SidebarView
 {
+    // P/Invoke 用于发送右键菜单消息
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+    private const uint WM_CONTEXTMENU = 0x007B;
     // ── 色彩 ──────────────────────────────────────────────────────
     private static readonly Color BgPanel   = Color.FromRgb(0x2D, 0x2D, 0x30);
     private static readonly Color BgHover   = Color.FromRgb(0x2A, 0x2D, 0x2E);
@@ -53,7 +58,6 @@ public sealed class SidebarView
     private readonly Button     _operationsBtn;
     private readonly DockPanel  _rootDock;
     private UIElement?          _envContentEl;
-    private Border?             _dropdownMenuBorder;  // 用于显示自定义下拉菜单
 
     // ── 公开 ──────────────────────────────────────────────────────
     public UIElement RootElement { get; }
@@ -493,90 +497,48 @@ public sealed class SidebarView
         var btn = new Button { Width = 48, Height = 32, Padding = new Thickness(0) };
         btn.Content(icon as Element).Background(Color.Transparent);
 
-        btn.Click += () => ShowOperationsMenu();
+        btn.Click += () =>
+        {
+            // 创建菜单
+            var menu = new ContextMenu();
+            if (!_isEnvMode)
+            {
+                menu.Item("新建HTTP请求", BeginNewFile);
+                menu.Item(_syncTabToSelection ? "✓ 跟随打开" : "☐ 跟随打开", () =>
+                {
+                    _syncTabToSelection = !_syncTabToSelection;
+                });
+            }
+            else
+            {
+                menu.Item("新建环境", BeginNewEnv);
+            }
+
+            // 绑定菜单到按钮
+            btn.ContextMenu(menu);
+
+            // 尝试获取按钮的窗口句柄并发送右键菜单消息
+            try
+            {
+                var handleProp = btn.GetType().GetProperty("Handle",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (handleProp?.GetValue(btn) is IntPtr handle && handle != IntPtr.Zero)
+                {
+                    // 发送WM_CONTEXTMENU消息以显示菜单
+                    PostMessage(handle, WM_CONTEXTMENU, IntPtr.Zero, new IntPtr(-1));
+                }
+            }
+            catch
+            {
+                // 如果反射失败，忽略
+            }
+        };
 
         btn.MouseEnter += () => icon.Foreground = TextPri;
         btn.MouseLeave += () => icon.Foreground = TextSec;
 
         return btn;
     }
-
-    private void ShowOperationsMenu()
-    {
-        // 如果菜单已显示，先隐藏
-        if (_dropdownMenuBorder is not null)
-        {
-            HideOperationsMenu();
-            return;
-        }
-
-        // 创建菜单项堆栈
-        var menuStack = new StackPanel { Orientation = Orientation.Vertical, Spacing = 0 };
-
-        if (!_isEnvMode)
-        {
-            // 工作区模式
-            var item1 = new Button { Height = 32, Padding = new Thickness(12, 6) };
-            item1.Content(new TextBlock { Text = "新建HTTP请求", FontSize = 12, Foreground = TextPri } as Element)
-                .Background(Color.Transparent);
-            item1.Click += () => { BeginNewFile(); HideOperationsMenu(); };
-            item1.MouseEnter += () => item1.Background(BgHover);
-            item1.MouseLeave += () => item1.Background(Color.Transparent);
-            menuStack.Add(item1);
-
-            var separator = new Border { Height = 1, Background = BorderCol };
-            menuStack.Add(separator);
-
-            var checkmark = _syncTabToSelection ? "✓" : "☐";
-            var item2 = new Button { Height = 32, Padding = new Thickness(12, 6) };
-            item2.Content(new TextBlock { Text = $"{checkmark} 跟随打开", FontSize = 12, Foreground = TextPri } as Element)
-                .Background(Color.Transparent);
-            item2.Click += () => { _syncTabToSelection = !_syncTabToSelection; HideOperationsMenu(); ShowOperationsMenu(); };
-            item2.MouseEnter += () => item2.Background(BgHover);
-            item2.MouseLeave += () => item2.Background(Color.Transparent);
-            menuStack.Add(item2);
-        }
-        else
-        {
-            // 环境模式
-            var item = new Button { Height = 32, Padding = new Thickness(12, 6) };
-            item.Content(new TextBlock { Text = "新建环境", FontSize = 12, Foreground = TextPri } as Element)
-                .Background(Color.Transparent);
-            item.Click += () => { BeginNewEnv(); HideOperationsMenu(); };
-            item.MouseEnter += () => item.Background(BgHover);
-            item.MouseLeave += () => item.Background(Color.Transparent);
-            menuStack.Add(item);
-        }
-
-        // 包装在 Border 中
-        _dropdownMenuBorder = new Border
-        {
-            Background = BgPanel,
-            BorderBrush = BorderCol,
-            BorderThickness = 1,
-            Child = menuStack
-        };
-
-        // 在底部标签页下方添加菜单
-        _rootDock.Add(_dropdownMenuBorder.DockTop());
-    }
-
-    private void HideOperationsMenu()
-    {
-        if (_dropdownMenuBorder is not null && _rootDock.Children.Contains(_dropdownMenuBorder))
-        {
-            // 通过清空并重新添加其他元素来移除菜单
-            var children = _rootDock.Children.ToList();
-            _rootDock.Clear();
-            foreach (var child in children)
-            {
-                if (child != _dropdownMenuBorder)
-                    _rootDock.Add(child);
-            }
-            _dropdownMenuBorder = null;
-        }
-    }
-
     private static void CopyToClipboard(string text)
     {
         try
