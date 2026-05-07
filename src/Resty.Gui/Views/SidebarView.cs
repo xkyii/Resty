@@ -39,6 +39,7 @@ public sealed class SidebarView
     private bool   _isEnvMode   = false;
     private string _activeEnv   = string.Empty;
     private string _selectedEnv = string.Empty;
+    private bool   _syncTabToSelection = false;  // 跟随打开标志
 
     private readonly TextBox    _searchBox;
     private readonly StackPanel _treeContainer;
@@ -49,6 +50,7 @@ public sealed class SidebarView
     private readonly Border     _envTabLine;
     private readonly Button     _collectionTabBtn;
     private readonly Button     _envTabBtn;
+    private readonly Button     _operationsBtn;
     private UIElement?          _envContentEl;
 
     // ── 公开 ──────────────────────────────────────────────────────
@@ -59,6 +61,8 @@ public sealed class SidebarView
     public event Action<string>? EnvActivated;
     /// <summary>新建 .http 文件后触发，参数为文件绝对路径。</summary>
     public event Action<string>? NewFileCreated;
+    /// <summary>当跟随打开启用时，Tab 激活时触发，参数为要高亮的文件和请求。</summary>
+    public event Action<HttpFileNode, RequestNode>? SyncTabActive;
 
     // ─────────────────────────────────────────────────────────────
     public SidebarView()
@@ -83,9 +87,15 @@ public sealed class SidebarView
         _collectionTabBtn.Click += () => SwitchMode(false);
         _envTabBtn.Click        += () => SwitchMode(true);
 
-        var tabRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0, HorizontalAlignment = HorizontalAlignment.Center };
-        tabRow.Add(_collectionTabBtn);
-        tabRow.Add(_envTabBtn);
+        // 操作菜单按钮
+        _operationsBtn = BuildOperationsButton();
+
+        var tabRow = new DockPanel { Height = 32 };
+        tabRow.Add(_operationsBtn.DockRight());
+        var tabsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0, HorizontalAlignment = HorizontalAlignment.Left };
+        tabsPanel.Add(_collectionTabBtn);
+        tabsPanel.Add(_envTabBtn);
+        tabRow.Add(tabsPanel);
 
         var tabDock = new DockPanel();
         tabDock.Add(new Border { Height = 1, Background = BorderCol }.DockBottom());
@@ -139,10 +149,7 @@ public sealed class SidebarView
             RefreshEnvList();
             if (_envContentEl is null)
             {
-                var hdr = BuildEnvHeader();
                 var dp  = new DockPanel();
-                dp.Add(hdr.DockTop());
-                dp.Add(new Border { Height = 1, Background = BorderCol }.DockTop());
                 dp.Add(new ScrollViewer { Content = _envListPanel });
                 _envContentEl = dp;
             }
@@ -156,29 +163,6 @@ public sealed class SidebarView
     }
 
     // ── 环境列表 ──────────────────────────────────────────────────
-    private UIElement BuildEnvHeader()
-    {
-        var title = new TextBlock
-        {
-            Text              = "环境",
-            FontSize          = 11,
-            FontWeight        = FontWeight.SemiBold,
-            Foreground        = TextSec,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin            = new Thickness(12, 0, 0, 0),
-        };
-        var addBtn = new Button { Width = 28, Height = 28, Padding = new Thickness(0) };
-        addBtn.Content(new TextBlock { Text = "+", FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element)
-              .Background(Color.Transparent).Foreground(TextSec);
-        addBtn.Click      += BeginNewEnv;
-        addBtn.MouseEnter += () => addBtn.Background(BgHover);
-        addBtn.MouseLeave += () => addBtn.Background(Color.Transparent);
-        var row = new DockPanel { Height = 34 };
-        row.Add(addBtn.DockRight());
-        row.Add(title);
-        return row;
-    }
-
     private void RefreshEnvList()
     {
         _envListPanel.Clear();
@@ -401,6 +385,33 @@ public sealed class SidebarView
         row.Click += () => RequestSelected?.Invoke(file, req);
         row.ContextMenu(new ContextMenu().Item("打开", () => RequestSelected?.Invoke(file, req)).Item("复制请求名称", () => CopyToClipboard(req.Name)));
         return row;
+    }
+
+    private Button BuildOperationsButton()
+    {
+        var icon = new TextBlock { Text = "▼", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        var btn = new Button { Width = 48, Height = 32, Padding = new Thickness(0) };
+        btn.Content(icon as Element).Background(Color.Transparent).Foreground(TextSec);
+
+        var menu = new ContextMenu();
+        // 工作区菜单项
+        var newHttpItem = menu.Item("新建 HTTP", BeginNewFile);
+        var syncItem = menu.Item("☐ 跟随打开", () => { _syncTabToSelection = !_syncTabToSelection; });
+        // 环境菜单项
+        var newEnvItem = menu.Item("新建环境", BeginNewEnv);
+
+        btn.Click += () =>
+        {
+            // 根据模式显示/隐藏相应的菜单项
+            // 简化方案：总是显示所有项，但仅在相应模式下有效果
+        };
+
+        btn.ContextMenu(menu);
+
+        btn.MouseEnter += () => btn.Background(BgHover);
+        btn.MouseLeave += () => btn.Background(Color.Transparent);
+
+        return btn;
     }
 
     private static void CopyToClipboard(string text)
