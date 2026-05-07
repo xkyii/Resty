@@ -499,7 +499,6 @@ public sealed class SidebarView
 
         btn.Click += () =>
         {
-            // 创建菜单
             var menu = new ContextMenu();
             if (!_isEnvMode)
             {
@@ -513,25 +512,15 @@ public sealed class SidebarView
             {
                 menu.Item("新建环境", BeginNewEnv);
             }
-
-            // 绑定菜单到按钮
             btn.ContextMenu(menu);
-
-            // 尝试获取按钮的窗口句柄并发送右键菜单消息
+            // 左键点击时显示菜单
             try
             {
-                var handleProp = btn.GetType().GetProperty("Handle",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (handleProp?.GetValue(btn) is IntPtr handle && handle != IntPtr.Zero)
-                {
-                    // 发送WM_CONTEXTMENU消息以显示菜单
-                    PostMessage(handle, WM_CONTEXTMENU, IntPtr.Zero, new IntPtr(-1));
-                }
+                var h = btn.GetType().GetProperty("Handle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(btn) as IntPtr?;
+                if (h.HasValue && h.Value != IntPtr.Zero)
+                    PostMessage(h.Value, WM_CONTEXTMENU, IntPtr.Zero, new IntPtr(-1));
             }
-            catch
-            {
-                // 如果反射失败，忽略
-            }
+            catch { }
         };
 
         btn.MouseEnter += () => icon.Foreground = TextPri;
