@@ -21,6 +21,10 @@
 # Resty private env (may contain secrets)
 http-client.private.env.json
 
+# Resty runtime files
+.resty/history.json
+.resty/
+
 # .NET build artifacts
 artifacts/
 
