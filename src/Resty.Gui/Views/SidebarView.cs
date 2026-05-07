@@ -183,20 +183,12 @@ public sealed class SidebarView
         var dot = new TextBlock { Text = "●", FontSize = 8, Foreground = isActive ? GreenDot : Color.Transparent, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
         var label = new TextBlock { Text = env, FontSize = 13, Foreground = isActive ? TextPri : TextSec, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
 
-        var menuBtn = new Button { Width = 24, Height = 24, Padding = new Thickness(0) };
-        menuBtn.Content(new TextBlock { Text = "···", FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element)
-               .Background(Color.Transparent).Foreground(TextSec);
         var capturedEnv = env;
-        menuBtn.ContextMenu(new ContextMenu().Item("删除", () => DeleteEnv(capturedEnv)));
-        menuBtn.MouseEnter += () => menuBtn.Background(BgHover);
-        menuBtn.MouseLeave += () => menuBtn.Background(Color.Transparent);
-
-        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0, Padding = new Thickness(12, 0, 4, 0) };
+        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0, Padding = new Thickness(12, 0, 12, 0) };
         content.Add(dot);
         content.Add(label);
 
         var rowInner = new DockPanel { Height = 36 };
-        rowInner.Add(menuBtn.DockRight());
         rowInner.Add(content);
 
         var rowBorder = new Border { Background = isSelected ? BgActive : Color.Transparent, Child = rowInner };
@@ -212,6 +204,10 @@ public sealed class SidebarView
             EnvActivated?.Invoke(capturedEnv);
             RefreshEnvList();
         };
+        // 右键菜单：重命名、删除
+        btn.ContextMenu(new ContextMenu()
+            .Item("重命名", () => BeginRenameEnv(capturedEnv))
+            .Item("删除", () => DeleteEnv(capturedEnv)));
         return btn;
     }
 
@@ -234,6 +230,59 @@ public sealed class SidebarView
                 _envListPanel.Add(BuildEnvRow(e));
         confirmBtn.Click += () => { var n = nameBox.Text?.Trim() ?? string.Empty; if (!string.IsNullOrEmpty(n)) CreateEnv(n); };
         cancelBtn.Click  += RefreshEnvList;
+    }
+
+    private void BeginRenameEnv(string oldName)
+    {
+        if (_workspace is null) return;
+        var nameBox = new TextBox { Text = oldName, FontSize = 12, Margin = new Thickness(12, 4, 4, 4) };
+        nameBox.SelectAll();
+        var confirmBtn = new Button { Width = 28, Height = 28, Padding = new Thickness(0) };
+        confirmBtn.Content(new TextBlock { Text = "✓", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element).Background(Accent).Foreground(Color.White);
+        var cancelBtn = new Button { Width = 28, Height = 28, Padding = new Thickness(0) };
+        cancelBtn.Content(new TextBlock { Text = "✕", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element).Background(Color.Transparent).Foreground(TextSec);
+        var editRow = new DockPanel { Height = 36 };
+        editRow.Add(cancelBtn.DockRight());
+        editRow.Add(confirmBtn.DockRight());
+        editRow.Add(nameBox);
+
+        // 清空列表并重建，带有编辑行在最前面
+        _envListPanel.Clear();
+        _envListPanel.Add(new Border { Background = BgActive, Child = editRow });
+        if (_workspace is not null)
+            foreach (var e in _workspace.AvailableEnvironments)
+                if (e != oldName)  // 跳过旧的环境名，稍后会被重建
+                    _envListPanel.Add(BuildEnvRow(e));
+
+        confirmBtn.Click += () => { var n = nameBox.Text?.Trim() ?? string.Empty; if (!string.IsNullOrEmpty(n) && n != oldName) RenameEnv(oldName, n); else RefreshEnvList(); };
+        cancelBtn.Click  += RefreshEnvList;
+    }
+
+    private void RenameEnv(string oldName, string newName)
+    {
+        if (_workspace is null) return;
+        RenameEnvInFile(System.IO.Path.Combine(_workspace.WorkspacePath, "http-client.env.json"), oldName, newName);
+        RenameEnvInFile(System.IO.Path.Combine(_workspace.WorkspacePath, "http-client.private.env.json"), oldName, newName);
+        _workspace.Load(_workspace.WorkspacePath);
+        if (_selectedEnv == oldName) _selectedEnv = newName;
+        if (_activeEnv == oldName) { _activeEnv = newName; EnvActivated?.Invoke(newName); }
+        RefreshEnvList();
+    }
+
+    private static void RenameEnvInFile(string filePath, string oldName, string newName)
+    {
+        if (!System.IO.File.Exists(filePath)) return;
+        try
+        {
+            var all = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>>(System.IO.File.ReadAllText(filePath)) ?? new();
+            if (all.TryGetValue(oldName, out var envValues))
+            {
+                all.Remove(oldName);
+                all[newName] = envValues;
+                System.IO.File.WriteAllText(filePath, System.Text.Json.JsonSerializer.Serialize(all, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            }
+        }
+        catch { }
     }
 
     private void CreateEnv(string envName)
@@ -327,6 +376,51 @@ public sealed class SidebarView
         catch { RefreshTree(); }
     }
 
+    private void BeginNewRequest(string filePath, HttpFileNode file)
+    {
+        if (_workspace is null) return;
+        var nameBox = new TextBox { Placeholder = "请求名称…", FontSize = 12, Margin = new Thickness(12, 4, 4, 4) };
+        var confirmBtn = new Button { Width = 28, Height = 28, Padding = new Thickness(0) };
+        confirmBtn.Content(new TextBlock { Text = "✓", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element)
+            .Background(Accent).Foreground(Color.White);
+        var cancelBtn = new Button { Width = 28, Height = 28, Padding = new Thickness(0) };
+        cancelBtn.Content(new TextBlock { Text = "✕", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } as Element)
+            .Background(Color.Transparent).Foreground(TextSec);
+        var newRow = new DockPanel { Height = 36 };
+        newRow.Add(cancelBtn.DockRight());
+        newRow.Add(confirmBtn.DockRight());
+        newRow.Add(nameBox);
+        confirmBtn.Click += () =>
+        {
+            var n = nameBox.Text?.Trim() ?? string.Empty;
+            if (!string.IsNullOrEmpty(n)) CreateRequest(filePath, n, file);
+        };
+        cancelBtn.Click  += RefreshTree;
+        // 临时插入编辑行到树顶部
+        _treeContainer.Insert(0, new Border { Background = BgActive, Child = newRow });
+    }
+
+    private void CreateRequest(string filePath, string requestName, HttpFileNode file)
+    {
+        if (_workspace is null) return;
+        try
+        {
+            if (System.IO.File.Exists(filePath))
+            {
+                var content = System.IO.File.ReadAllText(filePath);
+                var newRequestText = $"\r\n### {requestName}\r\nGET https://example.com\r\n";
+                System.IO.File.WriteAllText(filePath, content + newRequestText);
+                _workspace.Load(_workspace.WorkspacePath);
+                RefreshTree();
+                // 自动打开新请求
+                var newReq = file.Requests.FirstOrDefault(r => r.Name == requestName);
+                if (newReq != null)
+                    RequestSelected?.Invoke(file, newReq);
+            }
+        }
+        catch { RefreshTree(); }
+    }
+
     private void RefreshTree()
     {
         _treeContainer.Clear();
@@ -356,7 +450,9 @@ public sealed class SidebarView
         var fileRow = new Button { Height = 28 };
         fileRow.Content(fileRowContent as Element).Background(Color.Transparent).Foreground(TextPri).Padding(0, 0);
         fileRow.Click += () => expanded.Value = !expanded.Value;
+        var capturedFilePath = file.FilePath;
         fileRow.ContextMenu(new ContextMenu()
+            .Item("新建请求", () => BeginNewRequest(capturedFilePath, file))
             .Item("在资源管理器中显示", () => { try { System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{file.FilePath}\""); } catch { } })
             .Item("复制路径", () => CopyToClipboard(file.FilePath)));
         var childPanel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 0 };
@@ -383,7 +479,7 @@ public sealed class SidebarView
         var row = new Button { Height = 26 };
         row.Content(rowContent as Element).Background(Color.Transparent).Foreground(TextPri).Padding(0, 0);
         row.Click += () => RequestSelected?.Invoke(file, req);
-        row.ContextMenu(new ContextMenu().Item("打开", () => RequestSelected?.Invoke(file, req)).Item("复制请求名称", () => CopyToClipboard(req.Name)));
+        row.ContextMenu(new ContextMenu().Item("复制请求名称", () => CopyToClipboard(req.Name)));
         return row;
     }
 
