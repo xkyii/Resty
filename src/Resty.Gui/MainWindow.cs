@@ -5,6 +5,7 @@ using Resty.Core.Assertions;
 using Resty.Core.Environment;
 using Resty.Core.Execution;
 using Resty.Gui.Infrastructure;
+using Resty.Gui.Models;
 using Resty.Gui.Services;
 using Resty.Gui.Views;
 
@@ -50,11 +51,14 @@ public sealed class MainWindow : NativeCustomWindow
     private Border     _sidebarPanelBorder  = new();  // Activity Bar 切换侧边栏内容区
     private Border     _rightContentBorder  = new();  // 右侧主区（切换编辑器 ↔ 环境管理）
     private UIElement  _editorAndResponse   = null!;  // 请求编辑器 + 响应面板组合
+    private SplitPanel _bodyPanel           = new();  // 侧边栏 / 主区分隔面板（动态调宽）
     private CancellationTokenSource? _currentCts;
     // P15: Tab 状态缓存（key = "filePath||reqName"）
     private readonly Dictionary<string, Resty.Core.Models.HttpRequestDefinition> _tabStateCache = new();
-    // P11: 请求历史面板
-    private readonly HistoryPanelView _historyPanel = new();
+    // P11: 请求历史面板 + 服务
+    private readonly HistoryPanelView  _historyPanel  = new();
+    private readonly HistoryDetailView _historyDetail = new();
+    private readonly HistoryService    _historyService = new();
     // P12: 设置面板
     private readonly SettingsView _settingsView = new();
     // Lab: 实验面板
@@ -129,19 +133,21 @@ public sealed class MainWindow : NativeCustomWindow
     }
 
     // ── 编辑器事件绑定 ─────────────────────────────────────
-    private void WireEditorEvents(RequestEditorView editor, ResponsePanelView responsePanel, string requestName = "")
+    private void WireEditorEvents(RequestEditorView editor, ResponsePanelView responsePanel, string requestName = "", string filePath = "")
     {
         editor.CancelRequested = () => { try { _currentCts?.Cancel(); } catch (ObjectDisposedException) { _currentCts = null; } };
-        editor.SaveRequested = (filePath, def) => _workspace.SaveRequest(filePath, def);
+        editor.SaveRequested = (fp, def) => _workspace.SaveRequest(fp, def);
         editor.SendRequested = req =>
         {
-            var sc            = SynchronizationContext.Current;
-            var envName       = _currentEnv;
-            var workspacePath = _workspace.WorkspacePath;
-            var capturedEditor = editor;
-            var capturedPanel  = responsePanel;
-            var capturedName   = requestName;
-            var capturedHistory = _historyPanel;
+            var sc               = SynchronizationContext.Current;
+            var envName          = _currentEnv;
+            var workspacePath    = _workspace.WorkspacePath;
+            var capturedEditor   = editor;
+            var capturedPanel    = responsePanel;
+            var capturedName     = requestName;
+            var capturedFilePath = filePath;
+            var capturedHistory  = _historyPanel;
+            var capturedService  = _historyService;
             _currentCts?.Cancel();
             _currentCts = new CancellationTokenSource();
             var cts = _currentCts;
@@ -158,22 +164,35 @@ public sealed class MainWindow : NativeCustomWindow
                         var resolver = EnvironmentResolver.Load(fakePath, envName);
                         resolvedReq = resolver.ApplyTo(req);
                     }
-                    var result = await _executor.ExecuteAsync(resolvedReq, cts.Token);
+                    var result     = await _executor.ExecuteAsync(resolvedReq, cts.Token);
                     var assertions = req.Assertions.Count > 0
                         ? AssertionEngine.Evaluate(req.Assertions, result)
                         : null;
-                    var entry = new HistoryEntry(
-                        capturedName,
-                        resolvedReq.Method,
-                        resolvedReq.Url,
-                        result.StatusCode,
-                        result.ElapsedMs,
-                        DateTime.Now);
+
+                    // 构建完整 .hlog 记录
+                    var ts = DateTime.Now;
+                    var id = HistoryService.NewId(ts, capturedName);
+                    var statusText = result.StatusCode > 0
+                        ? GetStatusText(result.StatusCode) : string.Empty;
+
+                    var record = new HistoryRecord(
+                        new HistorySummary(id, capturedName, resolvedReq.Method,
+                            resolvedReq.Url, result.StatusCode, result.ElapsedMs,
+                            ts, capturedFilePath, result.Error),
+                        HlogSerializer.BuildRequestSection(
+                            resolvedReq.Method, resolvedReq.Url,
+                            resolvedReq.Headers, resolvedReq.Body),
+                        HlogSerializer.BuildResponseSection(
+                            result.StatusCode, statusText,
+                            result.Headers, result.Body, result.Error),
+                        HlogSerializer.BuildAssertionsSection(assertions));
+
                     sc?.Post(_ =>
                     {
                         capturedEditor.SetSendingState(false);
                         capturedPanel.ShowResult(result, assertions);
-                        capturedHistory.AddEntry(entry);
+                        capturedService.AddRecord(record);
+                        capturedHistory.PrependSummary(record.Summary);
                     }, null);
                 }
                 catch (OperationCanceledException)
@@ -192,6 +211,18 @@ public sealed class MainWindow : NativeCustomWindow
             });
         };
     }
+
+    private static string GetStatusText(int code) => code switch
+    {
+        200 => "OK", 201 => "Created", 204 => "No Content",
+        301 => "Moved Permanently", 302 => "Found", 304 => "Not Modified",
+        400 => "Bad Request", 401 => "Unauthorized", 403 => "Forbidden",
+        404 => "Not Found", 405 => "Method Not Allowed", 409 => "Conflict",
+        422 => "Unprocessable Entity", 429 => "Too Many Requests",
+        500 => "Internal Server Error", 502 => "Bad Gateway",
+        503 => "Service Unavailable", 504 => "Gateway Timeout",
+        _ => string.Empty,
+    };
 
     // ── 标签管理 ─────────────────────────────────────
     private void ActivateTab(int idx)
@@ -341,7 +372,7 @@ public sealed class MainWindow : NativeCustomWindow
             Child      = _sidebar.RootElement,
         };
 
-        var bodyPanel = new SplitPanel
+        _bodyPanel = new SplitPanel
         {
             Orientation       = Orientation.Horizontal,
             FirstLength       = 260,
@@ -354,7 +385,7 @@ public sealed class MainWindow : NativeCustomWindow
 
         // 整体 DockPanel
         var root = new DockPanel();
-        root.Add(bodyPanel);
+        root.Add(_bodyPanel);
         return root;
     }
 
@@ -462,6 +493,31 @@ public sealed class MainWindow : NativeCustomWindow
         catch { }
     }
 
+    private void OnHistoryEntrySelected(HistorySummary summary)
+    {
+        var record = _historyService.LoadRecord(summary.Id);
+        _rightContentBorder.Child = record is not null
+            ? _historyDetail.BuildView(record)
+            : _historyDetail.RootElement;
+    }
+
+    private void OnHistoryClearRequested()
+    {
+        _historyService.Clear();
+        _historyPanel.ClearList();
+        _rightContentBorder.Child = _historyDetail.RootElement;
+    }
+
+    // 历史记录"在编辑器打开"
+    private void OnHistoryOpenRequested(string filePath, string requestName)
+    {
+        if (_workspace is null) return;
+        var file = _workspace.Files.FirstOrDefault(f => f.FilePath == filePath);
+        var req  = file?.Requests.FirstOrDefault(r => r.Name == requestName);
+        if (file is not null && req is not null)
+            OnRequestSelected(file, req);
+    }
+
     // 环境模式切换（来自 SidebarView.EnvModeChanged）
     private void OnEnvModeChanged(bool isEnvMode)
     {
@@ -530,7 +586,14 @@ public sealed class MainWindow : NativeCustomWindow
         RecentWorkspacesService.Add(path);
 
         // P11: 初始化历史面板
-        _historyPanel.SetWorkspacePath(path);
+        _historyService.SetWorkspacePath(path);
+        _historyPanel.SetSummaries(_historyService.Summaries);
+        _historyPanel.EntrySelected  -= OnHistoryEntrySelected;
+        _historyPanel.EntrySelected  += OnHistoryEntrySelected;
+        _historyPanel.ClearRequested -= OnHistoryClearRequested;
+        _historyPanel.ClearRequested += OnHistoryClearRequested;
+        _historyDetail.OpenRequested -= OnHistoryOpenRequested;
+        _historyDetail.OpenRequested += OnHistoryOpenRequested;
 
         // 订阅 SidebarView 事件
         _sidebar.EnvModeChanged -= OnEnvModeChanged;
@@ -582,7 +645,7 @@ public sealed class MainWindow : NativeCustomWindow
         // 创建新编辑器 + 独立响应面板（P5）
         var responsePanel = new ResponsePanelView();
         var editor = new RequestEditorView();
-        WireEditorEvents(editor, responsePanel, req.Name);
+        WireEditorEvents(editor, responsePanel, req.Name, file.FilePath);
         editor.SetFilePath(file.FilePath);
 
         // 创建标签按钮（含关闭 ✕ 和 dirty 标记）

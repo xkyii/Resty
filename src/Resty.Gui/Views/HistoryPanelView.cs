@@ -1,21 +1,22 @@
-using System.Text.Json;
 using Aprillz.MewUI;
 using Aprillz.MewUI.Controls;
+using Resty.Gui.Models;
 
 namespace Resty.Gui.Views;
 
 /// <summary>
-/// P11 请求历史面板：显示最近发送的 HTTP 请求记录。
+/// 请求历史面板：左侧导航栏中的紧凑列表。
+/// 数据由 HistoryService 提供，点击条目时触发 EntrySelected 事件。
 /// </summary>
 public sealed class HistoryPanelView
 {
     // ── 颜色 ─────────────────────────────────────────────────────
     private static readonly Color BgSidebar = Color.FromRgb(0x2D, 0x2D, 0x30);
     private static readonly Color BgHover   = Color.FromRgb(0x2A, 0x2D, 0x2E);
+    private static readonly Color BgActive  = Color.FromRgb(0x04, 0x39, 0x5E);
     private static readonly Color TextPri   = Color.FromRgb(0xCC, 0xCC, 0xCC);
     private static readonly Color TextSec   = Color.FromRgb(0x85, 0x85, 0x85);
     private static readonly Color BorderCol = Color.FromRgb(0x3E, 0x3E, 0x42);
-    private static readonly Color Accent    = Color.FromRgb(0x00, 0x7A, 0xCC);
 
     private static readonly Dictionary<string, Color> MethodColors = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -32,11 +33,15 @@ public sealed class HistoryPanelView
 
     // ── 字段 ─────────────────────────────────────────────────────
     private readonly StackPanel _listPanel;
-    private readonly List<HistoryEntry> _entries = [];
-    private string _historyFile = string.Empty;
-    private const int MaxEntries = 200;
+    private readonly List<HistorySummary> _summaries = [];
+    private HistorySummary? _selected;
 
     public UIElement RootElement { get; }
+
+    /// <summary>用户点击某条历史记录时触发。</summary>
+    public event Action<HistorySummary>? EntrySelected;
+    /// <summary>用户点击"清除"按钮时触发，由 MainWindow 调用 HistoryService.Clear()。</summary>
+    public event Action? ClearRequested;
 
     // ── 构造 ─────────────────────────────────────────────────────
     public HistoryPanelView()
@@ -48,7 +53,7 @@ public sealed class HistoryPanelView
             .Background(Color.Transparent).Foreground(TextSec);
         clearBtn.MouseEnter += () => clearBtn.Background(BgHover).Foreground(TextPri);
         clearBtn.MouseLeave += () => clearBtn.Background(Color.Transparent).Foreground(TextSec);
-        clearBtn.OnClick(ClearAll);
+        clearBtn.OnClick(() => ClearRequested?.Invoke());
 
         var headerLabel = new TextBlock
         {
@@ -74,38 +79,36 @@ public sealed class HistoryPanelView
     }
 
     // ── 公开方法 ─────────────────────────────────────────────────
-    public void SetWorkspacePath(string workspacePath)
+    /// <summary>加载全部摘要（初始化或重载时调用）。</summary>
+    public void SetSummaries(IReadOnlyList<HistorySummary> summaries)
     {
-        if (string.IsNullOrEmpty(workspacePath)) return;
-        var dir = Path.Combine(workspacePath, ".resty");
-        Directory.CreateDirectory(dir);
-        _historyFile = Path.Combine(dir, "history.json");
-        _entries.Clear();
-        LoadFromFile();
+        _summaries.Clear();
+        _summaries.AddRange(summaries);
+        _selected = null;
         Rebuild();
     }
 
-    public void AddEntry(HistoryEntry entry)
+    /// <summary>在列表头部插入新摘要（每次发送请求后调用）。</summary>
+    public void PrependSummary(HistorySummary summary)
     {
-        _entries.Insert(0, entry);
-        if (_entries.Count > MaxEntries)
-            _entries.RemoveAt(_entries.Count - 1);
-        SaveToFile();
+        _summaries.Insert(0, summary);
+        _selected = summary;   // 自动选中最新条目
+        Rebuild();
+    }
+
+    /// <summary>清空列表显示。</summary>
+    public void ClearList()
+    {
+        _summaries.Clear();
+        _selected = null;
         Rebuild();
     }
 
     // ── 私有 ─────────────────────────────────────────────────────
-    private void ClearAll()
-    {
-        _entries.Clear();
-        SaveToFile();
-        Rebuild();
-    }
-
     private void Rebuild()
     {
         _listPanel.Clear();
-        if (_entries.Count == 0)
+        if (_summaries.Count == 0)
         {
             _listPanel.Add(new TextBlock
             {
@@ -117,12 +120,14 @@ public sealed class HistoryPanelView
             });
             return;
         }
-        foreach (var e in _entries)
-            _listPanel.Add(BuildEntryRow(e));
+        foreach (var s in _summaries)
+            _listPanel.Add(BuildEntryRow(s));
     }
 
-    private UIElement BuildEntryRow(HistoryEntry entry)
+    private UIElement BuildEntryRow(HistorySummary summary)
     {
+        var isSelected = IsSelected(summary);
+
         var methodBadge = new Border
         {
             Width   = 48,
@@ -130,16 +135,16 @@ public sealed class HistoryPanelView
             Padding = new Thickness(2, 1),
             Child   = new TextBlock
             {
-                Text                = entry.Method.ToUpperInvariant(),
+                Text                = summary.Method.ToUpperInvariant(),
                 FontSize            = 10,
                 FontWeight          = FontWeight.SemiBold,
-                Foreground          = MethodColor(entry.Method),
+                Foreground          = MethodColor(summary.Method),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment   = VerticalAlignment.Center,
             },
         };
 
-        var statusColor = entry.StatusCode switch
+        var statusColor = summary.StatusCode switch
         {
             >= 200 and < 300 => Color.FromRgb(0x4E, 0xC9, 0xB0),
             >= 300 and < 400 => Color.FromRgb(0x4F, 0xC1, 0xFF),
@@ -149,27 +154,26 @@ public sealed class HistoryPanelView
         };
         var statusLabel = new TextBlock
         {
-            Text              = entry.StatusCode > 0 ? entry.StatusCode.ToString() : "Err",
+            Text              = summary.Error is not null ? "Err"
+                              : summary.StatusCode > 0   ? summary.StatusCode.ToString()
+                              : "…",
             FontSize          = 11,
             Foreground        = statusColor,
             VerticalAlignment = VerticalAlignment.Center,
             Width             = 32,
             Margin            = new Thickness(0, 0, 4, 0),
         };
-
-        var timeStr = FormatRelativeTime(entry.Timestamp);
         var timeLabel = new TextBlock
         {
-            Text              = timeStr,
+            Text              = FormatRelativeTime(summary.Timestamp),
             FontSize          = 10,
             Foreground        = TextSec,
             VerticalAlignment = VerticalAlignment.Center,
             Margin            = new Thickness(0, 0, 8, 0),
         };
-
         var urlLabel = new TextBlock
         {
-            Text              = TruncateUrl(entry.Url, 28),
+            Text              = TruncateUrl(summary.Url),
             FontSize          = 11,
             Foreground        = TextPri,
             VerticalAlignment = VerticalAlignment.Center,
@@ -177,7 +181,7 @@ public sealed class HistoryPanelView
         };
         var nameLabel = new TextBlock
         {
-            Text              = entry.RequestName,
+            Text              = summary.RequestName,
             FontSize          = 10,
             Foreground        = TextSec,
             VerticalAlignment = VerticalAlignment.Center,
@@ -187,32 +191,42 @@ public sealed class HistoryPanelView
         infoStack.Add(urlLabel);
         infoStack.Add(nameLabel);
 
-        var row = new DockPanel { Margin = new Thickness(0) };
-        row.Add(new Border { Width = 6 }.DockLeft()); // indent
+        var row = new DockPanel();
+        row.Add(new Border { Width = 6 }.DockLeft());
         row.Add(methodBadge.DockLeft());
         row.Add(new Border { Width = 6 }.DockLeft());
         row.Add(timeLabel.DockRight());
         row.Add(statusLabel.DockRight());
         row.Add(infoStack);
 
-        var rowBorder = new Border { Height = 48, Padding = new Thickness(0, 2), Child = row };
-        rowBorder.MouseEnter += () => rowBorder.Background = BgHover;
-        rowBorder.MouseLeave += () => rowBorder.Background = Color.Transparent;
+        var rowBtn = new Button { Height = 48, Padding = new Thickness(0) };
+        rowBtn.Content(row as Element)
+              .Background(isSelected ? BgActive : Color.Transparent)
+              .Padding(0, 2);
+        rowBtn.MouseEnter += () => { if (!IsSelected(summary)) rowBtn.Background(BgHover); };
+        rowBtn.MouseLeave += () => { if (!IsSelected(summary)) rowBtn.Background(Color.Transparent); };
+        rowBtn.Click += () =>
+        {
+            _selected = summary;
+            Rebuild();
+            EntrySelected?.Invoke(summary);
+        };
 
         var separator = new Border { Height = 1, Background = Color.FromRgb(0x30, 0x30, 0x33) };
         var container = new StackPanel { Orientation = Orientation.Vertical };
-        container.Add(rowBorder);
+        container.Add(rowBtn);
         container.Add(separator);
         return container;
     }
 
-    private static string TruncateUrl(string url, int max)
+    private bool IsSelected(HistorySummary s) =>
+        _selected?.Id == s.Id;
+
+    private static string TruncateUrl(string url, int max = 28)
     {
-        // 去掉协议前缀以节省空间
-        var s = url;
-        if (s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) s = s[8..];
-        else if (s.StartsWith("http://",  StringComparison.OrdinalIgnoreCase)) s = s[7..];
-        return s.Length > max ? s[..max] + "…" : s;
+        if (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) url = url[8..];
+        else if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) url = url[7..];
+        return url.Length > max ? url[..max] + "…" : url;
     }
 
     private static string FormatRelativeTime(DateTime ts)
@@ -224,36 +238,4 @@ public sealed class HistoryPanelView
              : diff.TotalDays < 7      ? $"{(int)diff.TotalDays}d 前"
              : ts.ToString("MM-dd");
     }
-
-    private void LoadFromFile()
-    {
-        if (string.IsNullOrEmpty(_historyFile) || !File.Exists(_historyFile)) return;
-        try
-        {
-            var json = File.ReadAllText(_historyFile);
-            var list = JsonSerializer.Deserialize<List<HistoryEntry>>(json);
-            if (list is not null) _entries.AddRange(list);
-        }
-        catch { }
-    }
-
-    private void SaveToFile()
-    {
-        if (string.IsNullOrEmpty(_historyFile)) return;
-        try
-        {
-            var json = JsonSerializer.Serialize(_entries, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_historyFile, json);
-        }
-        catch { }
-    }
 }
-
-/// <summary>单条历史记录。</summary>
-public sealed record HistoryEntry(
-    string RequestName,
-    string Method,
-    string Url,
-    int StatusCode,
-    long ElapsedMs,
-    DateTime Timestamp);
