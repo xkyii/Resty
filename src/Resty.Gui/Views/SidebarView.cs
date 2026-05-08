@@ -1,7 +1,6 @@
 ﻿using Aprillz.MewUI;
 using Aprillz.MewUI.Controls;
 using Resty.Gui.Services;
-using System.Runtime.InteropServices;
 
 namespace Resty.Gui.Views;
 
@@ -11,36 +10,12 @@ namespace Resty.Gui.Views;
 /// </summary>
 public sealed class SidebarView
 {
-    // P/Invoke 用于发送右键菜单消息
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-    private const uint WM_CONTEXTMENU = 0x007B;
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct INPUT
-    {
-        public uint type;
-        public MOUSEINPUT mi;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MOUSEINPUT
-    {
-        public int dx, dy, mouseData;
-        public uint dwFlags, time;
-        public IntPtr dwExtraInfo;
-    }
-
-    private const uint INPUT_MOUSE = 0;
-    private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
-    private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
     // ── 色彩 ──────────────────────────────────────────────────────
-    private static readonly Color BgPanel   = Color.FromRgb(0x2D, 0x2D, 0x30);
-    private static readonly Color BgHover   = Color.FromRgb(0x2A, 0x2D, 0x2E);
-    private static readonly Color BgActive  = Color.FromRgb(0x04, 0x39, 0x5E);
+    private static readonly Color BgPanel      = Color.FromRgb(0x2D, 0x2D, 0x30);
+    private static readonly Color BgHover      = Color.FromRgb(0x2A, 0x2D, 0x2E);
+    private static readonly Color BgActive     = Color.FromRgb(0x04, 0x39, 0x5E);
+    private static readonly Color BgSeg        = Color.FromRgb(0x1A, 0x1A, 0x1C);
+    private static readonly Color BgSegActive  = Color.FromRgb(0x3C, 0x3C, 0x3F);
     private static readonly Color Accent    = Color.FromRgb(0x00, 0x7A, 0xCC);
     private static readonly Color TextPri   = Color.FromRgb(0xCC, 0xCC, 0xCC);
     private static readonly Color TextSec   = Color.FromRgb(0x85, 0x85, 0x85);
@@ -75,8 +50,6 @@ public sealed class SidebarView
     private readonly StackPanel _envListPanel;
     private readonly Border     _contentArea;
     private readonly UIElement  _collectionContent;
-    private readonly Border     _collectionTabLine;
-    private readonly Border     _envTabLine;
     private readonly Button     _collectionTabBtn;
     private readonly Button     _envTabBtn;
     private readonly Button     _operationsBtn;
@@ -106,41 +79,45 @@ public sealed class SidebarView
     // ─────────────────────────────────────────────────────────────
     public SidebarView()
     {
-        // Tab 行 — 图标按钮居中
-        _collectionTabLine = new Border { Height = 2, Background = Accent };
-        var colIcon = new TextBlock { Text = "☰", FontSize = 15, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var colDock = new DockPanel();
-        colDock.Add(_collectionTabLine.DockBottom());
-        colDock.Add(colIcon);
-        _collectionTabBtn = new Button { Width = 48, Height = 32, Padding = new Thickness(0) };
-        _collectionTabBtn.Content(colDock as Element).Background(Color.Transparent).Foreground(TextPri);
-
-        _envTabLine = new Border { Height = 2, Background = Color.Transparent };
-        var envIcon = new TextBlock { Text = "◎", FontSize = 15, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        var envDock = new DockPanel();
-        envDock.Add(_envTabLine.DockBottom());
-        envDock.Add(envIcon);
-        _envTabBtn = new Button { Width = 48, Height = 32, Padding = new Thickness(0) };
-        _envTabBtn.Content(envDock as Element).Background(Color.Transparent).Foreground(TextSec);
-
+        // ── Segment control（pill 样式）────────────────────────────
+        _collectionTabBtn = MakeSegBtn("☰", active: true,  tooltip: "集合");
+        _envTabBtn        = MakeSegBtn("◎", active: false, tooltip: "环境");
         _collectionTabBtn.Click += () => SwitchMode(false);
         _envTabBtn.Click        += () => SwitchMode(true);
 
-        // 操作菜单按钮
+        var segPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0 };
+        segPanel.Add(_collectionTabBtn);
+        segPanel.Add(_envTabBtn);
+        var segContainer = new Border
+        {
+            CornerRadius      = 4,
+            Background        = BgSeg,
+            Padding           = new Thickness(2),
+            Child             = segPanel,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        // ── 操作菜单按钮 ──────────────────────────────────────────
         _operationsBtn = BuildOperationsButton();
 
-        // Tab 按钮居中，操作按钮靠右
-        var tabsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 0, HorizontalAlignment = HorizontalAlignment.Center };
-        tabsPanel.Add(_collectionTabBtn);
-        tabsPanel.Add(_envTabBtn);
+        // ── Header 三列：标题 / segment / 菜单 ──────────────────
+        var titleLabel = new TextBlock
+        {
+            Text              = "工作区",
+            FontSize          = 11,
+            FontWeight        = FontWeight.SemiBold,
+            Foreground        = TextSec,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin            = new Thickness(12, 0, 0, 0),
+        };
+        var headerRow = new DockPanel { Height = 33 };
+        headerRow.Add(titleLabel.DockLeft());
+        headerRow.Add(_operationsBtn.DockRight());
+        headerRow.Add(new Border { Child = segContainer, HorizontalAlignment = HorizontalAlignment.Center });
 
-        var tabRow = new DockPanel { Height = 32 };
-        tabRow.Add(_operationsBtn.DockRight());
-        tabRow.Add(tabsPanel);
-
-        var tabDock = new DockPanel();
-        tabDock.Add(new Border { Height = 1, Background = BorderCol }.DockBottom());
-        tabDock.Add(tabRow);
+        var headerDock = new DockPanel();
+        headerDock.Add(new Border { Height = 1, Background = BorderCol }.DockBottom());
+        headerDock.Add(headerRow);
 
         // 集合内容
         _searchBox = new TextBox { Placeholder = "搜索请求…", FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
@@ -157,7 +134,7 @@ public sealed class SidebarView
         _contentArea = new Border { Child = _collectionContent };
 
         _rootDock = new DockPanel();
-        _rootDock.Add(new Border { Height = 33, Child = tabDock }.DockTop());
+        _rootDock.Add(new Border { Height = 33, Child = headerDock }.DockTop());
         _rootDock.Add(_contentArea);
         RootElement = _rootDock;
     }
@@ -180,10 +157,8 @@ public sealed class SidebarView
     private void SwitchMode(bool toEnv)
     {
         _isEnvMode = toEnv;
-        _collectionTabLine.Background = toEnv ? Color.Transparent : Accent;
-        _envTabLine.Background        = toEnv ? Accent : Color.Transparent;
-        _collectionTabBtn.Foreground(toEnv ? TextSec : TextPri);
-        _envTabBtn.Foreground(toEnv ? TextPri : TextSec);
+        _collectionTabBtn.Background(toEnv ? Color.Transparent : BgSegActive).Foreground(toEnv ? TextSec : TextPri);
+        _envTabBtn.Background(toEnv ? BgSegActive : Color.Transparent).Foreground(toEnv ? TextPri : TextSec);
 
         if (toEnv)
         {
@@ -527,6 +502,16 @@ public sealed class SidebarView
         return row;
     }
 
+    private static Button MakeSegBtn(string icon, bool active, string tooltip)
+    {
+        var btn = new Button { Width = 32, Height = 26, Padding = new Thickness(0), CornerRadius = 3 };
+        btn.Content(icon, false).FontSize(14)
+           .Background(active ? BgSegActive : Color.Transparent)
+           .Foreground(active ? TextPri : TextSec);
+        btn.ToolTip(tooltip);
+        return btn;
+    }
+
     private Button BuildOperationsButton()
     {
         var icon = new TextBlock { Text = "···", FontSize = 14, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Foreground = TextSec };
@@ -548,23 +533,12 @@ public sealed class SidebarView
             {
                 menu.Item("新建环境", BeginNewEnv);
             }
-            btn.ContextMenu(menu);
-            // 模拟右键点击来显示菜单
-            try
-            {
-                var inputs = new INPUT[]
-                {
-                    new() { type = INPUT_MOUSE, mi = new() { dwFlags = MOUSEEVENTF_RIGHTDOWN } },
-                    new() { type = INPUT_MOUSE, mi = new() { dwFlags = MOUSEEVENTF_RIGHTUP } }
-                };
-                SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
-            }
-            catch { }
+            ViewHelpers.PopupMenu(btn, menu);
         };
 
         btn.MouseEnter += () => icon.Foreground = TextPri;
         btn.MouseLeave += () => icon.Foreground = TextSec;
-
+        btn.ToolTip("更多操作");
         return btn;
     }
     private static void CopyToClipboard(string text)

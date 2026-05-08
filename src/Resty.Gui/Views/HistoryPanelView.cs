@@ -48,12 +48,20 @@ public sealed class HistoryPanelView
     {
         _listPanel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 0 };
 
-        var clearBtn = new Button { Height = 26, Padding = new Thickness(10, 0) };
-        clearBtn.Content("清除", false).FontSize(11)
-            .Background(Color.Transparent).Foreground(TextSec);
-        clearBtn.MouseEnter += () => clearBtn.Background(BgHover).Foreground(TextPri);
-        clearBtn.MouseLeave += () => clearBtn.Background(Color.Transparent).Foreground(TextSec);
-        clearBtn.OnClick(() => ClearRequested?.Invoke());
+        var menuIcon = new TextBlock { Text = "···", FontSize = 14,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment   = VerticalAlignment.Center, Foreground = TextSec };
+        var menuBtn = new Button { Width = 32, Height = 26, Padding = new Thickness(0), Margin = new Thickness(0, 0, 6, 0) };
+        menuBtn.Content(menuIcon as Element).Background(Color.Transparent);
+        menuBtn.MouseEnter += () => menuIcon.Foreground = TextPri;
+        menuBtn.MouseLeave += () => menuIcon.Foreground = TextSec;
+        menuBtn.ToolTip("更多操作");
+        menuBtn.Click += () =>
+        {
+            var menu = new ContextMenu();
+            menu.Item("清除", () => ClearRequested?.Invoke());
+            ViewHelpers.PopupMenu(menuBtn, menu);
+        };
 
         var headerLabel = new TextBlock
         {
@@ -64,14 +72,14 @@ public sealed class HistoryPanelView
             VerticalAlignment = VerticalAlignment.Center,
             Margin            = new Thickness(12, 0, 0, 0),
         };
-        var headerRow = new DockPanel { Height = 30 };
-        headerRow.Add(clearBtn.DockRight());
+        var headerRow = new DockPanel { Height = 33 };
+        headerRow.Add(menuBtn.DockRight());
         headerRow.Add(headerLabel);
 
         var scroll = new ScrollViewer { VerticalScroll = ScrollMode.Auto, Content = _listPanel };
 
         var root = new DockPanel();
-        root.Add(new Border { Height = 30, Background = BgSidebar, Child = headerRow }.DockTop());
+        root.Add(new Border { Height = 33, Background = BgSidebar, Child = headerRow }.DockTop());
         root.Add(new Border { Height = 1, Background = BorderCol }.DockTop());
         root.Add(scroll);
 

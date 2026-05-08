@@ -34,6 +34,7 @@ public sealed class MainWindow : NativeCustomWindow
     private readonly EnvManagerView      _envManagerView = new();
     private readonly ObservableValue<string> _workspaceName = new("Resty");
 
+
     // G2 组件
     private RequestEditorView? _editor; // 当前激活的编辑器
     private readonly HttpRequestExecutor _executor = new(timeoutMs: 30_000);
@@ -52,6 +53,9 @@ public sealed class MainWindow : NativeCustomWindow
     private Border     _rightContentBorder  = new();  // 右侧主区（切换编辑器 ↔ 环境管理）
     private UIElement  _editorAndResponse   = null!;  // 请求编辑器 + 响应面板组合
     private SplitPanel _bodyPanel           = new();  // 侧边栏 / 主区分隔面板（动态调宽）
+    private int        _activePanelIdx      = 0;      // 当前活跃的 Activity Bar 面板
+    private UIElement[] _panelRightDefaults = null!;  // 各面板右侧默认内容
+    private readonly UIElement?[] _panelRightCache = new UIElement?[5]; // 各面板右侧记忆
     private CancellationTokenSource? _currentCts;
     // P15: Tab 状态缓存（key = "filePath||reqName"）
     private readonly Dictionary<string, Resty.Core.Models.HttpRequestDefinition> _tabStateCache = new();
@@ -96,6 +100,7 @@ public sealed class MainWindow : NativeCustomWindow
             TitleBarLeft.Add(appIcon);
         }
         TitleBarLeft.Add(BuildMenuBar());
+        // 窗口标题居中显示：由 this.Title 控制（随侧边栏/面板变化）
 
         // ── 侧边栏事件 ───────────────────────────────────────────
         _sidebar.RequestSelected += OnRequestSelected;
@@ -233,6 +238,7 @@ public sealed class MainWindow : NativeCustomWindow
         _editor = tab.Editor;
         _responseArea.Child = tab.ResponsePanel.RootElement;
         _editorTabControl.SelectedIndex(idx);
+        this.Title = tab.Request.Name;
         // 同步左侧树中的激活请求
         _sidebar.SetActiveRequest(tab.File, tab.Request);
     }
@@ -253,6 +259,7 @@ public sealed class MainWindow : NativeCustomWindow
             _activeTabIdx = -1;
             _editor = null;
             _responseArea.Child = new ResponsePanelView().RootElement;
+            this.Title = _workspaceName.Value;
         }
         else
         {
@@ -359,6 +366,15 @@ public sealed class MainWindow : NativeCustomWindow
 
         // 右侧主区（Border 方便切换内容）
         _rightContentBorder = new Border { Child = _editorAndResponse };
+        // 各面板右侧默认内容（无记忆时的初始值）
+        _panelRightDefaults = new UIElement[]
+        {
+            _editorAndResponse,         // 0: 工作区
+            _historyDetail.RootElement, // 1: 请求历史
+            _editorAndResponse,         // 2: 最近工作区
+            _editorAndResponse,         // 3: 实验室
+            _editorAndResponse,         // 4: 设置
+        };
         // 订阅 LabView 的试验打开事件：当左侧点击某个试验时，将具体试验内容显示到右侧主区
         _labView.ExperimentRequested -= ui => _rightContentBorder.Child = ui;
         _labView.ExperimentRequested += ui => _rightContentBorder.Child = ui;
@@ -405,7 +421,17 @@ public sealed class MainWindow : NativeCustomWindow
 
         void SetActive(int idx)
         {
-            // 仅保留左侧竖线作为选中态，不额外显示蓝色边框。
+            // 保存当前面板的右侧内容
+            _panelRightCache[_activePanelIdx] = _rightContentBorder.Child;
+            _activePanelIdx = idx;
+
+            // 恢复目标面板的右侧内容（有记忆则用记忆，否则用默认值）
+            _rightContentBorder.Child = _panelRightCache[idx] ?? _panelRightDefaults[idx];
+
+            // 侧边栏宽度：历史面板稍宽
+            _bodyPanel.FirstLength = idx == 1 ? 320 : 260;
+
+            // 左侧竖线选中态
             collectionLine.Background = idx == 0 ? Accent : Color.Transparent;
             historyLine.Background    = idx == 1 ? Accent : Color.Transparent;
             workspaceLine.Background  = idx == 2 ? Accent : Color.Transparent;
@@ -426,14 +452,24 @@ public sealed class MainWindow : NativeCustomWindow
                 4 => _settingsView.RootElement,
                 _ => _sidebar.RootElement,
             };
+            // 更新窗口标题（居中显示）
+            this.Title = idx switch
+            {
+                0 => string.IsNullOrEmpty(_workspace.WorkspaceName) ? "工作区" : _workspace.WorkspaceName,
+                1 => "请求历史",
+                2 => "最近工作区",
+                3 => "实验室",
+                4 => "设置",
+                _ => "Resty",
+            };
         }
 
-        collectionBtn = MakeActivityBtn("☰", collectionLine, () => SetActive(0));
-        historyBtn    = MakeActivityBtn("⧗", historyLine,    () => SetActive(1));
-        workspaceBtn  = MakeActivityBtn("⊞", workspaceLine,  () => SetActive(2));
-        labBtn        = MakeActivityBtn("⚗", labLine,        () => SetActive(3));
+        collectionBtn = MakeActivityBtn("☰", collectionLine, () => SetActive(0), "工作区");
+        historyBtn    = MakeActivityBtn("⧗", historyLine,    () => SetActive(1), "请求历史");
+        workspaceBtn  = MakeActivityBtn("⊞", workspaceLine,  () => SetActive(2), "最近工作区");
+        labBtn        = MakeActivityBtn("⚗", labLine,        () => SetActive(3), "实验室");
 
-        var settingsBtn = MakeActivityBtn("⚙", settingsLine, () => SetActive(4));
+        var settingsBtn = MakeActivityBtn("⚙", settingsLine, () => SetActive(4), "设置");
 
         var topPanel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 0 };
         topPanel.Add(collectionBtn);
@@ -453,7 +489,7 @@ public sealed class MainWindow : NativeCustomWindow
         };
     }
 
-    private static Button MakeActivityBtn(string icon, Border indicator, Action onClick)
+    private static Button MakeActivityBtn(string icon, Border indicator, Action onClick, string tooltip)
     {
         var lbl = new TextBlock
         {
@@ -479,6 +515,7 @@ public sealed class MainWindow : NativeCustomWindow
         btn.Click      += onClick;
         btn.MouseEnter += () => btn.Background(Color.FromRgb(0x45, 0x45, 0x45));
         btn.MouseLeave += () => btn.Background(Color.Transparent);
+        btn.ToolTip(tooltip);
         return btn;
     }
 
@@ -505,6 +542,7 @@ public sealed class MainWindow : NativeCustomWindow
     {
         _historyService.Clear();
         _historyPanel.ClearList();
+        _panelRightCache[1] = null;
         _rightContentBorder.Child = _historyDetail.RootElement;
     }
 
@@ -578,6 +616,7 @@ public sealed class MainWindow : NativeCustomWindow
         _workspace.Load(path);
         _workspace.FilesChanged += OnWorkspaceFilesChanged;
         _workspaceName.Value = _workspace.WorkspaceName;
+        this.Title = _workspaceName.Value;
         _currentEnv = _workspace.AvailableEnvironments.Count > 0
             ? _workspace.AvailableEnvironments[0]
             : string.Empty;

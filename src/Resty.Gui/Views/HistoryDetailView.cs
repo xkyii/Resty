@@ -55,30 +55,6 @@ public sealed class HistoryDetailView
     {
         var s = record.Summary;
 
-        // ── 顶部标题栏 ────────────────────────────────────────
-        var titleLabel = new TextBlock
-        {
-            Text              = s.RequestName,
-            FontSize          = 14,
-            FontWeight        = FontWeight.SemiBold,
-            Foreground        = TextPri,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin            = new Thickness(20, 0, 0, 0),
-        };
-        var btnRow = new StackPanel
-        {
-            Orientation       = Orientation.Horizontal,
-            Spacing           = 8,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin            = new Thickness(0, 0, 16, 0),
-        };
-        if (!string.IsNullOrEmpty(s.FilePath))
-            btnRow.Add(MakeButton("在编辑器打开", AccentBlue, Color.White,
-                () => OpenRequested?.Invoke(s.FilePath, s.RequestName)));
-        var titleBar = new DockPanel { Height = 44 };
-        titleBar.Add(btnRow.DockRight());
-        titleBar.Add(titleLabel);
-
         // ── 标签页 ────────────────────────────────────────────
         var rawText    = HlogSerializer.Serialize(record);
         var tabControl = new TabControl();
@@ -91,8 +67,6 @@ public sealed class HistoryDetailView
         );
 
         var root = new DockPanel();
-        root.Add(new Border { Background = BgPanel, Child = titleBar }.DockTop());
-        root.Add(new Border { Height = 1, Background = BorderCol }.DockTop());
         root.Add(tabControl);
         return new Border { Background = BgBase, Child = root };
     }
