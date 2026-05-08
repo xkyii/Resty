@@ -1,0 +1,51 @@
+<linker>
+  <!-- System.Text.Json infrastructure -->
+  <assembly fullname="System.Text.Json" preserve="nothing">
+    <type fullname="System.Text.Json.JsonDocument" preserve="all" />
+    <type fullname="System.Text.Json.JsonElement" preserve="all" />
+    <type fullname="System.Text.Json.Utf8JsonWriter" preserve="all" />
+    <type fullname="System.Text.Json.JsonWriterOptions" preserve="all" />
+    <type fullname="System.Text.Json.JsonSerializer" preserve="all" />
+    <type fullname="System.Text.Json.JsonSerializerOptions" preserve="all" />
+  </assembly>
+
+  <!-- Collections used in SidebarView JSON serialization -->
+  <assembly fullname="System.Collections" preserve="nothing">
+    <type fullname="System.Collections.Generic.List`1" preserve="all" />
+    <type fullname="System.Collections.Generic.Dictionary`2" preserve="all" />
+    <type fullname="System.Collections.Generic.KeyValuePair`2" preserve="all" />
+  </assembly>
+
+  <!-- Resty.Gui Models and Services -->
+  <assembly fullname="Resty.Gui" preserve="nothing">
+    <type fullname="Resty.Gui.Services.AppSettings" preserve="all" />
+    <type fullname="Resty.Gui.Services.RecentWorkspacesService+RecentWorkspaceEntry" preserve="all" />
+    <type fullname="Resty.Gui.Models.HistorySummary" preserve="all" />
+    <type fullname="Resty.Gui.Models.HistoryRecord" preserve="all" />
+  </assembly>
+
+  <!-- Resty.Core Models -->
+  <assembly fullname="Resty.Core" preserve="nothing">
+    <type fullname="Resty.Core.Models.HttpFileDefinition" preserve="all" />
+    <type fullname="Resty.Core.Models.HttpRequestDefinition" preserve="all" />
+    <type fullname="Resty.Core.Models.AssertionRule" preserve="all" />
+    <type fullname="Resty.Core.Models.AssertionResult" preserve="all" />
+    <type fullname="Resty.Core.Models.HttpExecutionResult" preserve="all" />
+    <type fullname="Resty.Core.Models.RequestExecutionResult" preserve="all" />
+  </assembly>
+
+  <!-- MewUI libraries - keep entire assemblies to avoid runtime lookup failures -->
+  <assembly fullname="Aprillz.MewUI.Windows" preserve="all" />
+  <assembly fullname="Aprillz.MewUI" preserve="all" />
+
+  <!-- System types for basic reflection -->
+  <assembly fullname="System.Runtime" preserve="nothing">
+    <type fullname="System.Object" preserve="all" />
+    <type fullname="System.String" preserve="all" />
+    <type fullname="System.DateTime" preserve="all" />
+    <type fullname="System.Int32" preserve="all" />
+    <type fullname="System.Boolean" preserve="all" />
+    <type fullname="System.Type" preserve="all" />
+    <type fullname="System.Activator" preserve="all" />
+  </assembly>
+</linker>

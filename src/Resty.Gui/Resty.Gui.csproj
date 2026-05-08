@@ -12,6 +12,11 @@
     <ApplicationIcon>Assets\resty.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- NativeAOT: only when PublishAot is set (via publish profile or CLI flag) -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <TrimmerRootDescriptor>trimmer-roots.xml</TrimmerRootDescriptor>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="Assets\resty.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
