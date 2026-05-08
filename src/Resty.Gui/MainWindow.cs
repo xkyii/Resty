@@ -55,7 +55,7 @@ public sealed class MainWindow : NativeCustomWindow
     private SplitPanel _bodyPanel           = new();  // 侧边栏 / 主区分隔面板（动态调宽）
     private int        _activePanelIdx      = 0;      // 当前活跃的 Activity Bar 面板
     private UIElement[] _panelRightDefaults = null!;  // 各面板右侧默认内容
-    private readonly UIElement?[] _panelRightCache = new UIElement?[5]; // 各面板右侧记忆
+    private readonly UIElement?[] _panelRightCache = new UIElement?[4]; // 各面板右侧记忆
     private CancellationTokenSource? _currentCts;
     // P15: Tab 状态缓存（key = "filePath||reqName"）
     private readonly Dictionary<string, Resty.Core.Models.HttpRequestDefinition> _tabStateCache = new();
@@ -63,8 +63,8 @@ public sealed class MainWindow : NativeCustomWindow
     private readonly HistoryPanelView  _historyPanel  = new();
     private readonly HistoryDetailView _historyDetail = new();
     private readonly HistoryService    _historyService = new();
-    // P12: 设置面板
-    private readonly SettingsView _settingsView = new();
+    // P12: 设置窗口（独立 NativeCustomWindow）
+    private SettingsWindow? _settingsWindow;
     // Lab: 实验面板
     private readonly LabView _labView = new();
 
@@ -373,7 +373,6 @@ public sealed class MainWindow : NativeCustomWindow
             _historyDetail.RootElement, // 1: 请求历史
             _editorAndResponse,         // 2: 最近工作区
             _editorAndResponse,         // 3: 实验室
-            _editorAndResponse,         // 4: 设置
         };
         // 订阅 LabView 的试验打开事件：当左侧点击某个试验时，将具体试验内容显示到右侧主区
         _labView.ExperimentRequested -= ui => _rightContentBorder.Child = ui;
@@ -410,14 +409,13 @@ public sealed class MainWindow : NativeCustomWindow
     {
         var bgBar = Color.FromRgb(0x33, 0x33, 0x33);
 
-        Border collectionLine = null!, historyLine = null!, workspaceLine = null!, labLine = null!, settingsLine = null!;
+        Border collectionLine = null!, historyLine = null!, workspaceLine = null!, labLine = null!;
         Button collectionBtn  = null!, historyBtn  = null!, workspaceBtn  = null!, labBtn = null!;
 
         collectionLine = new Border { Width = 2, Background = Accent };
         historyLine    = new Border { Width = 2, Background = Color.Transparent };
         workspaceLine  = new Border { Width = 2, Background = Color.Transparent };
         labLine        = new Border { Width = 2, Background = Color.Transparent };
-        settingsLine   = new Border { Width = 2, Background = Color.Transparent };
 
         void SetActive(int idx)
         {
@@ -436,7 +434,6 @@ public sealed class MainWindow : NativeCustomWindow
             historyLine.Background    = idx == 1 ? Accent : Color.Transparent;
             workspaceLine.Background  = idx == 2 ? Accent : Color.Transparent;
             labLine.Background        = idx == 3 ? Accent : Color.Transparent;
-            settingsLine.Background   = idx == 4 ? Accent : Color.Transparent;
 
             collectionBtn.Foreground(idx == 0 ? Color.White : TextSec);
             historyBtn.Foreground(idx == 1 ? Color.White : TextSec);
@@ -449,7 +446,6 @@ public sealed class MainWindow : NativeCustomWindow
                 1 => _historyPanel.RootElement,
                 2 => _workspacePanel.RootElement,
                 3 => _labView.RootElement,
-                4 => _settingsView.RootElement,
                 _ => _sidebar.RootElement,
             };
             // 更新窗口标题（居中显示）
@@ -459,7 +455,6 @@ public sealed class MainWindow : NativeCustomWindow
                 1 => "请求历史",
                 2 => "最近工作区",
                 3 => "实验室",
-                4 => "设置",
                 _ => "Resty",
             };
         }
@@ -469,7 +464,7 @@ public sealed class MainWindow : NativeCustomWindow
         workspaceBtn  = MakeActivityBtn("⊞", workspaceLine,  () => SetActive(2), "最近工作区");
         labBtn        = MakeActivityBtn("⚗", labLine,        () => SetActive(3), "实验室");
 
-        var settingsBtn = MakeActivityBtn("⚙", settingsLine, () => SetActive(4), "设置");
+        var settingsBtn = MakeSettingsBtn();
 
         var topPanel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 0 };
         topPanel.Add(collectionBtn);
@@ -487,6 +482,47 @@ public sealed class MainWindow : NativeCustomWindow
             Background = bgBar,
             Child      = barDock,
         };
+    }
+
+    private Button MakeSettingsBtn()
+    {
+        var lbl = new TextBlock
+        {
+            Text                = "⚙",
+            FontSize            = 16,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment   = VerticalAlignment.Center,
+        };
+        var btn = new Button
+        {
+            Width = 40,
+            Height = 40,
+            Padding = new Thickness(0),
+            BorderThickness = 0,
+        };
+        btn.Content(lbl as Element).Background(Color.Transparent).Foreground(TextSec);
+        try { btn.BorderBrush = Color.Transparent; } catch { }
+        btn.Click      += () =>
+        {
+            if (_settingsWindow is null)
+            {
+                _settingsWindow = new SettingsWindow();
+                _settingsWindow.Closed += () => _settingsWindow = null;
+                _settingsWindow.Show();
+            }
+            else
+            {
+                // 窗口已存在：前置并激活
+                if (_settingsWindow.WindowState == WindowState.Minimized)
+                    _settingsWindow.Restore();
+                _settingsWindow.Activate();
+                _settingsWindow.Focus();
+            }
+        };
+        btn.MouseEnter += () => btn.Background(Color.FromRgb(0x45, 0x45, 0x45));
+        btn.MouseLeave += () => btn.Background(Color.Transparent);
+        btn.ToolTip("设置");
+        return btn;
     }
 
     private static Button MakeActivityBtn(string icon, Border indicator, Action onClick, string tooltip)
