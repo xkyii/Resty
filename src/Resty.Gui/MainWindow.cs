@@ -371,7 +371,7 @@ public sealed class MainWindow : NativeCustomWindow
         {
             _editorAndResponse,         // 0: 工作区
             _historyDetail.RootElement, // 1: 请求历史
-            _editorAndResponse,         // 2: 最近工作区
+            _workspacePanel.DetailElement, // 2: 工作区管理
             _editorAndResponse,         // 3: 实验室
         };
         // 订阅 LabView 的试验打开事件：当左侧点击某个试验时，将具体试验内容显示到右侧主区
@@ -453,15 +453,18 @@ public sealed class MainWindow : NativeCustomWindow
             {
                 0 => string.IsNullOrEmpty(_workspace.WorkspaceName) ? "工作区" : _workspace.WorkspaceName,
                 1 => "请求历史",
-                2 => "最近工作区",
+                2 => "工作区管理",
                 3 => "实验室",
                 _ => "Resty",
             };
+
+            if (idx == 2)
+                _workspacePanel.Refresh();
         }
 
         collectionBtn = MakeActivityBtn("☰", collectionLine, () => SetActive(0), "工作区");
         historyBtn    = MakeActivityBtn("⧗", historyLine,    () => SetActive(1), "请求历史");
-        workspaceBtn  = MakeActivityBtn("⊞", workspaceLine,  () => SetActive(2), "最近工作区");
+        workspaceBtn  = MakeActivityBtn("⊞", workspaceLine,  () => SetActive(2), "工作区管理");
         labBtn        = MakeActivityBtn("⚗", labLine,        () => SetActive(3), "实验室");
 
         var settingsBtn = MakeSettingsBtn();
@@ -582,6 +585,13 @@ public sealed class MainWindow : NativeCustomWindow
         _rightContentBorder.Child = _historyDetail.RootElement;
     }
 
+    private void OnWorkspacePanelSelectionChanged(string _)
+    {
+        _panelRightCache[2] = _workspacePanel.DetailElement;
+        if (_activePanelIdx == 2)
+            _rightContentBorder.Child = _workspacePanel.DetailElement;
+    }
+
     // 历史记录"在编辑器打开"
     private void OnHistoryOpenRequested(string filePath, string requestName)
     {
@@ -676,9 +686,15 @@ public sealed class MainWindow : NativeCustomWindow
         _sidebar.EnvActivated   -= OnEnvSelected;
         _sidebar.EnvActivated   += OnEnvSelected;
 
-        // 订阅 WorkspacePanelView.WorkspaceSelected 事件
-        _workspacePanel.WorkspaceSelected -= LoadWorkspace;
-        _workspacePanel.WorkspaceSelected += LoadWorkspace;
+        // 订阅 WorkspacePanelView 事件
+        _workspacePanel.WorkspaceOpenRequested -= LoadWorkspace;
+        _workspacePanel.WorkspaceOpenRequested += LoadWorkspace;
+        _workspacePanel.WorkspaceSelected -= OnWorkspacePanelSelectionChanged;
+        _workspacePanel.WorkspaceSelected += OnWorkspacePanelSelectionChanged;
+
+        // 重置面板状态：避免面板缓存污染新工作区布局
+        _activePanelIdx = 0;
+        Array.Clear(_panelRightCache);
 
         // 关闭已开启的标签
         while (_tabs.Count > 0) CloseTab(0);

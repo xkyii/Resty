@@ -8,6 +8,7 @@ public sealed class AppSettings
     public int    TimeoutSeconds    { get; set; } = 30;
     public string ProxyUrl          { get; set; } = string.Empty;
     public bool   JsonAutoFormat    { get; set; } = true;
+    public int    RecentWorkspaceDisplayCount { get; set; } = 5;
 }
 
 /// <summary>持久化应用设置（%APPDATA%/Resty/settings.json）。</summary>
@@ -26,7 +27,9 @@ public static class SettingsService
         {
             if (!File.Exists(StoragePath)) return new AppSettings();
             var json = File.ReadAllText(StoragePath);
-            return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            settings.RecentWorkspaceDisplayCount = NormalizeRecentCount(settings.RecentWorkspaceDisplayCount);
+            return settings;
         }
         catch { return new AppSettings(); }
     }
@@ -35,6 +38,7 @@ public static class SettingsService
     {
         try
         {
+            settings.RecentWorkspaceDisplayCount = NormalizeRecentCount(settings.RecentWorkspaceDisplayCount);
             _current = settings;
             var dir = Path.GetDirectoryName(StoragePath)!;
             Directory.CreateDirectory(dir);
@@ -43,4 +47,7 @@ public static class SettingsService
         }
         catch { }
     }
+
+    private static int NormalizeRecentCount(int value)
+        => value is < 3 or > 20 ? 5 : value;
 }

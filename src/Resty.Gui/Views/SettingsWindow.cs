@@ -23,6 +23,7 @@ public sealed class SettingsWindow : NativeCustomWindow
     // ── 控件引用 ─────────────────────────────────────────────────
     private readonly TextBox      _timeoutBox;
     private readonly TextBox      _proxyBox;
+    private readonly TextBox      _recentDisplayCountBox;
     private readonly ToggleSwitch _jsonAutoFormatSwitch;
     private readonly Button       _saveBtn;
     private readonly Button       _resetBtn;
@@ -75,6 +76,17 @@ public sealed class SettingsWindow : NativeCustomWindow
             Margin      = new Thickness(0),
         };
 
+        _recentDisplayCountBox = new TextBox
+        {
+            Text        = s.RecentWorkspaceDisplayCount.ToString(),
+            FontSize    = 12,
+            Background  = BgInput,
+            Foreground  = TextPri,
+            Height      = 28,
+            Margin      = new Thickness(0),
+            MaxLength   = 2,
+        };
+
         // ── 按钮（统一样式：高度 28）──────────
         _saveBtn = new Button { Height = 28, Padding = new Thickness(20, 0) };
         _saveBtn.Content("保存", false).FontSize(12).Background(Accent).Foreground(Color.White);
@@ -117,6 +129,10 @@ public sealed class SettingsWindow : NativeCustomWindow
         jsonRow.Add(MakeLabel("JSON 自动格式化").DockLeft());
         jsonRow.Add(_jsonAutoFormatSwitch);
 
+        var recentCountRow = new DockPanel { Height = 36 };
+        recentCountRow.Add(MakeLabel("最近显示数量").DockLeft());
+        recentCountRow.Add(_recentDisplayCountBox);
+
         // ── 按钮行（靠右对齐）────────────────────────────────────
         var btnRow = new DockPanel { Height = 40, Margin = new Thickness(0, 8, 0, 0) };
         btnRow.Add(_closeBtn.DockRight());
@@ -133,6 +149,7 @@ public sealed class SettingsWindow : NativeCustomWindow
         form.Add(timeoutRow);
         form.Add(proxyRow);
         form.Add(jsonRow);
+        form.Add(recentCountRow);
         form.Add(btnRow);
 
         // ── 容器 ───────────────────────────────────────────────
@@ -175,11 +192,16 @@ public sealed class SettingsWindow : NativeCustomWindow
         int.TryParse(_timeoutBox.Text?.Trim(), out timeout);
         if (timeout <= 0 || timeout > 300) timeout = 30;
 
+        var recentCount = 5;
+        int.TryParse(_recentDisplayCountBox.Text?.Trim(), out recentCount);
+        if (recentCount < 3 || recentCount > 20) recentCount = 5;
+
         var settings = new AppSettings
         {
             TimeoutSeconds = timeout,
             ProxyUrl       = _proxyBox.Text?.Trim() ?? string.Empty,
             JsonAutoFormat = _jsonAutoFormatSwitch.IsChecked,
+            RecentWorkspaceDisplayCount = recentCount,
         };
         SettingsService.Save(settings);
         SettingsChanged?.Invoke(settings);
@@ -191,5 +213,6 @@ public sealed class SettingsWindow : NativeCustomWindow
         _timeoutBox.Text       = defaults.TimeoutSeconds.ToString();
         _proxyBox.Text         = defaults.ProxyUrl;
         _jsonAutoFormatSwitch.IsChecked = defaults.JsonAutoFormat;
+        _recentDisplayCountBox.Text = defaults.RecentWorkspaceDisplayCount.ToString();
     }
 }
